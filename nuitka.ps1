@@ -1,0 +1,1 @@
+nuitka --standalone --onefile --windows-console-mode=attach --include-data-dir=frontend=frontend --include-package=fastapi --nofollow-import-to=fastapi.agents --python-flag=-O --output-dir=dist main.py

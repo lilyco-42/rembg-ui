@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fluid Rembg Tool - 智能分层抠图</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+            }
+            body {
+                background-color: #f5f7fa;
+                color: #333;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+            }
+            h1 {
+                margin: 10px 0 20px 0;
+                font-weight: 600;
+                color: #2c3e50;
+                font-size: 24px;
+            }
+            /* 【响应式优化】控制面板布局 */
+            .control-panel {
+                background: white;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                display: flex;
+                flex-wrap: wrap; /* 允许自动换行 */
+                gap: 20px;
+                align-items: flex-end;
+                margin-bottom: 25px;
+                width: 100%;
+                max-width: 1100px;
+            }
+            .control-group {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                flex: 1;
+                min-width: 200px; /* 保证小屏幕下不会挤压变形 */
+            }
+            label {
+                font-size: 13px;
+                font-weight: bold;
+                color: #7f8c8d;
+            }
+            select,
+            input[type="file"] {
+                padding: 10px 12px;
+                border: 1px solid #dcdfe6;
+                border-radius: 6px;
+                outline: none;
+                background: #fff;
+                font-size: 14px;
+                width: 100%;
+            }
+            select {
+                cursor: pointer;
+            }
+            .btn-group {
+                display: flex;
+                gap: 12px;
+                min-width: 240px;
+                flex: 1;
+                justify-content: flex-end;
+            }
+            button {
+                padding: 11px 24px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                flex: 1;
+                text-align: center;
+            }
+            .btn-primary {
+                background-color: #409eff;
+                color: white;
+            }
+            .btn-primary:hover:not(:disabled) {
+                background-color: #66b1ff;
+            }
+            .btn-success {
+                background-color: #67c23a;
+                color: white;
+            }
+            .btn-success:hover:not(:disabled) {
+                background-color: #85ce61;
+            }
+            button:disabled {
+                background-color: #c0c4cc;
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+            /* 【响应式核心】工作区大屏并排，小屏垂直堆叠 */
+            .workspace {
+                display: flex;
+                flex-direction: row;
+                gap: 20px;
+                width: 100%;
+                max-width: 1100px;
+                flex: 1;
+            }
+            @media (max-width: 768px) {
+                .workspace {
+                    flex-direction: column;
+                }
+                .preview-box {
+                    height: 320px !important;
+                }
+            }
+            .preview-box {
+                flex: 1;
+                background: white;
+                border: 2px dashed #dcdfe6;
+                border-radius: 12px;
+                height: calc(100vh - 200px);
+                min-height: 350px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+                position: relative;
+                transition: border-color 0.3s;
+            }
+            .preview-box.has-img {
+                border-style: solid;
+                border-color: #e4e7ed;
+                background-image:
+                    linear-gradient(
+                        45deg,
+                        #eee 25%,
+                        transparent 25%,
+                        transparent 75%,
+                        #eee 75%,
+                        #eee
+                    ),
+                    linear-gradient(
+                        45deg,
+                        #eee 25%,
+                        white 25%,
+                        white 75%,
+                        #eee 75%,
+                        #eee
+                    );
+                background-size: 20px 20px;
+                background-position:
+                    0 0,
+                    10px 10px;
+            }
+            .preview-box img {
+                max-width: 90%;
+                max-height: 90%;
+                object-fit: contain;
+                border-radius: 4px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            }
+            .preview-title {
+                position: absolute;
+                top: 12px;
+                left: 12px;
+                background: rgba(44, 62, 80, 0.85);
+                backdrop-filter: blur(4px);
+                color: white;
+                padding: 5px 10px;
+                font-size: 12px;
+                border-radius: 4px;
+                z-index: 10;
+                font-weight: 500;
+            }
+            .loading-mask {
+                display: none;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(4px);
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 15px;
+                font-weight: bold;
+                color: #409eff;
+                z-index: 20;
+            }
+            .spinner {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #409eff;
+                border-radius: 50%;
+                width: 36px;
+                height: 36px;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>AI 智能分层抠图武器库</h1>
+
+        <div class="control-panel">
+            <div class="control-group">
+                <label>选择输入图片</label>
+                <input
+                    type="file"
+                    id="fileInput"
+                    accept="image/*"
+                    onchange="handleFileSelect()"
+                />
+            </div>
+
+            <div class="control-group">
+                <label>抠图模型</label>
+                <select id="modelSelect">
+                    <optgroup label="✨ 通用与平衡推荐">
+                        <option value="u2net" selected>
+                            通用均衡模型 (u2net) - 默认推荐，稳定可靠
+                        </option>
+                        <option value="isnet-general-use">
+                            高精度通用 (isnet-general-use) - 发丝级边缘
+                        </option>
+                        <option value="u2netp">
+                            轻量极速版 (u2netp) - 体积小计算快
+                        </option>
+                        <option value="silueta">
+                            小体积轮廓版 (silueta) - 仅43Mb快速提取
+                        </option>
+                    </optgroup>
+                    <optgroup label="👔 垂直领域特化">
+                        <option value="u2net_human_seg">
+                            人像特化 (u2net_human_seg) - 针对人体发丝单独调优
+                        </option>
+                        <option value="u2net_cloth_seg">
+                            服装解析 (u2net_cloth_seg) - 自动分离衣服拓扑
+                        </option>
+                        <option value="isnet-anime">
+                            动漫二次元 (isnet-anime) - 插画手办高精度分割
+                        </option>
+                    </optgroup>
+                    <optgroup label="🔥 现代超精细 BiRefNet 家族 (细节狂魔)">
+                        <option value="birefnet-general">
+                            BiRefNet 通用版 (birefnet-general)
+                        </option>
+                        <option value="birefnet-general-lite">
+                            BiRefNet 轻量版 (birefnet-general-lite)
+                        </option>
+                        <option value="birefnet-portrait">
+                            BiRefNet 人像版 (birefnet-portrait)
+                        </option>
+                        <option value="birefnet-dis">
+                            BiRefNet 二分图像版 (birefnet-dis)
+                        </option>
+                        <option value="birefnet-hrsod">
+                            BiRefNet 高清显著版 (birefnet-hrsod)
+                        </option>
+                        <option value="birefnet-cod">
+                            BiRefNet 伪装检测版 (birefnet-cod)
+                        </option>
+                        <option value="birefnet-massive">
+                            BiRefNet 海量数据版 (birefnet-massive)
+                        </option>
+                    </optgroup>
+                    <optgroup label="⚠️ 特殊与实验性">
+                        <option value="bria-rmbg">
+                            BRIA 顶尖模型 (bria-rmbg) - 商业级去背景
+                        </option>
+                        <option value="sam">
+                            SAM 预训练模型 (sam) - 任意物体通用分割
+                        </option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="btn-group">
+                <button
+                    id="runBtn"
+                    class="btn-primary"
+                    onclick="processImage()"
+                    disabled
+                >
+                    开始抠图
+                </button>
+                <button
+                    id="downloadBtn"
+                    class="btn-success"
+                    onclick="downloadResult()"
+                    disabled
+                >
+                    保存结果
+                </button>
+            </div>
+        </div>
+
+        <div class="workspace">
+            <div class="preview-box" id="origBox">
+                <div class="preview-title">原图预览</div>
+                <span id="uploadHint" style="color: #909399"
+                    >拖入或选择一张图片开始</span
+                >
+                <img id="origImg" style="display: none" />
+            </div>
+
+            <div class="preview-box" id="resultBox">
+                <div class="preview-title">抠图结果</div>
+                <img id="resultImg" style="display: none" />
+
+                <div class="loading-mask" id="loadingMask">
+                    <div class="spinner"></div>
+                    <div id="loadingText">正在处理中... (首次切换模型较慢)</div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let resultBase64 = null;
+            let currentFileName = "output.png";
+
+            function handleFileSelect() {
+                const fileInput = document.getElementById("fileInput");
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                currentFileName =
+                    "rmbg_" +
+                    file.name.split(".").slice(0, -1).join(".") +
+                    ".png";
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const origImg = document.getElementById("origImg");
+                    origImg.src = e.target.result;
+                    origImg.style.display = "block";
+                    document.getElementById("uploadHint").style.display =
+                        "none";
+                    document.getElementById("origBox").classList.add("has-img");
+                    document.getElementById("runBtn").disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            async function processImage() {
+                const fileInput = document.getElementById("fileInput");
+                const modelSelect = document.getElementById("modelSelect");
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                document.getElementById("loadingMask").style.display = "flex";
+                document.getElementById("downloadBtn").disabled = true;
+
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("model_name", modelSelect.value);
+
+                try {
+                    const response = await fetch("/api/remove-bg", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        resultBase64 = data.image;
+                        const resultImg = document.getElementById("resultImg");
+                        resultImg.src = resultBase64;
+                        resultImg.style.display = "block";
+                        document
+                            .getElementById("resultBox")
+                            .classList.add("has-img");
+                        document.getElementById("downloadBtn").disabled = false;
+                    } else {
+                        alert("抠图失败: " + data.detail);
+                    }
+                } catch (error) {
+                    alert("请求失败，请检查后端服务是否正常运行");
+                    console.error(error);
+                } finally {
+                    document.getElementById("loadingMask").style.display =
+                        "none";
+                }
+            }
+
+            async function downloadResult() {
+                if (!resultBase64) return;
+
+                try {
+                    const response = await fetch("/api/save-image", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            base64_data: resultBase64,
+                            filename: currentFileName,
+                        }),
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        // 如果后端成功保存，这里静默或提示均可
+                        console.log("图片保存成功");
+                    }
+                } catch (error) {
+                    alert("保存文件时发生错误");
+                    console.error(error);
+                }
+            }
+        </script>
+    </body>
+</html>
