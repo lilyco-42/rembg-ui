@@ -24,6 +24,7 @@ def build(mode: str = "release"):
         "--include-package=fastapi",
         "--nofollow-import-to=fastapi.agents",
         "--include-windows-runtime-dlls=no",
+        "--assume-yes-for-downloads",
         f"--output-dir={ROOT / 'dist'}",
         str(ROOT / "main.py"),
     ]
