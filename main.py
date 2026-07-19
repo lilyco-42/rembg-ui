@@ -78,14 +78,31 @@ class SaveImageRequest(BaseModel):
 
 
 @app.post("/api/remove-bg")
-async def remove_bg(file: UploadFile = File(...), model_name: str = Form("u2net")):
+async def remove_bg(
+    file: UploadFile = File(...),
+    model_name: str = Form("bria-rmbg"),
+    alpha_matting: bool = Form(False),
+    alpha_matting_fg: int = Form(240),
+    alpha_matting_bg: int = Form(10),
+    alpha_matting_erode: int = Form(10),
+    post_process: bool = Form(False),
+    only_mask: bool = Form(False),
+):
     try:
         input_data = await file.read()
         session = get_model_session(model_name)
-        print(f"[Rembg] 正在使用模型 [{model_name}] 处理图片...")
+        print(f"[Rembg] 模型={model_name} alpha={alpha_matting} fg={alpha_matting_fg} bg={alpha_matting_bg} erode={alpha_matting_erode}")
 
-        # 执行智能分层抠图
-        output_data = remove(input_data, session=session)
+        output_data = remove(
+            input_data,
+            session=session,
+            alpha_matting=alpha_matting,
+            alpha_matting_foreground_threshold=alpha_matting_fg,
+            alpha_matting_background_threshold=alpha_matting_bg,
+            alpha_matting_erode_size=alpha_matting_erode,
+            post_process_mask=post_process,
+            only_mask=only_mask,
+        )
 
         # 统一输出格式为二进制 bytes
         if isinstance(output_data, Image.Image):
