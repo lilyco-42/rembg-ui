@@ -1,9 +1,25 @@
 import base64
 import io
 import os
+import random
+import socket
 import sys
 import threading
 from typing import Any  # 明确类型声明，让编辑器和静态检查彻底闭嘴
+
+
+def find_available_port(default: int = 8042) -> int:
+    """检测默认端口是否可用，不可用则随机 8000-8999"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", default))
+            return default
+    except OSError:
+        port = random.randint(8000, 8999)
+        while port == default:
+            port = random.randint(8000, 8999)
+        print(f"[Port] 端口 {default} 被占用，随机使用 {port}")
+        return port
 
 # 💡 强力注入国内 Hugging Face 镜像站，彻底解决大陆网络无法下载新模型的问题
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
@@ -26,6 +42,7 @@ from pydantic import BaseModel
 from rembg import new_session, remove
 
 app = FastAPI()
+SERVER_PORT = find_available_port()
 
 
 @app.on_event("startup")
@@ -36,7 +53,7 @@ async def on_startup():
 # 允许跨域（本地回环地址互通，确保 Webview 内部请求顺畅）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8042", "http://localhost:8042"],
+    allow_origins=[f"http://127.0.0.1:{SERVER_PORT}", f"http://localhost:{SERVER_PORT}"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -168,10 +185,11 @@ async def read_index():
         )
 
 
+
 def run_server():
     """在子线程中安全运行 Uvicorn"""
     global uvicorn_server
-    config = uvicorn.Config(app, host="127.0.0.1", port=8042, log_level="warning")
+    config = uvicorn.Config(app, host="127.0.0.1", port=SERVER_PORT, log_level="warning")
     uvicorn_server = uvicorn.Server(config)
     uvicorn_server.run()
 
@@ -190,7 +208,7 @@ if __name__ == "__main__":
     # 1. 创建窗口实例
     active_window = webview.create_window(
         title="AI 智能分层抠图工具 (完全体)",
-        url="http://127.0.0.1:8042",
+        url=f"http://127.0.0.1:{SERVER_PORT}",
         width=1100,
         height=800,
         resizable=True,
