@@ -36,7 +36,7 @@ async def on_startup():
 # 允许跨域（本地回环地址互通，确保 Webview 内部请求顺畅）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8000", "http://localhost:8000"],
+    allow_origins=["http://127.0.0.1:8042", "http://localhost:8042"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -171,7 +171,7 @@ async def read_index():
 def run_server():
     """在子线程中安全运行 Uvicorn"""
     global uvicorn_server
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
+    config = uvicorn.Config(app, host="127.0.0.1", port=8042, log_level="warning")
     uvicorn_server = uvicorn.Server(config)
     uvicorn_server.run()
 
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     # 1. 创建窗口实例
     active_window = webview.create_window(
         title="AI 智能分层抠图工具 (完全体)",
-        url="http://127.0.0.1:8000",
+        url="http://127.0.0.1:8042",
         width=1100,
         height=800,
         resizable=True,
