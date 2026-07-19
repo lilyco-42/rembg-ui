@@ -180,6 +180,36 @@
             height: 16px;
         }
 
+        .model-dir-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .model-dir-box:hover { border-color: var(--accent); }
+        .model-dir-path {
+            font-size: 11px;
+            color: var(--accent);
+            font-family: monospace;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        .model-dir-hint {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+        .model-status {
+            font-size: 11px;
+            margin-top: 6px;
+            color: var(--success);
+        }
+        .model-status.has-missing {
+            color: #e6a817;
+        }
+
         /* Main area */
         .main {
             flex: 1;
@@ -344,6 +374,13 @@
 
         <div class="advanced-toggle" onclick="toggleAdvanced()">
             <span id="advArrow">▶</span> 高级参数
+        </div>
+
+        <div class="section-label">模型目录</div>
+        <div class="model-dir-box" id="modelDirBox" onclick="openModelDir()">
+            <div class="model-dir-path" id="modelDirPath">加载中...</div>
+            <div class="model-dir-hint">点击查看 / 打开目录</div>
+            <div class="model-status" id="modelStatus"></div>
         </div>
         <div class="advanced-panel" id="advPanel">
             <div class="param-row">
@@ -576,6 +613,31 @@
             if (e.ctrlKey && e.key === "Enter") processImage();
             if (e.ctrlKey && e.key === "s") { e.preventDefault(); downloadResult(); }
         });
+
+        // Load model status
+        async function loadModelStatus() {
+            try {
+                const res = await fetch("/api/models");
+                const data = await res.json();
+                document.getElementById("modelDirPath").textContent = data.model_dir;
+                const selected = document.getElementById("modelSelect").value;
+                const model = data.models[selected];
+                if (model) {
+                    if (model.installed) {
+                        document.getElementById("modelStatus").innerHTML = "✅ " + selected + " 已就绪";
+                        document.getElementById("modelStatus").className = "model-status";
+                    } else {
+                        document.getElementById("modelStatus").innerHTML = "⚠️ " + selected + " 未安装 (" + model.size + ")";
+                        document.getElementById("modelStatus").className = "model-status has-missing";
+                    }
+                }
+            } catch(e) {}
+        }
+        async function openModelDir() {
+            await fetch("/api/open-model-dir", {method: "POST"});
+        }
+        document.getElementById("modelSelect").addEventListener("change", loadModelStatus);
+        loadModelStatus();
     </script>
 </body>
 </html>
