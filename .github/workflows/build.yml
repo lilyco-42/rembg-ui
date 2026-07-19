@@ -5,6 +5,15 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Build mode"
+        required: false
+        default: "release"
+        type: choice
+        options:
+          - release
+          - debug
 
 permissions:
   contents: write
@@ -27,7 +36,7 @@ jobs:
         run: uv sync
 
       - name: Build with Nuitka
-        run: uv run python build_nuitka.py release
+        run: uv run python build_nuitka.py ${{ inputs.mode || 'release' }}
 
       - name: Check build output
         run: |
@@ -49,6 +58,7 @@ jobs:
           path: Rembg-UI-windows.zip
 
       - name: Update release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: Rembg-UI-windows.zip
