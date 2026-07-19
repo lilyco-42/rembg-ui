@@ -31,9 +31,7 @@ def build(mode: str = "release"):
         str(ROOT / "main.py"),
     ]
 
-    if is_debug:
-        cmd.append("--debug")
-    else:
+    if not is_debug:
         cmd.append("--python-flag=-O")
 
     print(f"Building [{mode.upper()}] with Nuitka...")
