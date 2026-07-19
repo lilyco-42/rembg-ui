@@ -28,6 +28,11 @@ os.environ["ORT_LOGGING_LEVEL"] = "3"
 import numpy as np
 import uvicorn
 import webview
+from onnxruntime import get_available_providers
+
+# 检测 CUDA 是否可用，无 CUDA 时静默回退 CPU
+_has_cuda = "CUDAExecutionProvider" in get_available_providers()
+print(f"[GPU] CUDA: {'✓' if _has_cuda else '✗ (CPU 模式)'}")
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -66,7 +71,8 @@ def get_model_session(model_name: str):
         if model_name not in model_sessions:
             print(f"[Rembg] 正在初始化/载入模型: {model_name}...")
             try:
-                model_sessions[model_name] = new_session(model_name)
+                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if _has_cuda else ["CPUExecutionProvider"]
+                model_sessions[model_name] = new_session(model_name, providers=providers)
             except Exception:
                 model_sessions[model_name] = new_session(model_name)
         return model_sessions[model_name]
