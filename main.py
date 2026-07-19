@@ -169,11 +169,15 @@ async def read_index():
     if hasattr(sys, "_MEIPASS"):
         base_path = sys._MEIPASS
     elif getattr(sys, "frozen", False):
-        base_path = os.path.dirname(sys.executable)
+        exe_dir = os.path.dirname(sys.executable)
+        if os.path.exists(os.path.join(exe_dir, "frontend", "index.html")):
+            base_path = exe_dir
+        else:
+            base_path = os.path.dirname(sys.executable)
     else:
         base_path = os.path.dirname(os.path.abspath(__file__))
 
-    html_path = os.path.join(base_path, "frontend/index.html")
+    html_path = os.path.join(base_path, "frontend", "index.html")
 
     try:
         with open(html_path, "r", encoding="utf-8") as f:
