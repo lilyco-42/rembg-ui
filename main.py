@@ -23,12 +23,6 @@ def find_available_port(default: int = 8042) -> int:
 
 # 💡 强力注入国内 Hugging Face 镜像站，彻底解决大陆网络无法下载新模型的问题
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-
-# 原有的强阻断显卡环境配置
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["ORT_LOGGING_LEVEL"] = "3"
-# 💡 强力阻断 ONNX 检索显卡组件，杜绝 missing cublasLt64 报错，大幅缩减 Nuitka 打包体积
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["ORT_LOGGING_LEVEL"] = "3"
 
 import numpy as np
@@ -72,10 +66,7 @@ def get_model_session(model_name: str):
         if model_name not in model_sessions:
             print(f"[Rembg] 正在初始化/载入模型: {model_name}...")
             try:
-                # 强指定使用 CPU 运行，契合轻量化桌面端定位
-                model_sessions[model_name] = new_session(
-                    model_name, providers=["CPUExecutionProvider"]
-                )
+                model_sessions[model_name] = new_session(model_name)
             except Exception:
                 model_sessions[model_name] = new_session(model_name)
         return model_sessions[model_name]
