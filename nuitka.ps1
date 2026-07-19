@@ -1,1 +1,1 @@
-nuitka --standalone --windows-console-mode=disable --include-data-dir=frontend=frontend --include-package=fastapi --nofollow-import-to=fastapi.agents --include-windows-runtime-dlls=no --python-flag=-O --output-dir=dist main.py
+nuitka --standalone --windows-console-mode=disable --include-data-dir=frontend=frontend --include-package=fastapi --nofollow-import-to=fastapi.agents --nofollow-import-to=numba --nofollow-import-to=scipy --nofollow-import-to=numpy --include-windows-runtime-dlls=no --assume-yes-for-downloads --python-flag=-O --output-dir=dist main.py
