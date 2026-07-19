@@ -1,428 +1,546 @@
 <!doctype html>
 <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Fluid Rembg Tool - 智能分层抠图</title>
-        <style>
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-                font-family:
-                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                    sans-serif;
-            }
-            body {
-                background-color: #f5f7fa;
-                color: #333;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                min-height: 100vh;
-            }
-            h1 {
-                margin: 10px 0 20px 0;
-                font-weight: 600;
-                color: #2c3e50;
-                font-size: 24px;
-            }
-            /* 【响应式优化】控制面板布局 */
-            .control-panel {
-                background: white;
-                padding: 20px;
-                border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-                display: flex;
-                flex-wrap: wrap; /* 允许自动换行 */
-                gap: 20px;
-                align-items: flex-end;
-                margin-bottom: 25px;
-                width: 100%;
-                max-width: 1100px;
-            }
-            .control-group {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                flex: 1;
-                min-width: 200px; /* 保证小屏幕下不会挤压变形 */
-            }
-            label {
-                font-size: 13px;
-                font-weight: bold;
-                color: #7f8c8d;
-            }
-            select,
-            input[type="file"] {
-                padding: 10px 12px;
-                border: 1px solid #dcdfe6;
-                border-radius: 6px;
-                outline: none;
-                background: #fff;
-                font-size: 14px;
-                width: 100%;
-            }
-            select {
-                cursor: pointer;
-            }
-            .btn-group {
-                display: flex;
-                gap: 12px;
-                min-width: 240px;
-                flex: 1;
-                justify-content: flex-end;
-            }
-            button {
-                padding: 11px 24px;
-                border: none;
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                flex: 1;
-                text-align: center;
-            }
-            .btn-primary {
-                background-color: #409eff;
-                color: white;
-            }
-            .btn-primary:hover:not(:disabled) {
-                background-color: #66b1ff;
-            }
-            .btn-success {
-                background-color: #67c23a;
-                color: white;
-            }
-            .btn-success:hover:not(:disabled) {
-                background-color: #85ce61;
-            }
-            button:disabled {
-                background-color: #c0c4cc;
-                cursor: not-allowed;
-                opacity: 0.6;
-            }
-            /* 【响应式核心】工作区大屏并排，小屏垂直堆叠 */
-            .workspace {
-                display: flex;
-                flex-direction: row;
-                gap: 20px;
-                width: 100%;
-                max-width: 1100px;
-                flex: 1;
-            }
-            @media (max-width: 768px) {
-                .workspace {
-                    flex-direction: column;
-                }
-                .preview-box {
-                    height: 320px !important;
-                }
-            }
-            .preview-box {
-                flex: 1;
-                background: white;
-                border: 2px dashed #dcdfe6;
-                border-radius: 12px;
-                height: calc(100vh - 200px);
-                min-height: 350px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                overflow: hidden;
-                position: relative;
-                transition: border-color 0.3s;
-            }
-            .preview-box.has-img {
-                border-style: solid;
-                border-color: #e4e7ed;
-                background-image:
-                    linear-gradient(
-                        45deg,
-                        #eee 25%,
-                        transparent 25%,
-                        transparent 75%,
-                        #eee 75%,
-                        #eee
-                    ),
-                    linear-gradient(
-                        45deg,
-                        #eee 25%,
-                        white 25%,
-                        white 75%,
-                        #eee 75%,
-                        #eee
-                    );
-                background-size: 20px 20px;
-                background-position:
-                    0 0,
-                    10px 10px;
-            }
-            .preview-box img {
-                max-width: 90%;
-                max-height: 90%;
-                object-fit: contain;
-                border-radius: 4px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-            }
-            .preview-title {
-                position: absolute;
-                top: 12px;
-                left: 12px;
-                background: rgba(44, 62, 80, 0.85);
-                backdrop-filter: blur(4px);
-                color: white;
-                padding: 5px 10px;
-                font-size: 12px;
-                border-radius: 4px;
-                z-index: 10;
-                font-weight: 500;
-            }
-            .loading-mask {
-                display: none;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(255, 255, 255, 0.85);
-                backdrop-filter: blur(4px);
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                gap: 15px;
-                font-weight: bold;
-                color: #409eff;
-                z-index: 20;
-            }
-            .spinner {
-                border: 4px solid #f3f3f3;
-                border-top: 4px solid #409eff;
-                border-radius: 50%;
-                width: 36px;
-                height: 36px;
-                animation: spin 1s linear infinite;
-            }
-            @keyframes spin {
-                0% {
-                    transform: rotate(0deg);
-                }
-                100% {
-                    transform: rotate(360deg);
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <h1>AI 智能分层抠图武器库</h1>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rembg Studio</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-input: #0f3460;
+            --accent: #e94560;
+            --accent-hover: #ff6b81;
+            --text: #eee;
+            --text-dim: #8892a0;
+            --border: #2a2a4a;
+            --success: #27ae60;
+            --success-hover: #2ecc71;
+            --radius: 10px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-        <div class="control-panel">
-            <div class="control-group">
-                <label>选择输入图片</label>
-                <input
-                    type="file"
-                    id="fileInput"
-                    accept="image/*"
-                    onchange="handleFileSelect()"
-                />
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 16px;
+            overflow-y: auto;
+        }
+        .sidebar h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar h1::before { content: "✂"; font-size: 24px; }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-top: 8px;
+        }
+
+        select, input[type="file"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        select:focus, input:focus { border-color: var(--accent); }
+        select { cursor: pointer; }
+        select option { background: var(--bg-input); color: var(--text); }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(233, 69, 96, 0.1);
+            color: var(--accent);
+        }
+        .drop-zone.has-file {
+            border-style: solid;
+            border-color: var(--success);
+            background: rgba(39, 174, 96, 0.08);
+        }
+        .drop-zone input { display: none; }
+        .drop-zone .icon { font-size: 32px; margin-bottom: 8px; }
+        .drop-zone .hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+        .drop-zone .filename {
+            font-size: 13px;
+            color: var(--success);
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-success:hover:not(:disabled) { background: var(--success-hover); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Advanced toggle */
+        .advanced-toggle {
+            font-size: 12px;
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 0;
+            user-select: none;
+        }
+        .advanced-toggle:hover { color: var(--text); }
+        .advanced-panel {
+            display: none;
+            background: var(--bg-input);
+            border-radius: var(--radius);
+            padding: 14px;
+            gap: 12px;
+            flex-direction: column;
+        }
+        .advanced-panel.open { display: flex; }
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .param-row label {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .param-row input[type="range"] {
+            width: 120px;
+            accent-color: var(--accent);
+        }
+        .param-row .val {
+            font-size: 12px;
+            color: var(--accent);
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Main area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .preview-area {
+            flex: 1;
+            display: flex;
+            gap: 0;
+            overflow: hidden;
+        }
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .panel + .panel { border-left: 1px solid var(--border); }
+        .panel-header {
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-body {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            padding: 16px;
+            position: relative;
+        }
+        .panel-body img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        .panel-empty {
+            color: var(--text-dim);
+            font-size: 14px;
+            text-align: center;
+            line-height: 2;
+        }
+        .panel-empty .icon { font-size: 48px; opacity: 0.3; }
+
+        /* Loading */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(26, 26, 46, 0.85);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            z-index: 10;
+        }
+        .loading-overlay.active { display: flex; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 13px; color: var(--text-dim); }
+
+        /* Drag overlay on panels */
+        .drag-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(233, 69, 96, 0.15);
+            border: 2px dashed var(--accent);
+            border-radius: 4px;
+            z-index: 5;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .panel-body.drag-over .drag-overlay { display: flex; }
+
+        /* Checkerboard for result */
+        .checkerboard {
+            background-image:
+                linear-gradient(45deg, #2a2a4a 25%, transparent 25%),
+                linear-gradient(-45deg, #2a2a4a 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #2a2a4a 75%),
+                linear-gradient(-45deg, transparent 75%, #2a2a4a 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+            background-color: #22223a;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Rembg Studio</h1>
+
+        <div class="section-label">模型</div>
+        <select id="modelSelect">
+            <optgroup label="✨ 推荐">
+                <option value="birefnet-general" selected>最强通用 (birefnet-general)</option>
+                <option value="birefnet-massive">海量数据版 (birefnet-massive)</option>
+                <option value="bria-rmbg">商业级 (bria-rmbg)</option>
+            </optgroup>
+            <optgroup label="👤 人像">
+                <option value="birefnet-portrait">人像专用 (birefnet-portrait)</option>
+                <option value="u2net_human_seg">人体发丝 (u2net_human_seg)</option>
+            </optgroup>
+            <optgroup label="🎨 动漫">
+                <option value="isnet-anime">动漫插画 (isnet-anime)</option>
+            </optgroup>
+            <optgroup label="⚡ 极速">
+                <option value="birefnet-general-lite">BiRefNet 轻量</option>
+                <option value="u2net">通用均衡 (u2net)</option>
+                <option value="u2netp">极速版 (u2netp)</option>
+                <option value="silueta">最小体积 (silueta)</option>
+            </optgroup>
+            <optgroup label="🔧 其他">
+                <option value="isnet-general-use">高精度通用</option>
+                <option value="u2net_cloth_seg">服装解析</option>
+                <option value="birefnet-dis">二分图像</option>
+                <option value="birefnet-hrsod">高清显著</option>
+                <option value="birefnet-cod">伪装检测</option>
+                <option value="sam">SAM 通用分割</option>
+            </optgroup>
+        </select>
+
+        <div class="section-label">输入</div>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="image/*" />
+            <div class="icon">📁</div>
+            <div id="dropHint">拖拽图片到这里，或点击选择</div>
+            <div class="filename" id="dropFilename" style="display:none"></div>
+            <div class="hint">支持 PNG / JPG / WEBP</div>
+        </div>
+
+        <div class="advanced-toggle" onclick="toggleAdvanced()">
+            <span id="advArrow">▶</span> 高级参数
+        </div>
+        <div class="advanced-panel" id="advPanel">
+            <div class="param-row">
+                <label>Matting 精细边缘</label>
+                <input type="checkbox" id="paramAlpha" />
             </div>
-
-            <div class="control-group">
-                <label>抠图模型</label>
-                <select id="modelSelect">
-                    <optgroup label="✨ 通用与平衡推荐">
-                        <option value="u2net" selected>
-                            通用均衡模型 (u2net) - 默认推荐，稳定可靠
-                        </option>
-                        <option value="isnet-general-use">
-                            高精度通用 (isnet-general-use) - 发丝级边缘
-                        </option>
-                        <option value="u2netp">
-                            轻量极速版 (u2netp) - 体积小计算快
-                        </option>
-                        <option value="silueta">
-                            小体积轮廓版 (silueta) - 仅43Mb快速提取
-                        </option>
-                    </optgroup>
-                    <optgroup label="👔 垂直领域特化">
-                        <option value="u2net_human_seg">
-                            人像特化 (u2net_human_seg) - 针对人体发丝单独调优
-                        </option>
-                        <option value="u2net_cloth_seg">
-                            服装解析 (u2net_cloth_seg) - 自动分离衣服拓扑
-                        </option>
-                        <option value="isnet-anime">
-                            动漫二次元 (isnet-anime) - 插画手办高精度分割
-                        </option>
-                    </optgroup>
-                    <optgroup label="🔥 现代超精细 BiRefNet 家族 (细节狂魔)">
-                        <option value="birefnet-general">
-                            BiRefNet 通用版 (birefnet-general)
-                        </option>
-                        <option value="birefnet-general-lite">
-                            BiRefNet 轻量版 (birefnet-general-lite)
-                        </option>
-                        <option value="birefnet-portrait">
-                            BiRefNet 人像版 (birefnet-portrait)
-                        </option>
-                        <option value="birefnet-dis">
-                            BiRefNet 二分图像版 (birefnet-dis)
-                        </option>
-                        <option value="birefnet-hrsod">
-                            BiRefNet 高清显著版 (birefnet-hrsod)
-                        </option>
-                        <option value="birefnet-cod">
-                            BiRefNet 伪装检测版 (birefnet-cod)
-                        </option>
-                        <option value="birefnet-massive">
-                            BiRefNet 海量数据版 (birefnet-massive)
-                        </option>
-                    </optgroup>
-                    <optgroup label="⚠️ 特殊与实验性">
-                        <option value="bria-rmbg">
-                            BRIA 顶尖模型 (bria-rmbg) - 商业级去背景
-                        </option>
-                        <option value="sam">
-                            SAM 预训练模型 (sam) - 任意物体通用分割
-                        </option>
-                    </optgroup>
+            <div class="param-row">
+                <label>边缘羽化</label>
+                <input type="range" id="paramErode" min="0" max="20" value="0" oninput="document.getElementById('erodeVal').textContent=this.value" />
+                <span class="val" id="erodeVal">0</span>
+            </div>
+            <div class="param-row">
+                <label>背景颜色</label>
+                <select id="paramBg" style="width:auto;flex:0;padding:6px 10px;">
+                    <option value="transparent" selected>透明</option>
+                    <option value="white">白色</option>
+                    <option value="black">黑色</option>
                 </select>
-            </div>
-
-            <div class="btn-group">
-                <button
-                    id="runBtn"
-                    class="btn-primary"
-                    onclick="processImage()"
-                    disabled
-                >
-                    开始抠图
-                </button>
-                <button
-                    id="downloadBtn"
-                    class="btn-success"
-                    onclick="downloadResult()"
-                    disabled
-                >
-                    保存结果
-                </button>
             </div>
         </div>
 
-        <div class="workspace">
-            <div class="preview-box" id="origBox">
-                <div class="preview-title">原图预览</div>
-                <span id="uploadHint" style="color: #909399"
-                    >拖入或选择一张图片开始</span
-                >
-                <img id="origImg" style="display: none" />
+        <div style="flex:1"></div>
+
+        <button id="runBtn" class="btn btn-primary" onclick="processImage()" disabled>
+            ⚡ 开始抠图
+        </button>
+        <button id="downloadBtn" class="btn btn-success" onclick="downloadResult()" disabled>
+            💾 保存结果
+        </button>
+    </div>
+
+    <div class="main">
+        <div class="toolbar">
+            <span id="statusText">就绪 — 选择图片开始</span>
+            <span id="modelInfo">birefnet-general</span>
+        </div>
+        <div class="preview-area">
+            <div class="panel">
+                <div class="panel-header">原图</div>
+                <div class="panel-body" id="origBody">
+                    <div class="drag-overlay">📷 放开以载入图片</div>
+                    <div class="panel-empty" id="origEmpty">
+                        <div class="icon">🖼️</div>
+                        拖拽或点击左侧选择图片
+                    </div>
+                    <img id="origImg" style="display:none" />
+                </div>
             </div>
-
-            <div class="preview-box" id="resultBox">
-                <div class="preview-title">抠图结果</div>
-                <img id="resultImg" style="display: none" />
-
-                <div class="loading-mask" id="loadingMask">
-                    <div class="spinner"></div>
-                    <div id="loadingText">正在处理中... (首次切换模型较慢)</div>
+            <div class="panel">
+                <div class="panel-header">结果</div>
+                <div class="panel-body checkerboard" id="resultBody">
+                    <div class="panel-empty" id="resultEmpty">
+                        <div class="icon">✨</div>
+                        等待抠图...
+                    </div>
+                    <img id="resultImg" style="display:none" />
+                    <div class="loading-overlay" id="loadingMask">
+                        <div class="spinner"></div>
+                        <div class="loading-text" id="loadingText">正在处理...</div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <script>
-            let resultBase64 = null;
-            let currentFileName = "output.png";
+    <script>
+        let resultBase64 = null;
+        let currentFileName = "output.png";
+        let selectedFile = null;
 
-            function handleFileSelect() {
-                const fileInput = document.getElementById("fileInput");
-                const file = fileInput.files[0];
-                if (!file) return;
+        // Model info
+        document.getElementById("modelSelect").addEventListener("change", function() {
+            document.getElementById("modelInfo").textContent = this.value;
+        });
 
-                currentFileName =
-                    "rmbg_" +
-                    file.name.split(".").slice(0, -1).join(".") +
-                    ".png";
+        // Advanced toggle
+        function toggleAdvanced() {
+            const panel = document.getElementById("advPanel");
+            const arrow = document.getElementById("advArrow");
+            panel.classList.toggle("open");
+            arrow.textContent = panel.classList.contains("open") ? "▼" : "▶";
+        }
 
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const origImg = document.getElementById("origImg");
-                    origImg.src = e.target.result;
-                    origImg.style.display = "block";
-                    document.getElementById("uploadHint").style.display =
-                        "none";
-                    document.getElementById("origBox").classList.add("has-img");
-                    document.getElementById("runBtn").disabled = false;
-                };
-                reader.readAsDataURL(file);
-            }
+        // File select
+        document.getElementById("fileInput").addEventListener("change", function() {
+            if (this.files[0]) loadFile(this.files[0]);
+        });
 
-            async function processImage() {
-                const fileInput = document.getElementById("fileInput");
-                const modelSelect = document.getElementById("modelSelect");
-                const file = fileInput.files[0];
-                if (!file) return;
+        // Drop zone
+        const dropZone = document.getElementById("dropZone");
+        dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+        dropZone.addEventListener("drop", e => {
+            e.preventDefault();
+            dropZone.classList.remove("drag-over");
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith("image/")) loadFile(file);
+        });
 
-                document.getElementById("loadingMask").style.display = "flex";
-                document.getElementById("downloadBtn").disabled = true;
+        // Panel drag & drop
+        const origBody = document.getElementById("origBody");
+        origBody.addEventListener("dragover", e => { e.preventDefault(); origBody.classList.add("drag-over"); });
+        origBody.addEventListener("dragleave", () => origBody.classList.remove("drag-over"));
+        origBody.addEventListener("drop", e => {
+            e.preventDefault();
+            origBody.classList.remove("drag-over");
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith("image/")) loadFile(file);
+        });
 
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("model_name", modelSelect.value);
-
-                try {
-                    const response = await fetch("/api/remove-bg", {
-                        method: "POST",
-                        body: formData,
-                    });
-
-                    const data = await response.json();
-                    if (data.success) {
-                        resultBase64 = data.image;
-                        const resultImg = document.getElementById("resultImg");
-                        resultImg.src = resultBase64;
-                        resultImg.style.display = "block";
-                        document
-                            .getElementById("resultBox")
-                            .classList.add("has-img");
-                        document.getElementById("downloadBtn").disabled = false;
-                    } else {
-                        alert("抠图失败: " + data.detail);
-                    }
-                } catch (error) {
-                    alert("请求失败，请检查后端服务是否正常运行");
-                    console.error(error);
-                } finally {
-                    document.getElementById("loadingMask").style.display =
-                        "none";
+        // Paste support
+        document.addEventListener("paste", e => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith("image/")) {
+                    const file = item.getAsFile();
+                    if (file) loadFile(file);
+                    break;
                 }
             }
+        });
 
-            async function downloadResult() {
-                if (!resultBase64) return;
+        function loadFile(file) {
+            selectedFile = file;
+            currentFileName = "rmbg_" + file.name.replace(/\.[^.]+$/, "") + ".png";
 
-                try {
-                    const response = await fetch("/api/save-image", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            base64_data: resultBase64,
-                            filename: currentFileName,
-                        }),
-                    });
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById("origImg").src = e.target.result;
+                document.getElementById("origImg").style.display = "block";
+                document.getElementById("origEmpty").style.display = "none";
+                document.getElementById("runBtn").disabled = false;
+                document.getElementById("dropHint").style.display = "none";
+                document.getElementById("dropFilename").style.display = "block";
+                document.getElementById("dropFilename").textContent = file.name;
+                dropZone.classList.add("has-file");
+                document.getElementById("statusText").textContent = "已载入: " + file.name;
+            };
+            reader.readAsDataURL(file);
+        }
 
-                    const data = await response.json();
-                    if (data.success) {
-                        // 如果后端成功保存，这里静默或提示均可
-                        console.log("图片保存成功");
-                    }
-                } catch (error) {
-                    alert("保存文件时发生错误");
-                    console.error(error);
+        async function processImage() {
+            if (!selectedFile) return;
+
+            document.getElementById("loadingMask").classList.add("active");
+            document.getElementById("downloadBtn").disabled = true;
+            document.getElementById("statusText").textContent = "处理中...";
+            document.getElementById("runBtn").disabled = true;
+
+            const modelSelect = document.getElementById("modelSelect");
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            formData.append("model_name", modelSelect.value);
+
+            try {
+                const response = await fetch("/api/remove-bg", {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await response.json();
+                if (data.success) {
+                    resultBase64 = data.image;
+                    document.getElementById("resultImg").src = resultBase64;
+                    document.getElementById("resultImg").style.display = "block";
+                    document.getElementById("resultEmpty").style.display = "none";
+                    document.getElementById("downloadBtn").disabled = false;
+                    document.getElementById("statusText").textContent = "✅ 完成 — " + modelSelect.value;
+                } else {
+                    document.getElementById("statusText").textContent = "❌ 失败: " + (data.detail || "未知错误");
+                    alert("抠图失败: " + data.detail);
                 }
+            } catch (error) {
+                document.getElementById("statusText").textContent = "❌ 网络错误";
+                alert("请求失败，请检查后端服务");
+                console.error(error);
+            } finally {
+                document.getElementById("loadingMask").classList.remove("active");
+                document.getElementById("runBtn").disabled = false;
             }
-        </script>
-    </body>
+        }
+
+        async function downloadResult() {
+            if (!resultBase64) return;
+            try {
+                const response = await fetch("/api/save-image", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        base64_data: resultBase64,
+                        filename: currentFileName,
+                    }),
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById("statusText").textContent = "💾 已保存: " + data.path;
+                }
+            } catch (error) {
+                alert("保存失败");
+                console.error(error);
+            }
+        }
+
+        // Keyboard shortcut
+        document.addEventListener("keydown", e => {
+            if (e.ctrlKey && e.key === "Enter") processImage();
+            if (e.ctrlKey && e.key === "s") { e.preventDefault(); downloadResult(); }
+        });
+    </script>
+</body>
 </html>
