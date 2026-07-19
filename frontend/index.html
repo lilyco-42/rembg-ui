@@ -81,13 +81,15 @@
             text-align: center;
             color: var(--text-dim);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
         .drop-zone.drag-over {
             border-color: var(--accent);
-            background: rgba(233, 69, 96, 0.1);
+            background: rgba(233, 69, 96, 0.12);
             color: var(--accent);
+            transform: scale(1.01);
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.15);
         }
         .drop-zone.has-file {
             border-style: solid;
@@ -263,7 +265,7 @@
             display: none;
             position: absolute;
             inset: 0;
-            background: rgba(233, 69, 96, 0.15);
+            background: rgba(233, 69, 96, 0.12);
             border: 2px dashed var(--accent);
             border-radius: 4px;
             z-index: 5;
@@ -272,8 +274,10 @@
             font-size: 16px;
             color: var(--accent);
             font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        .panel-body.drag-over .drag-overlay { display: flex; }
+        .panel-body.drag-over .drag-overlay { display: flex; opacity: 1; }
 
         /* Checkerboard for result */
         .checkerboard {
@@ -295,7 +299,7 @@
         <div class="section-label">模型</div>
         <select id="modelSelect">
             <optgroup label="✨ 推荐">
-                <option value="birefnet-general" selected>最强通用 (birefnet-general)</option>
+                <option value="bria-rmbg" selected>商业级 (bria-rmbg)</option>
                 <option value="birefnet-massive">海量数据版 (birefnet-massive)</option>
                 <option value="bria-rmbg">商业级 (bria-rmbg)</option>
             </optgroup>
@@ -423,10 +427,13 @@
 
         // Drop zone
         const dropZone = document.getElementById("dropZone");
-        dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
-        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+        let dragCounter = 0;
+        dropZone.addEventListener("dragenter", e => { e.preventDefault(); dragCounter++; dropZone.classList.add("drag-over"); });
+        dropZone.addEventListener("dragleave", e => { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; dropZone.classList.remove("drag-over"); } });
+        dropZone.addEventListener("dragover", e => e.preventDefault());
         dropZone.addEventListener("drop", e => {
             e.preventDefault();
+            dragCounter = 0;
             dropZone.classList.remove("drag-over");
             const file = e.dataTransfer.files[0];
             if (file && file.type.startsWith("image/")) loadFile(file);
@@ -434,10 +441,13 @@
 
         // Panel drag & drop
         const origBody = document.getElementById("origBody");
-        origBody.addEventListener("dragover", e => { e.preventDefault(); origBody.classList.add("drag-over"); });
-        origBody.addEventListener("dragleave", () => origBody.classList.remove("drag-over"));
+        let origDragCounter = 0;
+        origBody.addEventListener("dragenter", e => { e.preventDefault(); origDragCounter++; origBody.classList.add("drag-over"); });
+        origBody.addEventListener("dragleave", e => { origDragCounter--; if (origDragCounter <= 0) { origDragCounter = 0; origBody.classList.remove("drag-over"); } });
+        origBody.addEventListener("dragover", e => e.preventDefault());
         origBody.addEventListener("drop", e => {
             e.preventDefault();
+            origDragCounter = 0;
             origBody.classList.remove("drag-over");
             const file = e.dataTransfer.files[0];
             if (file && file.type.startsWith("image/")) loadFile(file);
