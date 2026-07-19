@@ -27,7 +27,7 @@ jobs:
         run: uv sync
 
       - name: Build with Nuitka
-        run: uv run nuitka --standalone --windows-console-mode=disable --include-data-dir=frontend=frontend --include-package=fastapi --nofollow-import-to=fastapi.agents --include-windows-runtime-dlls=no --python-flag=-O --output-dir=dist main.py
+        run: uv run python build_nuitka.py release
 
       - name: Check build output
         run: |
@@ -39,18 +39,16 @@ jobs:
             exit 1
           }
 
+      - name: Package
+        run: Compress-Archive -Path dist/main.dist/* -DestinationPath Rembg-UI-windows.zip
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Rembg-UI-windows
-          path: dist/main.dist/
+          path: Rembg-UI-windows.zip
 
-      - name: Package release
-        if: startsWith(github.ref, 'refs/tags/')
-        run: Compress-Archive -Path dist/main.dist/* -DestinationPath Rembg-UI-windows.zip
-
-      - name: Create release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Update release
         uses: softprops/action-gh-release@v2
         with:
           files: Rembg-UI-windows.zip
