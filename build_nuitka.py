@@ -23,8 +23,6 @@ def build(mode: str = "release"):
         f"--include-data-dir={ROOT / 'frontend'}=frontend",
         "--include-package=fastapi",
         "--nofollow-import-to=fastapi.agents",
-        "--nofollow-import-to=numba",
-        "--nofollow-import-to=scipy",
         "--include-windows-runtime-dlls=yes",
         "--assume-yes-for-downloads",
         f"--output-dir={ROOT / 'dist'}",
