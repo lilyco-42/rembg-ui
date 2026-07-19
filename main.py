@@ -24,15 +24,32 @@ def find_available_port(default: int = 8042) -> int:
 # 💡 强力注入国内 Hugging Face 镜像站，彻底解决大陆网络无法下载新模型的问题
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 os.environ["ORT_LOGGING_LEVEL"] = "3"
+os.environ["ORT_CUDA_DEVICE_ID"] = "0"
 
 import numpy as np
 import uvicorn
 import webview
-from onnxruntime import get_available_providers
 
-# 检测 CUDA 是否可用，无 CUDA 时静默回退 CPU
-_has_cuda = "CUDAExecutionProvider" in get_available_providers()
-print(f"[GPU] CUDA: {'✓' if _has_cuda else '✗ (CPU 模式)'}")
+
+def _detect_providers():
+    """检测 CUDA 是否可用，不可用则回退 CPU"""
+    try:
+        from onnxruntime import get_available_providers
+        if "CUDAExecutionProvider" not in get_available_providers():
+            return ["CPUExecutionProvider"]
+        # 尝试真正创建 CUDA session
+        import onnxruntime as ort
+        so = ort.SessionOptions()
+        so.log_severity_level = 3
+        so.add_session_config_entry("session.use_env_allocators", "1")
+        ort.InferenceSession(b"", sess_options=so, providers=["CUDAExecutionProvider"])
+        return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    except Exception:
+        return ["CPUExecutionProvider"]
+
+
+PROVIDERS = _detect_providers()
+print(f"[GPU] Provider: {PROVIDERS[0]}")
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -71,8 +88,7 @@ def get_model_session(model_name: str):
         if model_name not in model_sessions:
             print(f"[Rembg] 正在初始化/载入模型: {model_name}...")
             try:
-                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if _has_cuda else ["CPUExecutionProvider"]
-                model_sessions[model_name] = new_session(model_name, providers=providers)
+                model_sessions[model_name] = new_session(model_name, providers=PROVIDERS)
             except Exception:
                 model_sessions[model_name] = new_session(model_name)
         return model_sessions[model_name]
@@ -81,6 +97,44 @@ def get_model_session(model_name: str):
 class SaveImageRequest(BaseModel):
     base64_data: str
     filename: str
+
+
+@app.get("/api/models")
+async def list_models():
+    """返回模型列表及本地安装状态"""
+    model_dir = os.path.expanduser("~/.u2net")
+    sessions = {
+        "bria-rmbg": {"name": "商业级 (bria-rmbg)", "group": "推荐", "size": "~170MB"},
+        "birefnet-general": {"name": "最强通用 (birefnet-general)", "group": "推荐", "size": "~970MB"},
+        "birefnet-massive": {"name": "海量数据版 (birefnet-massive)", "group": "推荐", "size": "~970MB"},
+        "birefnet-portrait": {"name": "人像专用 (birefnet-portrait)", "group": "人像", "size": "~970MB"},
+        "u2net_human_seg": {"name": "人体发丝 (u2net_human_seg)", "group": "人像", "size": "~170MB"},
+        "isnet-anime": {"name": "动漫插画 (isnet-anime)", "group": "动漫", "size": "~170MB"},
+        "birefnet-general-lite": {"name": "BiRefNet 轻量", "group": "极速", "size": "~170MB"},
+        "u2net": {"name": "通用均衡 (u2net)", "group": "极速", "size": "~170MB"},
+        "u2netp": {"name": "极速版 (u2netp)", "group": "极速", "size": "~50MB"},
+        "silueta": {"name": "最小体积 (silueta)", "group": "极速", "size": "~43MB"},
+        "isnet-general-use": {"name": "高精度通用", "group": "其他", "size": "~170MB"},
+        "u2net_cloth_seg": {"name": "服装解析", "group": "其他", "size": "~170MB"},
+        "birefnet-dis": {"name": "二分图像", "group": "其他", "size": "~970MB"},
+        "birefnet-hrsod": {"name": "高清显著", "group": "其他", "size": "~970MB"},
+        "birefnet-cod": {"name": "伪装检测", "group": "其他", "size": "~970MB"},
+        "sam": {"name": "SAM 通用分割", "group": "其他", "size": "~370MB"},
+    }
+    for key, info in sessions.items():
+        fpath = os.path.join(model_dir, f"{key}.onnx")
+        info["installed"] = os.path.exists(fpath)
+        info["path"] = fpath
+    return {"model_dir": model_dir, "models": sessions}
+
+
+@app.post("/api/open-model-dir")
+async def open_model_dir():
+    """用系统文件管理器打开模型目录"""
+    model_dir = os.path.expanduser("~/.u2net")
+    os.makedirs(model_dir, exist_ok=True)
+    os.startfile(model_dir)
+    return {"success": True, "path": model_dir}
 
 
 @app.post("/api/remove-bg")
