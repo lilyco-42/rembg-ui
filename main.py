@@ -8,9 +8,7 @@ import threading
 import webbrowser
 from typing import Any  # 明确类型声明，让编辑器和静态检查彻底闭嘴
 
-# 共享模块路径（D:\Code\shared）
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from shared.sponsor import sponsor_router, set_config, SponsorConfig, SponsorMethod, TutorialLink
+from sponsor import sponsor_router, set_config, SponsorConfig, SponsorMethod, TutorialLink
 
 
 def find_available_port(default: int = 8042) -> int:
