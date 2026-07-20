@@ -64,7 +64,7 @@ app = FastAPI()
 app.include_router(sponsor_router)
 set_config(SponsorConfig(
     methods=[
-        SponsorMethod(name="微信支付", icon="💚", qr_image="assets/wechat_pay.png"),
+        SponsorMethod(name="微信支付", icon="💚", qr_image="assets/wechatpay.png"),
         SponsorMethod(name="支付宝", icon="💙", qr_image="assets/alipay.png"),
         SponsorMethod(name="爱发电", icon="🧡", url="https://afdian.net/"),
     ],
