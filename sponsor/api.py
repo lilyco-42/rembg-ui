@@ -104,11 +104,19 @@ async def sponsor_config():
 @router.get("/assets/{filename}")
 async def serve_asset(filename: str):
     """提供 sponsor assets 目录中的静态文件"""
-    assets_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
-    filepath = os.path.join(assets_dir, filename)
-    if not os.path.isfile(filepath):
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(filepath)
+    if getattr(sys, "frozen", False):
+        # Nuitka 打包后
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 尝试多个路径
+    for sub_path in ["sponsor/assets", "assets"]:
+        filepath = os.path.join(base_dir, sub_path, filename)
+        if os.path.isfile(filepath):
+            return FileResponse(filepath)
+    
+    raise HTTPException(status_code=404, detail="Asset not found")
 
 
 def _get_window():

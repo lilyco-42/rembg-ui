@@ -22,6 +22,7 @@ def build(mode: str = "release"):
         f"--windows-console-mode={'force' if is_debug else 'disable'}",
         f"--windows-icon-from-ico={ROOT / 'rembg.ico'}",
         f"--include-data-dir={ROOT / 'frontend'}=frontend",
+        f"--include-data-dir={ROOT / 'sponsor' / 'assets'}=sponsor/assets",
         "--include-package=fastapi",
         "--include-package=sponsor",
         "--nofollow-import-to=fastapi.agents",
