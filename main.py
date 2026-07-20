@@ -5,7 +5,12 @@ import random
 import socket
 import sys
 import threading
+import webbrowser
 from typing import Any  # 明确类型声明，让编辑器和静态检查彻底闭嘴
+
+# 共享模块路径（D:\Code\shared）
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from shared.sponsor import sponsor_router, SponsorConfig, build_modal_html, build_modal_js, SPONSOR_QR_CDN
 
 
 def find_available_port(default: int = 8042) -> int:
@@ -58,6 +63,7 @@ from pydantic import BaseModel
 from rembg import new_session, remove
 
 app = FastAPI()
+app.include_router(sponsor_router)
 SERVER_PORT = find_available_port()
 
 
@@ -302,4 +308,5 @@ if __name__ == "__main__":
 
     # 5. GUI 占领主线程启动
     print("[UI] 正在启动桌面窗口...")
-    webview.start()
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rembg.ico")
+    webview.start(icon=icon_path)
