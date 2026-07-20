@@ -10,7 +10,7 @@ from typing import Any  # 明确类型声明，让编辑器和静态检查彻底
 
 # 共享模块路径（D:\Code\shared）
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from shared.sponsor import sponsor_router, SponsorConfig, build_modal_html, build_modal_js, SPONSOR_QR_CDN
+from shared.sponsor import sponsor_router, set_config, SponsorConfig, SponsorMethod, TutorialLink
 
 
 def find_available_port(default: int = 8042) -> int:
@@ -64,6 +64,17 @@ from rembg import new_session, remove
 
 app = FastAPI()
 app.include_router(sponsor_router)
+set_config(SponsorConfig(
+    methods=[
+        SponsorMethod(name="微信支付", icon="💚", qr_image="assets/wechat_pay.png"),
+        SponsorMethod(name="支付宝", icon="💙", qr_image="assets/alipay.png"),
+        SponsorMethod(name="爱发电", icon="🧡", url="https://afdian.net/"),
+    ],
+    tutorials=[TutorialLink(title="B 站教程视频", url="https://www.bilibili.com/video/BV1xx411c7mD")],
+    project_name="Rembg Studio",
+    project_version="1.0.0",
+    project_repo="https://github.com/lilyco-42/rembg-ui",
+))
 SERVER_PORT = find_available_port()
 
 

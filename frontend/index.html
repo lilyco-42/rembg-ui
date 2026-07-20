@@ -719,78 +719,71 @@
     <div class="sponsor-modal-overlay" id="sponsorModalOverlay" onclick="if(event.target===this)closeSponsorModal()">
         <div class="sponsor-modal">
             <div class="sponsor-header">
-                <h2>赞助与教程</h2>
+                <h2 id="sponsorTitle">赞助与教程</h2>
                 <button class="sponsor-close" onclick="closeSponsorModal()">&times;</button>
             </div>
-            <div class="sponsor-body">
-                <div class="sponsor-qr-section">
-                    <div id="sponsorQR"></div>
-                    <div class="sponsor-qr-label">扫码赞助 Rembg Studio</div>
-                </div>
-                <div class="sponsor-actions">
-                    <button class="sponsor-btn sponsor-btn-copy" id="sponsorCopyBtn" onclick="copySponsorLink()">复制赞助链接</button>
-                    <button class="sponsor-btn sponsor-btn-save" onclick="saveQRCode()">保存二维码</button>
-                </div>
-                <div class="sponsor-tutorials">
-                    <div class="st-label">教程</div>
-                    <a class="sponsor-tutorial-link" onclick="openTutorial('https://www.bilibili.com/video/BV1xx411c7mD')">
-                        <div class="sponsor-tutorial-icon">&#9654;</div>
-                        <div class="sponsor-tutorial-info">
-                            <div class="sponsor-tutorial-title">B 站教程视频</div>
-                            <div class="sponsor-tutorial-desc">点击在系统浏览器中打开</div>
-                        </div>
-                        <div class="sponsor-tutorial-arrow">&#9656;</div>
-                    </a>
-                </div>
-                <div class="sponsor-footer">
-                    Rembg Studio v1.0.0
-                </div>
+            <div class="sponsor-body" id="sponsorBody">
+                <div class="loading" style="padding:20px">加载中...</div>
             </div>
         </div>
     </div>
 
     <script>
-        const SPONSOR_URL = 'https://example.com/sponsor';
-        const SPONSOR_QR = '';
+        let _sponsorConfig = null;
 
-        function openSponsorModal() {
-            document.getElementById('sponsorModalOverlay').classList.add('active');
-            if (typeof QRCode !== 'undefined') {
-                const el = document.getElementById('sponsorQR');
-                el.innerHTML = '';
-                new QRCode(el, {
-                    text: SPONSOR_QR || SPONSOR_URL,
-                    width: 180, height: 180,
-                    colorDark: '#eeeeee', colorLight: '#16213e',
-                    correctLevel: QRCode.CorrectLevel.M
-                });
-            }
+        async function loadSponsorConfig() {
+            if (_sponsorConfig) return _sponsorConfig;
+            try {
+                const res = await fetch('/api/sponsor/config');
+                _sponsorConfig = await res.json();
+            } catch(e) { _sponsorConfig = { methods: [], tutorials: [] }; }
+            return _sponsorConfig;
         }
+
+        async function openSponsorModal() {
+            document.getElementById('sponsorModalOverlay').classList.add('active');
+            const cfg = await loadSponsorConfig();
+            const body = document.getElementById('sponsorBody');
+            document.getElementById('sponsorTitle').textContent = '赞助与教程';
+
+            let html = '';
+
+            // 赞助方式
+            for (const m of (cfg.methods || [])) {
+                html += '<div style="text-align:center;margin-bottom:18px">';
+                html += '<div style="font-size:14px;font-weight:600;margin-bottom:8px">' + m.icon + ' ' + m.name + '</div>';
+                if (m.qr_image) {
+                    const qrSrc = m.qr_image.startsWith('http') ? m.qr_image : '/api/sponsor/assets/' + m.qr_image;
+                    html += '<img src="' + qrSrc + '" style="width:180px;border-radius:10px;border:3px solid var(--border)" onerror="this.style.display=\'none\'" />';
+                }
+                if (m.url) {
+                    html += '<div style="margin-top:8px"><button class="sponsor-btn sponsor-btn-copy" style="display:inline-flex;width:auto;padding:8px 16px" onclick="openTutorial(\'' + m.url + '\')">打开链接</button></div>';
+                }
+                html += '</div>';
+            }
+
+            // 教程
+            if ((cfg.tutorials || []).length > 0) {
+                html += '<div class="sponsor-tutorials"><div class="st-label">教程</div>';
+                for (const t of cfg.tutorials) {
+                    html += '<a class="sponsor-tutorial-link" onclick="openTutorial(\'' + t.url + '\')">';
+                    html += '<div class="sponsor-tutorial-icon">' + (t.icon || '▶') + '</div>';
+                    html += '<div class="sponsor-tutorial-info"><div class="sponsor-tutorial-title">' + t.title + '</div>';
+                    html += '<div class="sponsor-tutorial-desc">' + (t.desc || '点击在系统浏览器中打开') + '</div></div>';
+                    html += '<div class="sponsor-tutorial-arrow">&#9656;</div></a>';
+                }
+                html += '</div>';
+            }
+
+            // 页脚
+            html += '<div class="sponsor-footer">' + (cfg.project_name || '') + ' v' + (cfg.project_version || '') + '</div>';
+            body.innerHTML = html;
+        }
+
         function closeSponsorModal() {
             document.getElementById('sponsorModalOverlay').classList.remove('active');
         }
-        async function copySponsorLink() {
-            try {
-                await navigator.clipboard.writeText(SPONSOR_URL);
-                const btn = document.getElementById('sponsorCopyBtn');
-                btn.textContent = '已复制';
-                setTimeout(() => { btn.innerHTML = '复制赞助链接'; }, 1500);
-            } catch(e) { prompt('请手动复制链接：', SPONSOR_URL); }
-        }
-        async function saveQRCode() {
-            const canvas = document.querySelector('#sponsorQR canvas');
-            if (!canvas) { alert('二维码尚未生成'); return; }
-            const base64 = canvas.toDataURL('image/png');
-            try {
-                const res = await fetch('/api/sponsor/save-file', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ base64_data: base64, filename: 'sponsor_qr.png' })
-                });
-                const data = await res.json();
-                if (data.success) alert('二维码已保存到: ' + data.path);
-            } catch(e) { alert('保存失败'); }
-        }
+
         async function openTutorial(url) {
             try {
                 await fetch('/api/sponsor/open-external', {
