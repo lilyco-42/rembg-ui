@@ -69,7 +69,7 @@ set_config(SponsorConfig(
         SponsorMethod(name="爱发电", icon="🧡", url="https://ifdian.net/a/Goth_donghaitang"),
         SponsorMethod(name="B站", icon="📺", url="https://space.bilibili.com/603079076"),
     ],
-    tutorials=[TutorialLink(title="B 站教程视频", url="https://www.bilibili.com/video/BV1xx411c7mD")],
+    tutorials=[TutorialLink(title="B站主页", url="https://space.bilibili.com/603079076")],
     project_name="Rembg Studio",
     project_version="1.0.0",
     project_repo="https://github.com/lilyco-42/rembg-ui",

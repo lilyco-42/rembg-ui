@@ -34,7 +34,7 @@ class SponsorConfig:
 
     # 教程链接
     tutorials: List[TutorialLink] = field(default_factory=lambda: [
-        TutorialLink(title="B 站教程视频", url="https://www.bilibili.com/video/BV1xx411c7mD"),
+        TutorialLink(title="B站主页", url="https://space.bilibili.com/603079076"),
     ])
 
     # 项目信息
