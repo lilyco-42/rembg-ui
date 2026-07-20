@@ -25,9 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clone shared modules
-        run: git clone https://github.com/lilyco-42/shared.git ${{ github.workspace }}/../shared
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
