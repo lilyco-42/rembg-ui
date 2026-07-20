@@ -29,6 +29,7 @@ class SponsorConfig:
         SponsorMethod(name="微信支付", icon="💚", qr_image="wechatpay.png"),
         SponsorMethod(name="支付宝", icon="💙", qr_image="alipay.png"),
         SponsorMethod(name="爱发电", icon="🧡", url="https://ifdian.net/a/Goth_donghaitang"),
+        SponsorMethod(name="B站", icon="📺", url="https://space.bilibili.com/603079076"),
     ])
 
     # 教程链接
