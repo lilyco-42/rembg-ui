@@ -748,19 +748,24 @@
 
             let html = '';
 
-            // 赞助方式
+            // 赞助方式 - 点击展开二维码
+            html += '<div style="display:flex;gap:12px;justify-content:center;margin-bottom:18px;flex-wrap:wrap">';
             for (const m of (cfg.methods || [])) {
-                html += '<div style="text-align:center;margin-bottom:18px">';
-                html += '<div style="font-size:14px;font-weight:600;margin-bottom:8px">' + m.icon + ' ' + m.name + '</div>';
-                if (m.qr_image) {
-                    const qrSrc = m.qr_image.startsWith('http') ? m.qr_image : '/api/sponsor/assets/' + m.qr_image;
-                    html += '<img src="' + qrSrc + '" style="width:180px;border-radius:10px;border:3px solid var(--border)" onerror="this.style.display=\'none\'" />';
-                }
-                if (m.url) {
-                    html += '<div style="margin-top:8px"><button class="sponsor-btn sponsor-btn-copy" style="display:inline-flex;width:auto;padding:8px 16px" onclick="openTutorial(\'' + m.url + '\')">打开链接</button></div>';
-                }
+                const id = 'sm_' + m.name.replace(/\s/g, '_');
+                html += '<div style="text-align:center">';
+                html += '<button class="sponsor-btn" onclick="toggleQr(\'' + id + '\', \'' + (m.qr_image || '') + '\', \'' + (m.url || '') + '\')" style="min-width:80px">';
+                html += m.icon + ' ' + m.name;
+                html += '</button>';
                 html += '</div>';
             }
+            html += '</div>';
+
+            // 二维码展示区（默认隐藏）
+            html += '<div id="qrDisplay" style="text-align:center;display:none;margin-bottom:18px">';
+            html += '<img id="qrImg" src="" style="max-width:220px;border-radius:10px;border:3px solid var(--border);display:none" />';
+            html += '<div id="qrLoading" style="display:none;color:var(--text-dim)">加载中...</div>';
+            html += '<div id="qrBtn" style="margin-top:10px;display:none"><button class="sponsor-btn sponsor-btn-copy" onclick="openTutorial(document.getElementById(\'qrBtn\').dataset.url)">打开链接</button></div>';
+            html += '</div>';
 
             // 教程
             if ((cfg.tutorials || []).length > 0) {
@@ -778,6 +783,48 @@
             // 页脚
             html += '<div class="sponsor-footer">' + (cfg.project_name || '') + ' v' + (cfg.project_version || '') + '</div>';
             body.innerHTML = html;
+        }
+
+        let _currentQr = null;
+        function toggleQr(id, qrImage, url) {
+            const display = document.getElementById('qrDisplay');
+            const img = document.getElementById('qrImg');
+            const loading = document.getElementById('qrLoading');
+            const btn = document.getElementById('qrBtn');
+
+            // 点击同一个按钮则关闭
+            if (_currentQr === id) {
+                display.style.display = 'none';
+                img.style.display = 'none';
+                _currentQr = null;
+                return;
+            }
+
+            _currentQr = id;
+            display.style.display = 'block';
+
+            if (qrImage) {
+                // 显示二维码
+                loading.style.display = 'block';
+                img.style.display = 'none';
+                const qrSrc = qrImage.startsWith('http') ? qrImage : '/api/sponsor/assets/' + qrImage;
+                img.onload = function() {
+                    loading.style.display = 'none';
+                    img.style.display = 'block';
+                };
+                img.onerror = function() {
+                    loading.style.display = 'none';
+                    display.style.display = 'none';
+                };
+                img.src = qrSrc;
+            } else if (url) {
+                // 纯链接，直接打开
+                img.style.display = 'none';
+                loading.style.display = 'none';
+                openTutorial(url);
+                display.style.display = 'none';
+                _currentQr = null;
+            }
         }
 
         function closeSponsorModal() {
