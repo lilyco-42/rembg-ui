@@ -26,10 +26,9 @@ class SponsorConfig:
     """赞助配置"""
     # 赞助方式列表
     methods: List[SponsorMethod] = field(default_factory=lambda: [
-        SponsorMethod(name="微信支付", icon="💚", qr_image="assets/wechat_pay.png"),
-        SponsorMethod(name="支付宝", icon="💙", qr_image="assets/alipay.png"),
-        SponsorMethod(name="爱发电", icon="🧡", url="https://afdian.net/"),
-        SponsorMethod(name="GitHub Sponsors", icon="💛", url="https://github.com/sponsors"),
+        SponsorMethod(name="微信支付", icon="💚", qr_image="wechatpay.png"),
+        SponsorMethod(name="支付宝", icon="💙", qr_image="alipay.png"),
+        SponsorMethod(name="爱发电", icon="🧡", url="https://ifdian.net/a/Goth_donghaitang"),
     ])
 
     # 教程链接
