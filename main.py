@@ -6,7 +6,7 @@ import socket
 import sys
 import threading
 import webbrowser
-from typing import Any  # 明确类型声明，让编辑器和静态检查彻底闭嘴
+from typing import Any, Optional  # 明确类型声明，让编辑器和静态检查彻底闭嘴
 
 from sponsor import sponsor_router, set_config, SponsorConfig, SponsorMethod, TutorialLink
 
@@ -59,6 +59,7 @@ from fastapi.responses import HTMLResponse
 from PIL import Image
 from pydantic import BaseModel
 from rembg import new_session, remove
+from processors.sam_processor import MobileSAMProcessor
 
 app = FastAPI()
 app.include_router(sponsor_router)
@@ -96,6 +97,10 @@ session_lock = threading.Lock()
 window_instance: Any = None
 uvicorn_server = None
 server_ready = threading.Event()
+
+sam_processor: Optional[MobileSAMProcessor] = None
+sam_temp_path: Optional[str] = None
+sam_last_result: Optional[dict] = None
 
 
 def get_model_session(model_name: str):
@@ -245,6 +250,105 @@ async def save_image(req: SaveImageRequest):
         return {"success": True, "path": save_path}
     except Exception as e:
         print(f"[Error] 保存文件失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+
+def _get_sam() -> MobileSAMProcessor:
+    global sam_processor
+    if sam_processor is None:
+        print("[SAM] 初始化 MobileSAM 模型...")
+        sam_processor = MobileSAMProcessor()
+    return sam_processor
+
+
+@app.post("/api/sam/load-image")
+async def sam_load_image(file: UploadFile = File(...)):
+    global sam_temp_path
+    try:
+        content = await file.read()
+        ext = os.path.splitext(file.filename or "image.png")[1] or ".png"
+        sam_temp_path = os.path.join(TEMP_DIR, f"sam_input{ext}")
+        with open(sam_temp_path, "wb") as f:
+            f.write(content)
+
+        proc = _get_sam()
+        proc.load_image(sam_temp_path)
+        w, h = proc._orig_size
+        print(f"[SAM] 图片已加载: {w}x{h}")
+        return {"success": True, "width": w, "height": h}
+    except Exception as e:
+        print(f"[SAM Error] 加载失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/sam/segment")
+async def sam_segment(points_json: str = Form(...)):
+    global sam_temp_path, sam_last_result
+    if not sam_temp_path or not os.path.exists(sam_temp_path):
+        raise HTTPException(status_code=400, detail="请先加载图片")
+    try:
+        import json
+        points_data = json.loads(points_json)
+        pts = [(p["x"], p["y"]) for p in points_data]
+        labels = [p["label"] for p in points_data]  # 1=前景, 0=背景
+
+        proc = _get_sam()
+        result = proc.segment_with_points(pts, labels)
+        orig = Image.open(sam_temp_path)
+        candidates = []
+        for c in result.candidates:
+            rgba = proc.apply_mask(orig, c.mask)
+            buf = io.BytesIO()
+            rgba.save(buf, format="PNG")
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            candidates.append({
+                "label": c.label,
+                "score": round(c.score, 3),
+                "area_pct": round(c.area_pct, 1),
+                "image": f"data:image/png;base64,{b64}",
+            })
+        sam_last_result = {
+            "orig_size": proc._orig_size,
+            "candidates": result.candidates,
+        }
+        return {"success": True, "candidates": candidates}
+    except Exception as e:
+        print(f"[SAM Error] 分割失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/sam/auto-segment")
+async def sam_auto_segment():
+    global sam_temp_path, sam_last_result
+    if not sam_temp_path or not os.path.exists(sam_temp_path):
+        raise HTTPException(status_code=400, detail="请先加载图片")
+    try:
+        proc = _get_sam()
+        result = proc.auto_segment(sam_temp_path)
+        orig = Image.open(sam_temp_path)
+        candidates = []
+        for c in result.candidates:
+            rgba = proc.apply_mask(orig, c.mask)
+            buf = io.BytesIO()
+            rgba.save(buf, format="PNG")
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            candidates.append({
+                "label": c.label,
+                "score": c.score,
+                "area_pct": c.area_pct,
+                "image": f"data:image/png;base64,{b64}",
+            })
+        sam_last_result = {
+            "orig_size": proc._orig_size,
+            "candidates": result.candidates,
+        }
+        return {"success": True, "candidates": candidates}
+    except Exception as e:
+        print(f"[SAM Error] 自动分割失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

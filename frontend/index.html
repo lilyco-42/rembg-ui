@@ -180,6 +180,34 @@
             height: 16px;
         }
 
+        .mode-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-input);
+            border-radius: var(--radius);
+            padding: 3px;
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 8px 4px;
+            border: none;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text-dim);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .mode-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+        .mode-tab:hover:not(.active) { color: var(--text); }
+        #samModeContent { display: none; }
+        #samModeContent.visible { display: block; }
+
         .model-dir-box {
             background: var(--bg-input);
             border: 1px solid var(--border);
@@ -209,6 +237,126 @@
         .model-status.has-missing {
             color: #e6a817;
         }
+
+        .sam-hint {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 6px;
+            background: var(--bg-input);
+            border-radius: var(--radius);
+        }
+        .candidate-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .candidate-item {
+            flex: 1;
+            min-width: 80px;
+            background: var(--bg-input);
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .candidate-item:hover { border-color: var(--accent); }
+        .candidate-item.active { border-color: var(--accent); background: rgba(233,69,96,0.12); }
+        .candidate-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            display: block;
+        }
+        .candidate-info {
+            padding: 4px 6px;
+            font-size: 10px;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+        .candidate-info .score { color: var(--accent); font-weight: 600; }
+
+        [data-sam-mode=true] #origImg { cursor: crosshair; }
+        #resultImg.sam-has-result { cursor: cell; }
+
+        /* Point overlay */
+        .sam-points-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .sam-points-wrapper img { display: block; max-width: 100%; max-height: 100%; }
+        #pointCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
+        }
+        .sam-point-type-toggle {
+            display: flex; gap: 6px; margin-top: 6px;
+        }
+        .sam-point-type-toggle button {
+            flex: 1; padding: 6px; font-size: 11px; font-weight: 600;
+            border: 2px solid transparent; border-radius: var(--radius);
+            cursor: pointer; transition: all 0.2s;
+            background: var(--bg-input); color: var(--text-dim);
+        }
+        .sam-point-type-toggle .pt-positive.active {
+            border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1);
+        }
+        .sam-point-type-toggle .pt-negative.active {
+            border-color: #e74c3c; color: #e74c3c; background: rgba(231, 76, 60, 0.1);
+        }
+        .sam-toolbar {
+            display: flex; gap: 6px; margin-top: 6px;
+        }
+        .sam-toolbar button {
+            flex: 1; padding: 8px; font-size: 12px; font-weight: 600;
+            border: none; border-radius: var(--radius); cursor: pointer; transition: all 0.2s;
+        }
+        .sam-toolbar .run-sam {
+            background: var(--accent); color: white;
+        }
+        .sam-toolbar .run-sam:hover { filter: brightness(1.15); }
+        .sam-toolbar .clear-points {
+            background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
+        }
+        .sam-toolbar .clear-points:hover { border-color: var(--accent); }
+        .sam-points-info {
+            font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 4px;
+        }
+
+        /* Preprocess toolbar */
+        .preprocess-bar {
+            display: flex; gap: 4px; align-items: center; padding: 0 4px;
+        }
+        .preprocess-bar button {
+            padding: 4px 10px; font-size: 11px; font-weight: 600;
+            border: 1px solid var(--border); border-radius: 6px;
+            background: var(--bg-input); color: var(--text-dim);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .preprocess-bar button:hover { border-color: var(--accent); color: var(--text); }
+        .preprocess-bar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .preprocess-bar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+        /* Crop overlay */
+        #cropCanvas {
+            position: absolute; top: 0; left: 0;
+            cursor: crosshair; z-index: 2;
+        }
+        .crop-rect {
+            position: absolute; border: 2px dashed var(--accent);
+            background: rgba(233, 69, 96, 0.08);
+            pointer-events: none; z-index: 3;
+            display: none;
+        }
+        .crop-rect.show { display: block; }
 
         /* Main area */
         .main {
@@ -240,7 +388,7 @@
             position: relative;
             overflow: hidden;
         }
-        .panel + .panel { border-left: 1px solid var(--border); }
+        .panel + .panel { border-left: 1px solid var(--border); flex: 2; }
         .panel-header {
             padding: 10px 16px;
             font-size: 12px;
@@ -405,35 +553,117 @@
     <div class="sidebar">
         <h1>Rembg Studio</h1>
 
-        <div class="section-label">模型</div>
-        <select id="modelSelect">
-            <optgroup label="✨ 推荐">
-                <option value="bria-rmbg" selected>商业级 (bria-rmbg)</option>
-                <option value="birefnet-general">最强通用 (birefnet-general)</option>
-                <option value="birefnet-massive">海量数据版 (birefnet-massive)</option>
-            </optgroup>
-            <optgroup label="👤 人像">
-                <option value="birefnet-portrait">人像专用 (birefnet-portrait)</option>
-                <option value="u2net_human_seg">人体发丝 (u2net_human_seg)</option>
-            </optgroup>
-            <optgroup label="🎨 动漫">
-                <option value="isnet-anime">动漫插画 (isnet-anime)</option>
-            </optgroup>
-            <optgroup label="⚡ 极速">
-                <option value="birefnet-general-lite">BiRefNet 轻量</option>
-                <option value="u2net">通用均衡 (u2net)</option>
-                <option value="u2netp">极速版 (u2netp)</option>
-                <option value="silueta">最小体积 (silueta)</option>
-            </optgroup>
-            <optgroup label="🔧 其他">
-                <option value="isnet-general-use">高精度通用</option>
-                <option value="u2net_cloth_seg">服装解析</option>
-                <option value="birefnet-dis">二分图像</option>
-                <option value="birefnet-hrsod">高清显著</option>
-                <option value="birefnet-cod">伪装检测</option>
-                <option value="sam">SAM 通用分割</option>
-            </optgroup>
-        </select>
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="rembg" onclick="switchMode('rembg')">Rembg 去背景</button>
+            <button class="mode-tab" data-mode="sam" onclick="switchMode('sam')">SAM 抠图</button>
+        </div>
+
+        <!-- Rembg mode content -->
+        <div id="rembgModeContent">
+            <div class="section-label">模型</div>
+            <select id="modelSelect">
+                <optgroup label="✨ 推荐">
+                    <option value="bria-rmbg" selected>商业级 (bria-rmbg)</option>
+                    <option value="birefnet-general">最强通用 (birefnet-general)</option>
+                    <option value="birefnet-massive">海量数据版 (birefnet-massive)</option>
+                </optgroup>
+                <optgroup label="👤 人像">
+                    <option value="birefnet-portrait">人像专用 (birefnet-portrait)</option>
+                    <option value="u2net_human_seg">人体发丝 (u2net_human_seg)</option>
+                </optgroup>
+                <optgroup label="🎨 动漫">
+                    <option value="isnet-anime">动漫插画 (isnet-anime)</option>
+                </optgroup>
+                <optgroup label="⚡ 极速">
+                    <option value="birefnet-general-lite">BiRefNet 轻量</option>
+                    <option value="u2net">通用均衡 (u2net)</option>
+                    <option value="u2netp">极速版 (u2netp)</option>
+                    <option value="silueta">最小体积 (silueta)</option>
+                </optgroup>
+                <optgroup label="🔧 其他">
+                    <option value="isnet-general-use">高精度通用</option>
+                    <option value="u2net_cloth_seg">服装解析</option>
+                    <option value="birefnet-dis">二分图像</option>
+                    <option value="birefnet-hrsod">高清显著</option>
+                    <option value="birefnet-cod">伪装检测</option>
+                    <option value="sam">SAM 通用分割</option>
+                </optgroup>
+            </select>
+
+            <div class="advanced-toggle" onclick="toggleAdvanced()">
+                <span id="advArrow">▶</span> 高级参数
+            </div>
+
+            <div class="advanced-panel" id="advPanel">
+                <div class="param-row">
+                    <label>Alpha Matting 精细边缘</label>
+                    <input type="checkbox" id="paramAlpha" onchange="document.getElementById('alphaParams').style.display=this.checked?'flex':'none'" />
+                </div>
+                <div id="alphaParams" style="display:none;flex-direction:column;gap:10px;padding:8px 0;">
+                    <div class="param-row">
+                        <label>前景阈值</label>
+                        <input type="range" id="paramFg" min="0" max="255" value="240" oninput="document.getElementById('fgVal').textContent=this.value" />
+                        <span class="val" id="fgVal">240</span>
+                    </div>
+                    <div class="param-row">
+                        <label>背景阈值</label>
+                        <input type="range" id="paramBg" min="0" max="255" value="10" oninput="document.getElementById('bgVal').textContent=this.value" />
+                        <span class="val" id="bgVal">10</span>
+                    </div>
+                    <div class="param-row">
+                        <label>腐蚀大小</label>
+                        <input type="range" id="paramErode" min="0" max="40" value="10" oninput="document.getElementById('erodeVal').textContent=this.value" />
+                        <span class="val" id="erodeVal">10</span>
+                    </div>
+                </div>
+                <div class="param-row">
+                    <label>后处理遮罩</label>
+                    <input type="checkbox" id="paramPostProcess" />
+                </div>
+                <div class="param-row">
+                    <label>仅输出遮罩</label>
+                    <input type="checkbox" id="paramOnlyMask" />
+                </div>
+            </div>
+        </div>
+
+        <!-- SAM mode content -->
+        <div id="samModeContent">
+            <div class="sam-hint">
+                🎯 自动检测全部物体 → 选中最像衣服的遮罩<br/>
+                点结果图排除多余区域（如同 PS 快速选择）
+            </div>
+            <button id="samLoadBtn" class="btn btn-primary" onclick="samLoadImage()" disabled>
+                📥 载入到 SAM
+            </button>
+
+            <div class="sam-toolbar" id="samAutoBar" style="display:none">
+                <button class="run-sam" onclick="samAutoDetect()" style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;background:var(--accent);color:white">
+                    🎯 自动检测全部物体
+                </button>
+            </div>
+
+            <div class="sam-point-type-toggle" id="pointTypeToggle" style="display:none">
+                <button class="pt-positive active" onclick="setSamPointType('positive')">🟢 前景加选</button>
+                <button class="pt-negative" onclick="setSamPointType('negative')">🔴 背景减选</button>
+            </div>
+
+            <div class="sam-toolbar" id="samToolbar" style="display:none">
+                <button class="run-sam" onclick="runSam()">▶ 应用点</button>
+                <button class="clear-points" onclick="clearSamPoints()">✕ 清除点</button>
+            </div>
+
+            <div class="sam-points-info" id="samPointsInfo"></div>
+
+            <div class="sam-refine-hint" id="samRefineHint" style="display:none;font-size:11px;color:var(--text-dim);text-align:center;padding:4px;background:var(--bg-input);border-radius:var(--radius);margin-top:4px">
+                💡 点击结果图中的多余区域可自动排除
+            </div>
+
+            <div id="samCandidates" style="display:none">
+                <div class="section-label" style="margin-top:8px">候选遮罩</div>
+                <div class="candidate-row" id="candidateRowSide"></div>
+            </div>
+        </div>
 
         <div class="section-label">输入</div>
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -444,46 +674,11 @@
             <div class="hint">支持 PNG / JPG / WEBP</div>
         </div>
 
-        <div class="advanced-toggle" onclick="toggleAdvanced()">
-            <span id="advArrow">▶</span> 高级参数
-        </div>
-
         <div class="section-label">模型目录</div>
         <div class="model-dir-box" id="modelDirBox" onclick="openModelDir()">
             <div class="model-dir-path" id="modelDirPath">加载中...</div>
             <div class="model-dir-hint">点击查看 / 打开目录</div>
             <div class="model-status" id="modelStatus"></div>
-        </div>
-        <div class="advanced-panel" id="advPanel">
-            <div class="param-row">
-                <label>Alpha Matting 精细边缘</label>
-                <input type="checkbox" id="paramAlpha" onchange="document.getElementById('alphaParams').style.display=this.checked?'flex':'none'" />
-            </div>
-            <div id="alphaParams" style="display:none;flex-direction:column;gap:10px;padding:8px 0;">
-                <div class="param-row">
-                    <label>前景阈值</label>
-                    <input type="range" id="paramFg" min="0" max="255" value="240" oninput="document.getElementById('fgVal').textContent=this.value" />
-                    <span class="val" id="fgVal">240</span>
-                </div>
-                <div class="param-row">
-                    <label>背景阈值</label>
-                    <input type="range" id="paramBg" min="0" max="255" value="10" oninput="document.getElementById('bgVal').textContent=this.value" />
-                    <span class="val" id="bgVal">10</span>
-                </div>
-                <div class="param-row">
-                    <label>腐蚀大小</label>
-                    <input type="range" id="paramErode" min="0" max="40" value="10" oninput="document.getElementById('erodeVal').textContent=this.value" />
-                    <span class="val" id="erodeVal">10</span>
-                </div>
-            </div>
-            <div class="param-row">
-                <label>后处理遮罩</label>
-                <input type="checkbox" id="paramPostProcess" />
-            </div>
-            <div class="param-row">
-                <label>仅输出遮罩</label>
-                <input type="checkbox" id="paramOnlyMask" />
-            </div>
         </div>
 
         <div style="flex:1"></div>
@@ -502,6 +697,13 @@
     <div class="main">
         <div class="toolbar">
             <span id="statusText">就绪 — 选择图片开始</span>
+            <div class="preprocess-bar" id="preprocessBar" style="display:none">
+                <button onclick="toggleCropMode()" id="cropBtn">✂ 裁剪</button>
+                <button onclick="rotateImage(90)">↻ 右旋</button>
+                <button onclick="rotateImage(-90)">↺ 左旋</button>
+                <div class="sep"></div>
+                <button onclick="resetImage()" style="color:#e74c3c">✕ 重置</button>
+            </div>
             <span id="modelInfo">bria-rmbg</span>
         </div>
         <div class="preview-area">
@@ -513,7 +715,12 @@
                         <div class="icon">🖼️</div>
                         拖拽或点击左侧选择图片
                     </div>
-                    <img id="origImg" style="display:none" />
+                    <div class="sam-points-wrapper" id="origWrapper" style="display:none">
+                        <img id="origImg" />
+                        <canvas id="pointCanvas"></canvas>
+                        <canvas id="cropCanvas"></canvas>
+                        <div class="crop-rect" id="cropRect"></div>
+                    </div>
                 </div>
             </div>
             <div class="panel">
@@ -529,6 +736,7 @@
                         <div class="loading-text" id="loadingText">正在处理...</div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -537,11 +745,22 @@
         let resultBase64 = null;
         let currentFileName = "output.png";
         let selectedFile = null;
+        let originalFileName = null;
+        let originalFileRef = null; // original File object for reset
+        let isCroppedOrRotated = false;
 
-        // Model info
+        // Crop state
+        let cropActive = false;
+        let cropStart = null;
+        let cropRect = null;
+
+        // Model info / mode display
         document.getElementById("modelSelect").addEventListener("change", function() {
             document.getElementById("modelInfo").textContent = this.value;
         });
+        function updateToolbarInfo() {
+            document.getElementById("modelInfo").textContent = currentMode === "sam" ? "MobileSAM" : document.getElementById("modelSelect").value;
+        }
 
         // Advanced toggle
         function toggleAdvanced() {
@@ -599,12 +818,20 @@
 
         function loadFile(file) {
             selectedFile = file;
+            originalFileName = file.name;
+            originalFileRef = file;
+            isCroppedOrRotated = false;
             currentFileName = "rmbg_" + file.name.replace(/\.[^.]+$/, "") + ".png";
+            document.getElementById("preprocessBar").style.display = "flex";
 
             const reader = new FileReader();
             reader.onload = e => {
-                document.getElementById("origImg").src = e.target.result;
-                document.getElementById("origImg").style.display = "block";
+                const dataUrl = e.target.result;
+                const img = document.getElementById("origImg");
+                const wrapper = document.getElementById("origWrapper");
+                img.src = dataUrl;
+                img.style.display = "block";
+                wrapper.style.display = "inline-block";
                 document.getElementById("origEmpty").style.display = "none";
                 document.getElementById("runBtn").disabled = false;
                 document.getElementById("dropHint").style.display = "none";
@@ -612,9 +839,20 @@
                 document.getElementById("dropFilename").textContent = file.name;
                 dropZone.classList.add("has-file");
                 document.getElementById("statusText").textContent = "已载入: " + file.name;
+                document.getElementById("samLoadBtn").disabled = false;
+                samLoaded = false;
+                samOrigImageData = dataUrl;
+                img.onload = () => {
+                    drawSamPoints();
+                    exitCropMode();
+                };
             };
             reader.readAsDataURL(file);
         }
+
+        // Click handlers on orig image and result image
+        document.getElementById("origImg").addEventListener("click", onOrigImageClick);
+        document.getElementById("resultImg").addEventListener("click", onResultImageClick);
 
         async function processImage() {
             if (!selectedFile) return;
@@ -626,7 +864,7 @@
 
             const modelSelect = document.getElementById("modelSelect");
             const formData = new FormData();
-            formData.append("file", selectedFile);
+            formData.append("file", selectedFile, selectedFile.name || originalFileName || "image.png");
             formData.append("model_name", modelSelect.value);
             formData.append("alpha_matting", document.getElementById("paramAlpha").checked);
             formData.append("alpha_matting_fg", document.getElementById("paramFg").value);
@@ -687,7 +925,448 @@
         document.addEventListener("keydown", e => {
             if (e.ctrlKey && e.key === "Enter") processImage();
             if (e.ctrlKey && e.key === "s") { e.preventDefault(); downloadResult(); }
+            if (e.key === "Escape") exitCropMode();
+            if (e.key === "Enter" && cropActive) applyCrop();
         });
+
+        // ─── Preprocess: crop / rotate ────────────────────────────
+
+        // Replace displayed image with a new one (blob)
+        function replaceDisplayedImage(blob) {
+            selectedFile = blob;
+            isCroppedOrRotated = true;
+            samLoaded = false;
+            document.getElementById("samLoadBtn").disabled = false;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const dataUrl = e.target.result;
+                document.getElementById("origImg").src = dataUrl;
+                document.getElementById("origImg").onload = () => {
+                    drawSamPoints();
+                    sizeCropCanvases();
+                };
+                samOrigImageData = dataUrl;
+                // Clear previous results
+                document.getElementById("resultEmpty").style.display = "block";
+                document.getElementById("resultEmpty").innerHTML = '<div class="icon">🖼️</div>已更新原图';
+                document.getElementById("resultImg").style.display = "none";
+                document.getElementById("resultImg").src = "";
+                resultBase64 = null;
+                document.getElementById("downloadBtn").disabled = true;
+            };
+            reader.readAsDataURL(blob);
+        }
+
+        // Crop mode
+        function toggleCropMode() {
+            if (cropActive) { exitCropMode(); return; }
+            const img = document.getElementById("origImg");
+            if (!img.src || img.style.display === "none") return;
+            cropActive = true;
+            document.getElementById("cropBtn").classList.add("active");
+            document.getElementById("cropCanvas").style.display = "block";
+            document.getElementById("pointCanvas").style.pointerEvents = "none"; // prevent point placement during crop
+            sizeCropCanvases();
+            document.getElementById("statusText").textContent = "✂ 拖拽选择裁剪区域，按 Enter 确认，Esc 取消";
+        }
+
+        function exitCropMode() {
+            cropActive = false;
+            document.getElementById("cropBtn").classList.remove("active");
+            document.getElementById("cropCanvas").style.display = "none";
+            document.getElementById("cropRect").classList.remove("show");
+            document.getElementById("pointCanvas").style.pointerEvents = "none";
+            cropStart = null;
+            cropRect = null;
+            document.getElementById("statusText").textContent = "已取消裁剪";
+        }
+
+        function sizeCropCanvases() {
+            const img = document.getElementById("origImg");
+            if (!img || img.naturalWidth === 0) return;
+            const w = img.getBoundingClientRect().width;
+            const h = img.getBoundingClientRect().height;
+            ["cropCanvas", "pointCanvas"].forEach(id => {
+                const c = document.getElementById(id);
+                if (c) { c.width = w; c.height = h; }
+            });
+        }
+
+        // Crop mouse handlers
+        document.getElementById("cropCanvas").addEventListener("mousedown", e => {
+            if (!cropActive) return;
+            const rect = document.getElementById("cropCanvas").getBoundingClientRect();
+            cropStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        });
+
+        document.getElementById("cropCanvas").addEventListener("mousemove", e => {
+            if (!cropActive || !cropStart) return;
+            const rect = document.getElementById("cropCanvas").getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const rx = document.getElementById("cropRect");
+            rx.classList.add("show");
+            rx.style.left = Math.min(cropStart.x, x) + "px";
+            rx.style.top = Math.min(cropStart.y, y) + "px";
+            rx.style.width = Math.abs(x - cropStart.x) + "px";
+            rx.style.height = Math.abs(y - cropStart.y) + "px";
+            cropRect = {
+                x: Math.min(cropStart.x, x),
+                y: Math.min(cropStart.y, y),
+                w: Math.abs(x - cropStart.x),
+                h: Math.abs(y - cropStart.y),
+            };
+        });
+
+        document.addEventListener("mouseup", () => {
+            if (!cropActive) return;
+            cropStart = null;
+            if (cropRect && (cropRect.w < 5 || cropRect.h < 5)) {
+                exitCropMode();
+            } else if (cropRect) {
+                document.getElementById("statusText").textContent =
+                    `✂ 选区 ${Math.round(cropRect.w)}×${Math.round(cropRect.h)}，按 Enter 确认`;
+            }
+        });
+
+        function applyCrop() {
+            if (!cropRect || cropRect.w < 5 || cropRect.h < 5) return;
+            const img = document.getElementById("origImg");
+            const scaleX = img.naturalWidth / img.getBoundingClientRect().width;
+            const scaleY = img.naturalHeight / img.getBoundingClientRect().height;
+
+            const sx = Math.round(cropRect.x * scaleX);
+            const sy = Math.round(cropRect.y * scaleY);
+            const sw = Math.round(cropRect.w * scaleX);
+            const sh = Math.round(cropRect.h * scaleY);
+
+            const canvas = document.createElement("canvas");
+            canvas.width = sw;
+            canvas.height = sh;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+            canvas.toBlob(blob => {
+                blob.name = originalFileName || "crop.png";
+                exitCropMode();
+                replaceDisplayedImage(blob);
+                document.getElementById("statusText").textContent =
+                    `✅ 已裁剪至 ${sw}×${sh}`;
+            }, "image/png");
+        }
+
+        function rotateImage(deg) {
+            const img = document.getElementById("origImg");
+            if (!img.src || img.style.display === "none") return;
+
+            const canvas = document.createElement("canvas");
+            const w = img.naturalWidth, h = img.naturalHeight;
+            canvas.width = deg === 90 || deg === -90 ? h : w;
+            canvas.height = deg === 90 || deg === -90 ? w : h;
+            const ctx = canvas.getContext("2d");
+
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(deg * Math.PI / 180);
+            ctx.drawImage(img, -w / 2, -h / 2);
+
+            canvas.toBlob(blob => {
+                blob.name = originalFileName || "rotated.png";
+                replaceDisplayedImage(blob);
+                document.getElementById("statusText").textContent = `↻ 旋转 ${deg}°`;
+            }, "image/png");
+        }
+
+        function resetImage() {
+            if (!originalFileRef) return;
+            const wasCropped = isCroppedOrRotated;
+            loadFile(originalFileRef);
+            if (wasCropped) {
+                document.getElementById("statusText").textContent = "↺ 已恢复原始图片";
+            }
+            exitCropMode();
+        }
+
+        // ─── end preprocess ────────────────────────────────────────
+
+        // Mode switching
+        let currentMode = "rembg";
+        function switchMode(mode) {
+            exitCropMode();
+            currentMode = mode;
+            document.querySelectorAll(".mode-tab").forEach(t => t.classList.toggle("active", t.dataset.mode === mode));
+            document.getElementById("rembgModeContent").style.display = mode === "rembg" ? "block" : "none";
+            document.getElementById("samModeContent").style.display = mode === "sam" ? "block" : "none";
+            document.getElementById("origBody").dataset.samMode = mode === "sam" ? "true" : "false";
+            document.getElementById("resultImg").classList.remove("sam-has-result");
+
+            document.getElementById("samCandidates").style.display = "none";
+            document.getElementById("samAutoBar").style.display = "none";
+            document.getElementById("pointTypeToggle").style.display = "none";
+            document.getElementById("samToolbar").style.display = "none";
+            document.getElementById("samRefineHint").style.display = "none";
+            document.getElementById("samLoadBtn").disabled = !selectedFile;
+            if (mode === "sam") {
+                document.getElementById("statusText").textContent = "SAM 模式 — 先载入图片";
+            }
+            updateToolbarInfo();
+        }
+
+        // SAM state
+        let samLoaded = false;
+        let samOrigImageData = null;
+        let samPoints = [];
+        let samPointType = "positive";
+        let samSelectedIndex = 0;
+
+        // SAM: load image
+        async function samLoadImage() {
+            if (!selectedFile) return;
+            document.getElementById("loadingMask").classList.add("active");
+            document.getElementById("loadingText").textContent = "SAM 加载图片中...";
+            document.getElementById("statusText").textContent = "SAM 编码图片中...";
+
+            const formData = new FormData();
+            formData.append("file", selectedFile, selectedFile.name || originalFileName || "image.png");
+
+            try {
+                const resp = await fetch("/api/sam/load-image", { method: "POST", body: formData });
+                const data = await resp.json();
+                if (data.success) {
+                    samLoaded = true;
+                    clearSamPoints();
+                    document.getElementById("samAutoBar").style.display = "flex";
+                    document.getElementById("samCandidates").style.display = "none";
+        
+                    document.getElementById("pointTypeToggle").style.display = "none";
+                    document.getElementById("samToolbar").style.display = "none";
+                    document.getElementById("samRefineHint").style.display = "none";
+                    document.getElementById("resultBody").dataset.samHasResult = "false";
+                    document.getElementById("resultEmpty").style.display = "block";
+                    document.getElementById("resultEmpty").innerHTML = '<div class="icon">🎯</div>点「自动检测全部物体」识别所有区域';
+                    document.getElementById("resultImg").style.display = "none";
+                    document.getElementById("statusText").textContent = `SAM 就绪 — ${data.width}x${data.height}，点击自动检测`;
+                    updateSamUI();
+                }
+            } catch (e) {
+                document.getElementById("statusText").textContent = "❌ SAM 加载失败";
+                console.error(e);
+            } finally {
+                document.getElementById("loadingMask").classList.remove("active");
+                document.getElementById("loadingText").textContent = "正在处理...";
+            }
+        }
+
+        // SAM: auto detect all objects
+        async function samAutoDetect() {
+            document.getElementById("loadingMask").classList.add("active");
+            document.getElementById("loadingText").textContent = "SAM 自动检测中...";
+            document.getElementById("statusText").textContent = "自动检测全部物体...";
+
+            try {
+                const resp = await fetch("/api/sam/auto-segment", { method: "POST" });
+                const data = await resp.json();
+                if (data.success) {
+                    clearSamPoints();
+                    document.getElementById("samAutoBar").style.display = "none";
+                    document.getElementById("pointTypeToggle").style.display = "flex";
+                    document.getElementById("samToolbar").style.display = "flex";
+                    document.getElementById("samRefineHint").style.display = "block";
+                    showSamCandidates(data.candidates);
+                    document.getElementById("statusText").textContent =
+                        `🎯 检测到 ${data.candidates.length} 个区域 — 选中最像衣服的遮罩`;
+                } else {
+                    document.getElementById("statusText").textContent = "❌ 自动检测失败";
+                }
+            } catch (e) {
+                document.getElementById("statusText").textContent = "❌ 网络错误";
+                console.error(e);
+            } finally {
+                document.getElementById("loadingMask").classList.remove("active");
+                document.getElementById("loadingText").textContent = "正在处理...";
+            }
+        }
+
+        // SAM: set point type
+        function setSamPointType(type) {
+            samPointType = type;
+            document.querySelectorAll(".pt-positive, .pt-negative").forEach(b => b.classList.toggle("active", b.classList.contains("pt-" + type)));
+        }
+
+        // SAM: draw points on canvas
+        function drawSamPoints() {
+            const canvas = document.getElementById("pointCanvas");
+            const img = document.getElementById("origImg");
+            if (!canvas || !img || img.naturalWidth === 0) return;
+
+            const rect = img.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const scaleX = rect.width / img.naturalWidth;
+            const scaleY = rect.height / img.naturalHeight;
+
+            samPoints.forEach(p => {
+                const cx = p.x * scaleX;
+                const cy = p.y * scaleY;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = p.label === 1 ? "rgba(46, 204, 113, 0.85)" : "rgba(231, 76, 60, 0.85)";
+                ctx.fill();
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx - 3, cy); ctx.lineTo(cx + 3, cy);
+                ctx.moveTo(cx, cy - 3); ctx.lineTo(cx, cy + 3);
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+
+        // SAM: add a point
+        function addSamPoint(x, y) {
+            const label = samPointType === "positive" ? 1 : 0;
+            const existing = samPoints.findIndex(p => Math.abs(p.x - x) < 3 && Math.abs(p.y - y) < 3);
+            if (existing >= 0) {
+                samPoints.splice(existing, 1);
+            } else {
+                samPoints.push({ x, y, label });
+            }
+            updateSamUI();
+            drawSamPoints();
+        }
+
+        function updateSamUI() {
+            const pos = samPoints.filter(p => p.label === 1).length;
+            const neg = samPoints.filter(p => p.label === 0).length;
+            document.getElementById("samPointsInfo").textContent =
+                samPoints.length > 0
+                    ? `🟢 ${pos} 个前景 · 🔴 ${neg} 个背景（点击可移除）`
+                    : "👆 点击原图添加点（正/负），或点结果图排除";
+        }
+
+        // SAM: clear all points
+        function clearSamPoints() {
+            samPoints = [];
+            updateSamUI();
+            const canvas = document.getElementById("pointCanvas");
+            if (canvas) {
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            document.getElementById("statusText").textContent = "已清除所有点";
+        }
+
+        // SAM: click on orig image → add point
+        function onOrigImageClick(e) {
+            if (currentMode !== "sam" || !samLoaded) return;
+            const img = document.getElementById("origImg");
+            const rect = img.getBoundingClientRect();
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+            addSamPoint(x, y);
+        }
+
+        // SAM: click on result image → add negative point & re-run
+        function onResultImageClick(e) {
+            if (currentMode !== "sam" || !samLoaded) return;
+            const img = document.getElementById("resultImg");
+            if (img.style.display === "none") return;
+
+            const rect = img.getBoundingClientRect();
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+
+            // Add as negative point
+            const existing = samPoints.findIndex(p => Math.abs(p.x - x) < 3 && Math.abs(p.y - y) < 3);
+            if (existing >= 0) {
+                samPoints.splice(existing, 1);
+            } else {
+                samPoints.push({ x, y, label: 0 });
+            }
+            updateSamUI();
+            drawSamPoints();
+            runSam();
+        }
+
+        // SAM: run segmentation with all points
+        async function runSam() {
+            if (!samPoints.length) {
+                document.getElementById("statusText").textContent = "⚠ 请先点击原图添加至少一个点";
+                return;
+            }
+
+            document.getElementById("loadingMask").classList.add("active");
+            document.getElementById("loadingText").textContent = "SAM 分割中...";
+            document.getElementById("statusText").textContent =
+                `分割中 (${samPoints.filter(p=>p.label===1).length} 前景, ${samPoints.filter(p=>p.label===0).length} 背景)...`;
+
+            const formData = new FormData();
+            formData.append("points_json", JSON.stringify(samPoints));
+
+            try {
+                const resp = await fetch("/api/sam/segment", { method: "POST", body: formData });
+                const data = await resp.json();
+                if (data.success) {
+                    showSamCandidates(data.candidates);
+                    document.getElementById("statusText").textContent =
+                        `✅ ${samPoints.length} 个点 — ${data.candidates.length} 个候选`;
+                } else {
+                    document.getElementById("statusText").textContent = "❌ 分割失败";
+                }
+            } catch (e) {
+                document.getElementById("statusText").textContent = "❌ 网络错误";
+                console.error(e);
+            } finally {
+                document.getElementById("loadingMask").classList.remove("active");
+                document.getElementById("loadingText").textContent = "正在处理...";
+            }
+        }
+
+        // SAM: show candidates
+        function showSamCandidates(candidates) {
+            document.getElementById("samCandidates").style.display = "block";
+            document.getElementById("samRefineHint").style.display = "block";
+            document.getElementById("resultImg").classList.add("sam-has-result");
+
+            const row = document.getElementById("candidateRowSide");
+            row.innerHTML = "";
+
+            function selectCandidate(i) {
+                samSelectedIndex = i;
+                const c = candidates[i];
+                document.getElementById("resultImg").src = c.image;
+                document.getElementById("resultImg").style.display = "block";
+                document.getElementById("resultEmpty").style.display = "none";
+                resultBase64 = c.image;
+                document.getElementById("downloadBtn").disabled = false;
+                Array.from(row.children).forEach((el, idx) => el.classList.toggle("active", idx === i));
+            }
+
+            candidates.forEach((c, i) => {
+                const div = document.createElement("div");
+                div.className = "candidate-item" + (i === 0 ? " active" : "");
+                div.innerHTML = `
+                    <img src="${c.image}" alt="候选${i}" />
+                    <div class="candidate-info">
+                        <div class="score">${c.area_pct}%</div>
+                        <div>${c.label}</div>
+                    </div>
+                `;
+                div.addEventListener("click", () => selectCandidate(i));
+                row.appendChild(div);
+            });
+
+            selectCandidate(0);
+        }
 
         // Load model status
         async function loadModelStatus() {
@@ -713,6 +1392,13 @@
         }
         document.getElementById("modelSelect").addEventListener("change", loadModelStatus);
         loadModelStatus();
+
+        // Resize: redraw SAM points
+        let resizeTimer;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(drawSamPoints, 150);
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 

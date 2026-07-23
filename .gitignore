@@ -12,3 +12,13 @@ wheels/
 # Large model files
 models/
 nuitka-crash-report.xml
+
+# Runtime temp files
+temp/
+
+# SAM model weights (downloaded on demand)
+mobile_sam.pt
+
+# Temp test scripts
+tests/
+需求.md
