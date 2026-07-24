@@ -2,8 +2,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import numpy as np
 from PIL import Image
+from scipy.ndimage import gaussian_filter
 from ultralytics import SAM
 from ultralytics.models.sam import Predictor as SAMPredictor
 from ultralytics.utils import DEFAULT_CFG
@@ -27,7 +29,7 @@ class SegmentResult:
 
 
 class MobileSAMProcessor:
-    def __init__(self, model_path: str = "mobile_sam.pt", device: str = "cpu") -> None:
+    def __init__(self, model_path: str = "sam_b.pt", device: str = "cpu") -> None:
         self.model = SAM(model_path)
         self.device = device
         self._predictor: Optional[SAMPredictor] = None
@@ -50,9 +52,14 @@ class MobileSAMProcessor:
             image_path = Path(image_path)
             if not image_path.exists():
                 raise FileNotFoundError(f"图片不存在: {image_path}")
-            predictor.set_image(str(image_path))
             with Image.open(image_path) as img:
                 self._orig_size = img.size
+                if img.mode == "RGBA":
+                    bg = Image.new("RGB", img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[3])
+                    predictor.set_image(np.array(bg))
+                else:
+                    predictor.set_image(str(image_path))
         for batch in predictor.dataset:
             predictor.batch = batch
             self._im_tensor = predictor.preprocess(batch[1])
@@ -60,6 +67,15 @@ class MobileSAMProcessor:
 
     def _get_im_tensor(self):
         return self._im_tensor
+
+    @staticmethod
+    def _smooth_mask(mask: np.ndarray, target_size: tuple[int, int]) -> np.ndarray:
+        mask_f = mask.astype(np.float32)
+        mask_img = Image.fromarray(mask_f, mode="F")
+        mask_img = mask_img.resize(target_size, Image.LANCZOS)
+        arr = np.array(mask_img, dtype=np.float32)
+        arr = gaussian_filter(arr, sigma=1.0)
+        return (arr > 0.5).astype(np.uint8) * 255
 
     @staticmethod
     def _generate_label(mask: np.ndarray, orig_w: int, orig_h: int) -> str:
@@ -106,36 +122,32 @@ class MobileSAMProcessor:
         if masks.shape[0] == 0:
             raise RuntimeError(f"坐标 ({x}, {y}) 处未生成 mask")
 
-        mask_bool = (masks[0] > 0).cpu().numpy()
-        mask_img = Image.fromarray(mask_bool.astype(np.uint8) * 255, mode="L")
-        mask_img = mask_img.resize((orig_w, orig_h), Image.NEAREST)
-        return np.array(mask_img)
+        mask_np = masks[0].detach().cpu().numpy().astype(np.float32)
+        return self._smooth_mask(mask_np, (orig_w, orig_h))
 
-    def segment_all_candidates(self, x: int, y: int) -> SegmentResult:
-        return self.segment_with_points([(x, y)], [1])
-
-    def segment_with_points(
+    def segment_with_prompts(
         self,
-        points: list[tuple[int, int]],
-        labels: list[int],
+        points: list[tuple[int, int]] | None = None,
+        labels: list[int] | None = None,
+        boxes: list[tuple[int, int, int, int]] | None = None,
     ) -> SegmentResult:
         predictor = self._get_predictor()
         im = self._get_im_tensor()
         orig_w, orig_h = self._orig_size
 
-        masks, scores = predictor.prompt_inference(
-            im,
-            points=np.array(points),
-            labels=np.array(labels),
-            multimask_output=True,
-        )
+        kwargs = {"multimask_output": True}
+        if points:
+            kwargs["points"] = np.array(points)
+            kwargs["labels"] = np.array(labels)
+        if boxes:
+            kwargs["bboxes"] = np.array(boxes)
+
+        masks, scores = predictor.prompt_inference(im, **kwargs)
 
         result = SegmentResult()
         for i in range(masks.shape[0]):
-            mask_bool = (masks[i] > 0).cpu().numpy()
-            mask_img = Image.fromarray(mask_bool.astype(np.uint8) * 255, mode="L")
-            mask_img = mask_img.resize((orig_w, orig_h), Image.NEAREST)
-            mask_resized = np.array(mask_img) > 0
+            mask_np = masks[i].detach().cpu().numpy().astype(np.float32)
+            mask_resized = self._smooth_mask(mask_np, (orig_w, orig_h)) > 0
 
             area_pct = mask_resized.sum() / mask_resized.size * 100
             mask_255 = mask_resized.astype(np.uint8) * 255
@@ -151,6 +163,12 @@ class MobileSAMProcessor:
         result.candidates.sort(key=lambda c: c.score, reverse=True)
         return result
 
+    def segment_all_candidates(self, x: int, y: int) -> SegmentResult:
+        return self.segment_with_prompts(points=[(x, y)], labels=[1])
+
+    def segment_with_points(self, points, labels):
+        return self.segment_with_prompts(points=points, labels=labels)
+
     def auto_segment(self, image_path: str | Path, max_det: int = 255) -> SegmentResult:
         result = self.model.predict(
             str(image_path), max_det=max_det, verbose=False, device=self.device
@@ -165,12 +183,13 @@ class MobileSAMProcessor:
 
         result = SegmentResult()
         for i in range(n):
-            mask_bool = (masks_tensor[i] > 0).cpu().numpy()
-            h, w = mask_bool.shape
+            mask_raw = masks_tensor[i].detach().cpu().numpy().astype(np.float32)
+            h, w = mask_raw.shape
             if (h, w) != (orig_h, orig_w):
-                mask_img = Image.fromarray(mask_bool.astype(np.uint8) * 255, mode="L")
-                mask_img = mask_img.resize((orig_w, orig_h), Image.NEAREST)
-                mask_bool = np.array(mask_img, dtype=bool)
+                mask_255 = self._smooth_mask(mask_raw, (orig_w, orig_h))
+                mask_bool = mask_255 > 0
+            else:
+                mask_bool = mask_raw > 0
             area_pct = mask_bool.sum() / (orig_h * orig_w) * 100
             mask_255 = mask_bool.astype(np.uint8) * 255
             label = self._generate_label(mask_bool, orig_w, orig_h)
@@ -186,8 +205,9 @@ class MobileSAMProcessor:
     def apply_mask(image: Image.Image, mask: np.ndarray) -> Image.Image:
         image = image.convert("RGBA")
         if mask.shape[:2] != (image.height, image.width):
-            mask_img = Image.fromarray(mask, mode="L").resize(image.size, Image.NEAREST)
-            mask = np.array(mask_img)
+            mask_f = mask.astype(np.float32) / 255.0
+            mask_img = Image.fromarray(mask_f, mode="F").resize(image.size, Image.LANCZOS)
+            mask = (np.array(mask_img, dtype=np.float32) > 0.5).astype(np.uint8) * 255
         image.putalpha(Image.fromarray(mask, mode="L"))
         return image
 

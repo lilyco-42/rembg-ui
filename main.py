@@ -260,7 +260,7 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 def _get_sam() -> MobileSAMProcessor:
     global sam_processor
     if sam_processor is None:
-        print("[SAM] 初始化 MobileSAM 模型...")
+        print("[SAM] 初始化 SAM-B 模型...")
         sam_processor = MobileSAMProcessor()
     return sam_processor
 
@@ -318,6 +318,37 @@ async def sam_segment(points_json: str = Form(...)):
         return {"success": True, "candidates": candidates}
     except Exception as e:
         print(f"[SAM Error] 分割失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/sam/segment-box")
+async def sam_segment_box(x1: int = Form(...), y1: int = Form(...), x2: int = Form(...), y2: int = Form(...)):
+    global sam_temp_path, sam_last_result
+    if not sam_temp_path or not os.path.exists(sam_temp_path):
+        raise HTTPException(status_code=400, detail="请先加载图片")
+    try:
+        proc = _get_sam()
+        result = proc.segment_with_prompts(boxes=[(x1, y1, x2, y2)])
+        orig = Image.open(sam_temp_path)
+        candidates = []
+        for c in result.candidates:
+            rgba = proc.apply_mask(orig, c.mask)
+            buf = io.BytesIO()
+            rgba.save(buf, format="PNG")
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            candidates.append({
+                "label": c.label,
+                "score": round(c.score, 3),
+                "area_pct": round(c.area_pct, 1),
+                "image": f"data:image/png;base64,{b64}",
+            })
+        sam_last_result = {
+            "orig_size": proc._orig_size,
+            "candidates": result.candidates,
+        }
+        return {"success": True, "candidates": candidates}
+    except Exception as e:
+        print(f"[SAM Error] 框选分割失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

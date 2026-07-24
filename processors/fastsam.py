@@ -49,7 +49,7 @@ class FastSAMProcessor:
             raise ValueError(f"坐标 ({x}, {y}) 超出图片范围 ({orig_w}x{orig_h})")
 
         mask_tensor = masks_data.data
-        masks_np = mask_tensor.cpu().numpy()
+        masks_np = mask_tensor.detach().cpu().numpy()
 
         for i in range(masks_np.shape[0]):
             mask = masks_np[i]
@@ -63,8 +63,9 @@ class FastSAMProcessor:
         image = image.convert("RGBA")
         mask_resized: np.ndarray
         if mask.shape[:2] != (image.height, image.width):
-            mask_img = Image.fromarray(mask, mode="L").resize(image.size, Image.NEAREST)
-            mask_resized = np.array(mask_img)
+            mask_f = mask.astype(np.float32) / 255.0
+            mask_img = Image.fromarray(mask_f, mode="F").resize(image.size, Image.LANCZOS)
+            mask_resized = (np.array(mask_img, dtype=np.float32) > 0.5).astype(np.uint8) * 255
         else:
             mask_resized = mask
         image.putalpha(Image.fromarray(mask_resized, mode="L"))

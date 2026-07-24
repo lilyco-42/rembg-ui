@@ -246,6 +246,19 @@
             background: var(--bg-input);
             border-radius: var(--radius);
         }
+        .sam-tool-select {
+            display: flex; gap: 4px; margin-top: 8px;
+        }
+        .sam-tool-select button {
+            flex: 1; padding: 7px; font-size: 11px; font-weight: 600;
+            border: 2px solid transparent; border-radius: var(--radius);
+            cursor: pointer; transition: all 0.15s;
+            background: var(--bg-input); color: var(--text-dim);
+        }
+        .sam-tool-select button:hover { border-color: var(--accent); color: var(--text); }
+        .sam-tool-select button.active { border-color: var(--accent); color: var(--accent); background: rgba(233,69,96,0.1); }
+        [data-sam-tool=box] #origImg, [data-sam-tool=box] #cropCanvas { cursor: crosshair; }
+        [data-sam-tool=brush] #origImg, [data-sam-tool=brush] #cropCanvas { cursor: crosshair; }
         .candidate-row {
             display: flex;
             gap: 8px;
@@ -281,7 +294,6 @@
         }
         .candidate-info .score { color: var(--accent); font-weight: 600; }
 
-        [data-sam-mode=true] #origImg { cursor: crosshair; }
         #resultImg.sam-has-result { cursor: cell; }
 
         /* Point overlay */
@@ -292,10 +304,12 @@
             max-height: 100%;
         }
         .sam-points-wrapper img { display: block; max-width: 100%; max-height: 100%; }
+        #origImgWrap { position: relative; }
         #pointCanvas {
             position: absolute;
             top: 0; left: 0;
             pointer-events: none;
+            z-index: 3;
         }
         .sam-point-type-toggle {
             display: flex; gap: 6px; margin-top: 6px;
@@ -380,15 +394,28 @@
             display: flex;
             gap: 0;
             overflow: hidden;
+            position: relative;
         }
         .panel {
-            flex: 1;
+            flex: 1 1 0;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow: hidden;
+            min-width: 80px;
         }
-        .panel + .panel { border-left: 1px solid var(--border); flex: 2; }
+        .panel + .panel { border-left: 1px solid var(--border); }
+        .panel-divider {
+            width: 5px;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.15s;
+            flex-shrink: 0;
+            z-index: 5;
+            position: relative;
+        }
+        .panel-divider:hover,
+        .panel-divider.active { background: var(--accent); }
         .panel-header {
             padding: 10px 16px;
             font-size: 12px;
@@ -398,22 +425,59 @@
             color: var(--text-dim);
             background: var(--bg-card);
             border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
         }
+        .panel-header-zoom {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0;
+        }
+        .panel-header-zoom button {
+            background: var(--bg-input); border: 1px solid var(--border);
+            color: var(--text-dim); border-radius: 4px; cursor: pointer;
+            font-size: 11px; padding: 2px 6px; line-height: 1.4;
+            transition: all 0.15s;
+        }
+        .panel-header-zoom button:hover { border-color: var(--accent); color: var(--text); }
+        .panel-header-zoom span { min-width: 32px; text-align: center; }
         .panel-body {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: auto;
-            padding: 16px;
+            overflow: hidden;
+            padding: 0;
             position: relative;
         }
-        .panel-body img {
+        .panel-body .img-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .panel-body .img-wrap img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
             border-radius: 4px;
+            transition: transform 0.1s;
+            transform-origin: center center;
         }
+        .panel-body .img-wrap.zoomed {
+            overflow: auto;
+            cursor: grab;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+        .panel-body .img-wrap.zoomed img {
+            max-width: none;
+            max-height: none;
+        }
+        .panel-body .img-wrap.zoomed.grabbing { cursor: grabbing; }
         .panel-empty {
             color: var(--text-dim);
             font-size: 14px;
@@ -630,33 +694,37 @@
         <!-- SAM mode content -->
         <div id="samModeContent">
             <div class="sam-hint">
-                🎯 自动检测全部物体 → 选中最像衣服的遮罩<br/>
-                点结果图排除多余区域（如同 PS 快速选择）
+                框选 / 画笔 / 点选 → SAM 自动生成候选遮罩
             </div>
             <button id="samLoadBtn" class="btn btn-primary" onclick="samLoadImage()" disabled>
                 📥 载入到 SAM
             </button>
 
-            <div class="sam-toolbar" id="samAutoBar" style="display:none">
-                <button class="run-sam" onclick="samAutoDetect()" style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;background:var(--accent);color:white">
-                    🎯 自动检测全部物体
-                </button>
-            </div>
+            <div id="samToolGroup" style="display:none">
+                <div class="sam-tool-select">
+                    <button class="active" data-tool="box" onclick="setSamTool('box')">▭ 框选</button>
+                    <button data-tool="brush" onclick="setSamTool('brush')">✏ 画笔</button>
+                    <button data-tool="point" onclick="setSamTool('point')">◉ 点选</button>
+                </div>
 
-            <div class="sam-point-type-toggle" id="pointTypeToggle" style="display:none">
-                <button class="pt-positive active" onclick="setSamPointType('positive')">🟢 前景加选</button>
-                <button class="pt-negative" onclick="setSamPointType('negative')">🔴 背景减选</button>
+                <div class="sam-point-options" id="samPointOptions" style="display:none">
+                    <div class="sam-point-type-toggle">
+                        <button class="pt-positive active" onclick="setSamPointType('positive')">🟢 前景</button>
+                        <button class="pt-negative" onclick="setSamPointType('negative')">🔴 背景</button>
+                    </div>
+                    <div class="sam-toolbar" style="display:flex;gap:6px;margin-top:6px">
+                        <button class="run-sam" style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;background:var(--accent);color:white" onclick="runSam()">▶ 应用</button>
+                        <button class="clear-points" style="flex:1;padding:8px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;background:var(--bg-input);color:var(--text-dim)" onclick="clearSamPoints()">✕ 清除</button>
+                    </div>
+                    <div class="sam-points-info" id="samPointsInfo"></div>
+                </div>
+                <div class="sam-extra-hint" id="samExtraHint" style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:4px">
+                    ▭ 在原图上拖拽框选目标
+                </div>
             </div>
-
-            <div class="sam-toolbar" id="samToolbar" style="display:none">
-                <button class="run-sam" onclick="runSam()">▶ 应用点</button>
-                <button class="clear-points" onclick="clearSamPoints()">✕ 清除点</button>
-            </div>
-
-            <div class="sam-points-info" id="samPointsInfo"></div>
 
             <div class="sam-refine-hint" id="samRefineHint" style="display:none;font-size:11px;color:var(--text-dim);text-align:center;padding:4px;background:var(--bg-input);border-radius:var(--radius);margin-top:4px">
-                💡 点击结果图中的多余区域可自动排除
+                💡 滚轮缩放 · 左键拖拽平移
             </div>
 
             <div id="samCandidates" style="display:none">
@@ -667,7 +735,7 @@
 
         <div class="section-label">输入</div>
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept="image/*" />
+            <input type="file" id="fileInput" accept="image/*" style="display:none" />
             <div class="icon">📁</div>
             <div id="dropHint">拖拽图片到这里，或点击选择</div>
             <div class="filename" id="dropFilename" style="display:none"></div>
@@ -706,37 +774,53 @@
             </div>
             <span id="modelInfo">bria-rmbg</span>
         </div>
-        <div class="preview-area">
-            <div class="panel">
-                <div class="panel-header">原图</div>
+        <div class="preview-area" id="previewArea">
+            <div class="panel" id="origPanel">
+                <div class="panel-header">
+                    原图
+                    <div class="panel-header-zoom">
+                        <span id="origZoomLabel">100%</span>
+                        <button onclick="zoomImage('orig', 0)">⊞</button>
+                    </div>
+                </div>
                 <div class="panel-body" id="origBody">
                     <div class="drag-overlay">📷 放开以载入图片</div>
                     <div class="panel-empty" id="origEmpty">
                         <div class="icon">🖼️</div>
                         拖拽或点击左侧选择图片
                     </div>
-                    <div class="sam-points-wrapper" id="origWrapper" style="display:none">
-                        <img id="origImg" />
+                    <div class="img-wrap" id="origImgWrap" style="display:none">
                         <canvas id="pointCanvas"></canvas>
-                        <canvas id="cropCanvas"></canvas>
-                        <div class="crop-rect" id="cropRect"></div>
+                        <div class="sam-points-wrapper" id="origWrapper" style="display:none">
+                            <img id="origImg" />
+                            <canvas id="cropCanvas"></canvas>
+                            <div class="crop-rect" id="cropRect"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="panel">
-                <div class="panel-header">结果</div>
+            <div class="panel-divider" id="panelDivider"></div>
+            <div class="panel" id="resultPanel">
+                <div class="panel-header">
+                    结果
+                    <div class="panel-header-zoom">
+                        <span id="resultZoomLabel">100%</span>
+                        <button onclick="zoomImage('result', 0)">⊞</button>
+                    </div>
+                </div>
                 <div class="panel-body checkerboard" id="resultBody">
                     <div class="panel-empty" id="resultEmpty">
                         <div class="icon">✨</div>
                         等待抠图...
                     </div>
-                    <img id="resultImg" style="display:none" />
+                    <div class="img-wrap" id="resultImgWrap">
+                        <img id="resultImg" style="display:none" />
+                    </div>
                     <div class="loading-overlay" id="loadingMask">
                         <div class="spinner"></div>
                         <div class="loading-text" id="loadingText">正在处理...</div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -832,6 +916,7 @@
                 img.src = dataUrl;
                 img.style.display = "block";
                 wrapper.style.display = "inline-block";
+                document.getElementById("origImgWrap").style.display = "";
                 document.getElementById("origEmpty").style.display = "none";
                 document.getElementById("runBtn").disabled = false;
                 document.getElementById("dropHint").style.display = "none";
@@ -843,8 +928,10 @@
                 samLoaded = false;
                 samOrigImageData = dataUrl;
                 img.onload = () => {
-                    drawSamPoints();
+                    drawSamOverlay();
                     exitCropMode();
+                    zoomState.orig = 1; updateZoomUI("orig");
+                    zoomState.result = 1; updateZoomUI("result");
                 };
             };
             reader.readAsDataURL(file);
@@ -853,6 +940,10 @@
         // Click handlers on orig image and result image
         document.getElementById("origImg").addEventListener("click", onOrigImageClick);
         document.getElementById("resultImg").addEventListener("click", onResultImageClick);
+        const pc = document.getElementById("pointCanvas");
+        pc.addEventListener("mousedown", onCanvasMouseDown);
+        pc.addEventListener("mousemove", onCanvasMouseMove);
+        pc.addEventListener("mouseup", onCanvasMouseUp);
 
         async function processImage() {
             if (!selectedFile) return;
@@ -943,8 +1034,10 @@
                 const dataUrl = e.target.result;
                 document.getElementById("origImg").src = dataUrl;
                 document.getElementById("origImg").onload = () => {
-                    drawSamPoints();
+                    drawSamOverlay();
                     sizeCropCanvases();
+                    zoomState.orig = 1; updateZoomUI("orig");
+                    zoomState.result = 1; updateZoomUI("result");
                 };
                 samOrigImageData = dataUrl;
                 // Clear previous results
@@ -976,7 +1069,12 @@
             document.getElementById("cropBtn").classList.remove("active");
             document.getElementById("cropCanvas").style.display = "none";
             document.getElementById("cropRect").classList.remove("show");
-            document.getElementById("pointCanvas").style.pointerEvents = "none";
+            const canvas = document.getElementById("pointCanvas");
+            if (currentMode === "sam" && samLoaded && samTool !== "point") {
+                canvas.style.pointerEvents = "auto";
+            } else {
+                canvas.style.pointerEvents = "none";
+            }
             cropStart = null;
             cropRect = null;
             document.getElementById("statusText").textContent = "已取消裁剪";
@@ -1101,9 +1199,7 @@
             document.getElementById("resultImg").classList.remove("sam-has-result");
 
             document.getElementById("samCandidates").style.display = "none";
-            document.getElementById("samAutoBar").style.display = "none";
-            document.getElementById("pointTypeToggle").style.display = "none";
-            document.getElementById("samToolbar").style.display = "none";
+            document.getElementById("samToolGroup").style.display = "none";
             document.getElementById("samRefineHint").style.display = "none";
             document.getElementById("samLoadBtn").disabled = !selectedFile;
             if (mode === "sam") {
@@ -1118,6 +1214,11 @@
         let samPoints = [];
         let samPointType = "positive";
         let samSelectedIndex = 0;
+        let samTool = "box";
+        let samDrawing = false;
+        let samDragStart = null;
+        let samDragEnd = null;
+        let samBrushPoints = [];
 
         // SAM: load image
         async function samLoadImage() {
@@ -1135,17 +1236,15 @@
                 if (data.success) {
                     samLoaded = true;
                     clearSamPoints();
-                    document.getElementById("samAutoBar").style.display = "flex";
+                    document.getElementById("samToolGroup").style.display = "block";
                     document.getElementById("samCandidates").style.display = "none";
-        
-                    document.getElementById("pointTypeToggle").style.display = "none";
-                    document.getElementById("samToolbar").style.display = "none";
                     document.getElementById("samRefineHint").style.display = "none";
                     document.getElementById("resultBody").dataset.samHasResult = "false";
                     document.getElementById("resultEmpty").style.display = "block";
-                    document.getElementById("resultEmpty").innerHTML = '<div class="icon">🎯</div>点「自动检测全部物体」识别所有区域';
+                    document.getElementById("resultEmpty").innerHTML = '<div class="icon">🎯</div>选择工具后操作原图';
                     document.getElementById("resultImg").style.display = "none";
-                    document.getElementById("statusText").textContent = `SAM 就绪 — ${data.width}x${data.height}，点击自动检测`;
+                    document.getElementById("statusText").textContent = `SAM 就绪 — ${data.width}x${data.height}`;
+                    setSamTool("box");
                     updateSamUI();
                 }
             } catch (e) {
@@ -1157,34 +1256,30 @@
             }
         }
 
-        // SAM: auto detect all objects
-        async function samAutoDetect() {
-            document.getElementById("loadingMask").classList.add("active");
-            document.getElementById("loadingText").textContent = "SAM 自动检测中...";
-            document.getElementById("statusText").textContent = "自动检测全部物体...";
+        // SAM: set active tool
+        function setSamTool(tool) {
+            samTool = tool;
+            document.querySelectorAll(".sam-tool-select button").forEach(b =>
+                b.classList.toggle("active", b.dataset.tool === tool)
+            );
+            document.getElementById("samPointOptions").style.display = tool === "point" ? "block" : "none";
+            const hint = document.getElementById("samExtraHint");
+            if (tool === "box") hint.textContent = "▭ 在原图上拖拽框选目标";
+            else if (tool === "brush") hint.textContent = "✏ 在原图上涂画目标区域";
+            else hint.textContent = "◉ 点击原图添加前景／背景点";
 
-            try {
-                const resp = await fetch("/api/sam/auto-segment", { method: "POST" });
-                const data = await resp.json();
-                if (data.success) {
-                    clearSamPoints();
-                    document.getElementById("samAutoBar").style.display = "none";
-                    document.getElementById("pointTypeToggle").style.display = "flex";
-                    document.getElementById("samToolbar").style.display = "flex";
-                    document.getElementById("samRefineHint").style.display = "block";
-                    showSamCandidates(data.candidates);
-                    document.getElementById("statusText").textContent =
-                        `🎯 检测到 ${data.candidates.length} 个区域 — 选中最像衣服的遮罩`;
-                } else {
-                    document.getElementById("statusText").textContent = "❌ 自动检测失败";
-                }
-            } catch (e) {
-                document.getElementById("statusText").textContent = "❌ 网络错误";
-                console.error(e);
-            } finally {
-                document.getElementById("loadingMask").classList.remove("active");
-                document.getElementById("loadingText").textContent = "正在处理...";
-            }
+            const canvas = document.getElementById("pointCanvas");
+            canvas.style.pointerEvents = tool === "point" ? "none" : "auto";
+            const img = document.getElementById("origImg");
+            img.style.cursor = tool === "point" ? "crosshair" : "default";
+
+            clearSamPoints();
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            samDragStart = null;
+            samDragEnd = null;
+            samDrawing = false;
+            samBrushPoints = [];
         }
 
         // SAM: set point type
@@ -1193,41 +1288,75 @@
             document.querySelectorAll(".pt-positive, .pt-negative").forEach(b => b.classList.toggle("active", b.classList.contains("pt-" + type)));
         }
 
-        // SAM: draw points on canvas
-        function drawSamPoints() {
+        function drawSamOverlay() {
             const canvas = document.getElementById("pointCanvas");
             const img = document.getElementById("origImg");
             if (!canvas || !img || img.naturalWidth === 0) return;
 
-            const rect = img.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
+            const wrap = document.getElementById("origImgWrap");
+            canvas.width = wrap.clientWidth;
+            canvas.height = wrap.clientHeight;
             const ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const scaleX = rect.width / img.naturalWidth;
-            const scaleY = rect.height / img.naturalHeight;
+            const imgRect = img.getBoundingClientRect();
+            const wrapRect = wrap.getBoundingClientRect();
+            const offX = imgRect.left - wrapRect.left + wrap.scrollLeft;
+            const offY = imgRect.top - wrapRect.top + wrap.scrollTop;
+            const scaleX = imgRect.width / img.naturalWidth;
+            const scaleY = imgRect.height / img.naturalHeight;
 
-            samPoints.forEach(p => {
-                const cx = p.x * scaleX;
-                const cy = p.y * scaleY;
-                ctx.beginPath();
-                ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
-                ctx.fillStyle = p.label === 1 ? "rgba(46, 204, 113, 0.85)" : "rgba(231, 76, 60, 0.85)";
-                ctx.fill();
-                ctx.strokeStyle = "#fff";
+            if (samTool === "box" && samDragStart && samDragEnd) {
+                const x = offX + Math.min(samDragStart.x, samDragEnd.x) * scaleX;
+                const y = offY + Math.min(samDragStart.y, samDragEnd.y) * scaleY;
+                const w = Math.abs(samDragEnd.x - samDragStart.x) * scaleX;
+                const h = Math.abs(samDragEnd.y - samDragStart.y) * scaleY;
+                ctx.fillStyle = "rgba(233, 69, 96, 0.15)";
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeStyle = "#e94560";
                 ctx.lineWidth = 2;
-                ctx.stroke();
+                ctx.setLineDash([6, 3]);
+                ctx.strokeRect(x, y, w, h);
+                ctx.setLineDash([]);
+            }
+
+            if (samTool === "brush" && samBrushPoints.length > 0) {
                 ctx.beginPath();
-                ctx.moveTo(cx - 3, cy); ctx.lineTo(cx + 3, cy);
-                ctx.moveTo(cx, cy - 3); ctx.lineTo(cx, cy + 3);
-                ctx.strokeStyle = "#fff";
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = "rgba(233, 69, 96, 0.8)";
+                ctx.lineWidth = 3;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                samBrushPoints.forEach((p, i) => {
+                    const cx = offX + p.x * scaleX;
+                    const cy = offY + p.y * scaleY;
+                    if (i === 0) ctx.moveTo(cx, cy);
+                    else ctx.lineTo(cx, cy);
+                });
                 ctx.stroke();
-            });
+            }
+
+            if (samPoints.length > 0) {
+                samPoints.forEach(p => {
+                    const cx = offX + p.x * scaleX;
+                    const cy = offY + p.y * scaleY;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+                    ctx.fillStyle = p.label === 1 ? "rgba(46, 204, 113, 0.85)" : "rgba(231, 76, 60, 0.85)";
+                    ctx.fill();
+                    ctx.strokeStyle = "#fff";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 3, cy); ctx.lineTo(cx + 3, cy);
+                    ctx.moveTo(cx, cy - 3); ctx.lineTo(cx, cy + 3);
+                    ctx.strokeStyle = "#fff";
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+            }
         }
 
-        // SAM: add a point
+        // SAM: add a point (point mode)
         function addSamPoint(x, y) {
             const label = samPointType === "positive" ? 1 : 0;
             const existing = samPoints.findIndex(p => Math.abs(p.x - x) < 3 && Math.abs(p.y - y) < 3);
@@ -1237,7 +1366,7 @@
                 samPoints.push({ x, y, label });
             }
             updateSamUI();
-            drawSamPoints();
+            drawSamOverlay();
         }
 
         function updateSamUI() {
@@ -1245,25 +1374,76 @@
             const neg = samPoints.filter(p => p.label === 0).length;
             document.getElementById("samPointsInfo").textContent =
                 samPoints.length > 0
-                    ? `🟢 ${pos} 个前景 · 🔴 ${neg} 个背景（点击可移除）`
-                    : "👆 点击原图添加点（正/负），或点结果图排除";
+                    ? `🟢 ${pos} 前景 · 🔴 ${neg} 背景`
+                    : "点击原图添加点";
         }
 
         // SAM: clear all points
         function clearSamPoints() {
             samPoints = [];
+            samBrushPoints = [];
+            samDragStart = null;
+            samDragEnd = null;
+            samDrawing = false;
             updateSamUI();
-            const canvas = document.getElementById("pointCanvas");
-            if (canvas) {
-                const ctx = canvas.getContext("2d");
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
-            document.getElementById("statusText").textContent = "已清除所有点";
+            drawSamOverlay();
+            document.getElementById("statusText").textContent = "已清除";
         }
 
-        // SAM: click on orig image → add point
+        // SAM: canvas mouse handlers (for box & brush)
+        function getImgCoords(e) {
+            const img = document.getElementById("origImg");
+            const rect = img.getBoundingClientRect();
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            return {
+                x: Math.round((e.clientX - rect.left) * scaleX),
+                y: Math.round((e.clientY - rect.top) * scaleY),
+            };
+        }
+
+        function onCanvasMouseDown(e) {
+            if (currentMode !== "sam" || !samLoaded || samTool === "box") return;
+            // skip if pan is active
+            if (panState.active) return;
+            const { x, y } = getImgCoords(e);
+            if (samTool === "brush") {
+                samDrawing = true;
+                samPoints = [];
+                samBrushPoints = [{ x, y }];
+                samPoints.push({ x, y, label: 1 });
+                drawSamOverlay();
+            }
+        }
+
+        function onCanvasMouseMove(e) {
+            if (!samDrawing || currentMode !== "sam" || !samLoaded || samTool === "box") return;
+            const { x, y } = getImgCoords(e);
+            if (samTool === "brush") {
+                const last = samBrushPoints[samBrushPoints.length - 1];
+                if (!last || Math.hypot(x - last.x, y - last.y) > 3) {
+                    samBrushPoints.push({ x, y });
+                    samPoints.push({ x, y, label: 1 });
+                    drawSamOverlay();
+                    updateSamUI();
+                }
+            }
+        }
+
+        function onCanvasMouseUp(e) {
+            if (!samDrawing || currentMode !== "sam" || !samLoaded || samTool === "box") return;
+            samDrawing = false;
+            if (samTool === "brush") {
+                if (samBrushPoints.length > 2) {
+                    runSam();
+                }
+            }
+        }
+
+        // SAM: click on orig image → add point (point mode only)
         function onOrigImageClick(e) {
-            if (currentMode !== "sam" || !samLoaded) return;
+            if (currentMode !== "sam" || !samLoaded || samTool !== "point") return;
+            if (zoomState.orig > 1 && panMovedOrig) return;
             const img = document.getElementById("origImg");
             const rect = img.getBoundingClientRect();
             const scaleX = img.naturalWidth / rect.width;
@@ -1273,34 +1453,14 @@
             addSamPoint(x, y);
         }
 
-        // SAM: click on result image → add negative point & re-run
+        // SAM: click on result image → no-op (view only)
         function onResultImageClick(e) {
-            if (currentMode !== "sam" || !samLoaded) return;
-            const img = document.getElementById("resultImg");
-            if (img.style.display === "none") return;
-
-            const rect = img.getBoundingClientRect();
-            const scaleX = img.naturalWidth / rect.width;
-            const scaleY = img.naturalHeight / rect.height;
-            const x = Math.round((e.clientX - rect.left) * scaleX);
-            const y = Math.round((e.clientY - rect.top) * scaleY);
-
-            // Add as negative point
-            const existing = samPoints.findIndex(p => Math.abs(p.x - x) < 3 && Math.abs(p.y - y) < 3);
-            if (existing >= 0) {
-                samPoints.splice(existing, 1);
-            } else {
-                samPoints.push({ x, y, label: 0 });
-            }
-            updateSamUI();
-            drawSamPoints();
-            runSam();
         }
 
-        // SAM: run segmentation with all points
+        // SAM: run with points (point mode or brush mode)
         async function runSam() {
             if (!samPoints.length) {
-                document.getElementById("statusText").textContent = "⚠ 请先点击原图添加至少一个点";
+                document.getElementById("statusText").textContent = "⚠ 请先选择目标区域";
                 return;
             }
 
@@ -1318,9 +1478,40 @@
                 if (data.success) {
                     showSamCandidates(data.candidates);
                     document.getElementById("statusText").textContent =
-                        `✅ ${samPoints.length} 个点 — ${data.candidates.length} 个候选`;
+                        `✅ ${data.candidates.length} 个候选`;
                 } else {
                     document.getElementById("statusText").textContent = "❌ 分割失败";
+                }
+            } catch (e) {
+                document.getElementById("statusText").textContent = "❌ 网络错误";
+                console.error(e);
+            } finally {
+                document.getElementById("loadingMask").classList.remove("active");
+                document.getElementById("loadingText").textContent = "正在处理...";
+            }
+        }
+
+        // SAM: run with box
+        async function runSamBox(x1, y1, x2, y2) {
+            document.getElementById("loadingMask").classList.add("active");
+            document.getElementById("loadingText").textContent = "SAM 框选分割中...";
+            document.getElementById("statusText").textContent = "框选分割...";
+
+            const formData = new FormData();
+            formData.append("x1", x1);
+            formData.append("y1", y1);
+            formData.append("x2", x2);
+            formData.append("y2", y2);
+
+            try {
+                const resp = await fetch("/api/sam/segment-box", { method: "POST", body: formData });
+                const data = await resp.json();
+                if (data.success) {
+                    showSamCandidates(data.candidates);
+                    document.getElementById("statusText").textContent =
+                        `✅ ${data.candidates.length} 个候选（框选）`;
+                } else {
+                    document.getElementById("statusText").textContent = "❌ 框选分割失败";
                 }
             } catch (e) {
                 document.getElementById("statusText").textContent = "❌ 网络错误";
@@ -1349,6 +1540,7 @@
                 resultBase64 = c.image;
                 document.getElementById("downloadBtn").disabled = false;
                 Array.from(row.children).forEach((el, idx) => el.classList.toggle("active", idx === i));
+                zoomState.result = 1; updateZoomUI("result");
             }
 
             candidates.forEach((c, i) => {
@@ -1393,11 +1585,205 @@
         document.getElementById("modelSelect").addEventListener("change", loadModelStatus);
         loadModelStatus();
 
-        // Resize: redraw SAM points
+        // Resize: redraw SAM overlay
         let resizeTimer;
         window.addEventListener("resize", () => {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(drawSamPoints, 150);
+            resizeTimer = setTimeout(drawSamOverlay, 150);
+        });
+
+        // ─── Panel divider ───────────────────────────────────────
+        let dividerDragging = false;
+        const divider = document.getElementById("panelDivider");
+        divider.addEventListener("mousedown", e => {
+            dividerDragging = true;
+            divider.classList.add("active");
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+        });
+        document.addEventListener("mousemove", e => {
+            if (!dividerDragging) return;
+            const pa = document.getElementById("previewArea");
+            const rect = pa.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const pct = Math.max(15, Math.min(85, x / rect.width * 100));
+            document.getElementById("origPanel").style.flex = `0 0 ${pct}%`;
+            document.getElementById("resultPanel").style.flex = `0 0 ${100 - pct}%`;
+            drawSamOverlay();
+        });
+        document.addEventListener("mouseup", () => {
+            if (!dividerDragging) return;
+            dividerDragging = false;
+            divider.classList.remove("active");
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+        });
+
+        // ─── Image zoom & pan ────────────────────────────────────
+        const zoomState = { orig: 1, result: 1 };
+        let panState = { active: false, startX: 0, startY: 0, scrollL: 0, scrollT: 0, moved: false };
+        let panMovedOrig = false, panMovedResult = false;
+
+        function getZoomImg(id) {
+            if (id === "orig") {
+                const img = document.getElementById("origImg");
+                return img?.naturalWidth > 0 ? img : null;
+            }
+            const img = document.getElementById("resultImg");
+            return img?.naturalWidth > 0 ? img : null;
+        }
+
+        function getZoomWrap(id) {
+            return document.getElementById(id === "orig" ? "origImgWrap" : "resultImgWrap");
+        }
+
+        function updateZoomUI(id) {
+            const pct = Math.round(zoomState[id] * 100);
+            document.getElementById(id === "orig" ? "origZoomLabel" : "resultZoomLabel").textContent = pct + "%";
+            const wrap = getZoomWrap(id);
+            const img = getZoomImg(id);
+            if (!img) return;
+            if (zoomState[id] <= 1) {
+                wrap.classList.remove("zoomed");
+                img.style.transform = "";
+            } else {
+                wrap.classList.add("zoomed");
+                img.style.transform = `scale(${zoomState[id]})`;
+                img.style.transformOrigin = "0 0";
+            }
+        }
+
+        function zoomAtCursor(id, delta, cx, cy) {
+            const wrap = getZoomWrap(id);
+            const img = getZoomImg(id);
+            if (!img) return;
+            const levels = [1, 1.15, 1.3, 1.5, 1.7, 2, 2.5, 3, 4, 6, 8];
+            let i = levels.indexOf(zoomState[id]);
+            const oldScale = zoomState[id];
+            if (delta < 0) i = Math.min(i + 1, levels.length - 1);
+            else i = Math.max(i - 1, 0);
+            const newScale = levels[i];
+            if (newScale === oldScale) return;
+            zoomState[id] = newScale;
+            updateZoomUI(id);
+            if (newScale > 1 && cx !== undefined) {
+                const wr = wrap.getBoundingClientRect();
+                const px = cx - wr.left, py = cy - wr.top;
+                wrap.scrollLeft = (px + wrap.scrollLeft) * newScale / oldScale - px;
+                wrap.scrollTop = (py + wrap.scrollTop) * newScale / oldScale - py;
+            }
+            if (id === "orig") drawSamOverlay();
+        }
+
+        function zoomImage(id, dir) {
+            zoomAtCursor(id, dir < 0 ? -1 : 1);
+        }
+
+        function startPan(id, e) {
+            if (zoomState[id] <= 1) return false;
+            const wrap = getZoomWrap(id);
+            panState.active = id;
+            panState.startX = e.clientX;
+            panState.startY = e.clientY;
+            panState.scrollL = wrap.scrollLeft;
+            panState.scrollT = wrap.scrollTop;
+            if (id === "orig") panMovedOrig = false;
+            else panMovedResult = false;
+            wrap.classList.add("grabbing");
+            return true;
+        }
+
+        function movePan(id, e) {
+            if (panState.active !== id) return;
+            const wrap = getZoomWrap(id);
+            wrap.scrollLeft = panState.scrollL - (e.clientX - panState.startX);
+            wrap.scrollTop = panState.scrollT - (e.clientY - panState.startY);
+            if (Math.abs(e.clientX - panState.startX) > 5 || Math.abs(e.clientY - panState.startY) > 5) {
+                if (id === "orig") panMovedOrig = true;
+                else panMovedResult = true;
+            }
+        }
+
+        function endPan(id) {
+            if (!panState.active) return;
+            const wrap = getZoomWrap(id);
+            wrap.classList.remove("grabbing");
+            panState.active = false;
+        }
+
+        // Prevent context menu on panels
+        document.getElementById("origBody").addEventListener("contextmenu", e => e.preventDefault());
+        document.getElementById("resultBody").addEventListener("contextmenu", e => e.preventDefault());
+
+        // Wheel zoom (no Ctrl needed)
+        document.getElementById("origBody").addEventListener("wheel", e => {
+            e.preventDefault();
+            zoomAtCursor("orig", e.deltaY, e.clientX, e.clientY);
+        }, { passive: false });
+        document.getElementById("resultBody").addEventListener("wheel", e => {
+            e.preventDefault();
+            zoomAtCursor("result", e.deltaY, e.clientX, e.clientY);
+        }, { passive: false });
+
+        // Left-drag pan on zoomed images
+        document.getElementById("origBody").addEventListener("mousedown", e => {
+            if (e.button !== 0) return;
+            if (cropActive) return;
+            if (startPan("orig", e)) e.stopPropagation();
+        });
+        document.getElementById("resultBody").addEventListener("mousedown", e => {
+            if (e.button !== 0) return;
+            startPan("result", e);
+        });
+        document.addEventListener("mousemove", e => {
+            movePan("orig", e);
+            movePan("result", e);
+        });
+        document.addEventListener("mouseup", e => {
+            endPan("orig");
+            endPan("result");
+        });
+
+        // Right-drag on orig panel → SAM box (in SAM box mode)
+        let samRightDrag = null;
+        document.getElementById("origBody").addEventListener("mousedown", e => {
+            if (e.button !== 2 || cropActive) return;
+            if (currentMode !== "sam" || !samLoaded || samTool !== "box") return;
+            const img = document.getElementById("origImg");
+            const rect = img.getBoundingClientRect();
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            samRightDrag = {
+                x1: Math.round((e.clientX - rect.left) * scaleX),
+                y1: Math.round((e.clientY - rect.top) * scaleY),
+                x2: 0, y2: 0,
+            };
+            samPoints = [];
+            samDrawing = true;
+        });
+        document.getElementById("origBody").addEventListener("mousemove", e => {
+            if (!samRightDrag || !samDrawing) return;
+            const img = document.getElementById("origImg");
+            const rect = img.getBoundingClientRect();
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            samRightDrag.x2 = Math.round((e.clientX - rect.left) * scaleX);
+            samRightDrag.y2 = Math.round((e.clientY - rect.top) * scaleY);
+            samDragStart = { x: samRightDrag.x1, y: samRightDrag.y1 };
+            samDragEnd = { x: samRightDrag.x2, y: samRightDrag.y2 };
+            drawSamOverlay();
+        });
+        document.getElementById("origBody").addEventListener("mouseup", e => {
+            if (e.button !== 2 || !samRightDrag) return;
+            samDrawing = false;
+            const x1 = Math.min(samRightDrag.x1, samRightDrag.x2);
+            const y1 = Math.min(samRightDrag.y1, samRightDrag.y2);
+            const x2 = Math.max(samRightDrag.x1, samRightDrag.x2);
+            const y2 = Math.max(samRightDrag.y1, samRightDrag.y2);
+            samRightDrag = null;
+            if (x2 - x1 > 5 && y2 - y1 > 5) {
+                runSamBox(x1, y1, x2, y2);
+            }
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>

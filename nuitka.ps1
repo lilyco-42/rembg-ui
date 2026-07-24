@@ -10,7 +10,6 @@ $nuitka = Join-Path (Join-Path $PSScriptRoot ".venv") "Scripts\nuitka.cmd"
     --include-package=fastapi --include-package=ultralytics `
     --nofollow-import-to=fastapi.agents `
     --nofollow-import-to=torch._inductor `
-    --nofollow-import-to=matplotlib `
     --module-parameter=numba-disable-jit=yes --module-parameter=torch-disable-jit=yes `
     main.py
 
