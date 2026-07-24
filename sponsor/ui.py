@@ -121,6 +121,9 @@ def build_modal_html(config):
             </div>
             <div class="sponsor-footer">
                 {config.project_name} v{config.project_version}{repo_link}
+                <div style="margin-top:6px;font-size:10px;color:var(--text-dim,#8892a0);">
+                    Nuitka 编译版（性能优化）赞助后获取
+                </div>
             </div>
         </div>
     </div>

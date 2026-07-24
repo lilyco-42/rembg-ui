@@ -1,28 +1,20 @@
 $ErrorActionPreference = "Stop"
 $env:PYTHONUTF8 = 1
 
-$venv = Join-Path $PSScriptRoot ".venv"
-$python = Join-Path $venv "Scripts\python.exe"
-$pyinstaller = Join-Path $venv "Scripts\pyinstaller.exe"
-$dist = Join-Path $PSScriptRoot "dist\rembg-ui"
-
-# ensure pyinstaller installed
-if (-not (Test-Path $pyinstaller)) {
-    & $python -m pip install pyinstaller --quiet
-}
+$root = $PSScriptRoot
+$pyinstaller = Join-Path $root ".venv\Scripts\pyinstaller.exe"
+$dist = Join-Path $root "dist\rembg-ui"
 
 # clean old build
-if (Test-Path (Join-Path $PSScriptRoot "dist")) {
-    Remove-Item -Path (Join-Path $PSScriptRoot "dist") -Recurse -Force
-}
-if (Test-Path (Join-Path $PSScriptRoot "build")) {
-    Remove-Item -Path (Join-Path $PSScriptRoot "build") -Recurse -Force
+foreach ($d in @("dist", "build")) {
+    $p = Join-Path $root $d
+    if (Test-Path $p) { Remove-Item -Recurse -Force $p }
 }
 
 & $pyinstaller --onedir --name "rembg-ui" --noconsole `
     --add-data "frontend;frontend" `
-    --add-data "processors;processors" `
-    --add-data "sponsor;sponsor" `
+    --add-data "sponsor\assets;sponsor\assets" `
+    --add-data "rembg.ico;." `
     --hidden-import "uvicorn.logging" `
     --hidden-import "uvicorn.loops.auto" `
     --hidden-import "uvicorn.protocols.http.auto" `
@@ -30,6 +22,7 @@ if (Test-Path (Join-Path $PSScriptRoot "build")) {
     --hidden-import "multipart" `
     --hidden-import "numpy" `
     --hidden-import "PIL._tkinter_finder" `
+    --hidden-import "skimage" `
     --collect-submodules "ultralytics" `
     --collect-submodules "rembg" `
     --exclude-module "matplotlib" `
@@ -46,8 +39,7 @@ if (Test-Path (Join-Path $PSScriptRoot "build")) {
     main.py
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "[OK] 打包完成: $dist" -ForegroundColor Green
-    Write-Host "    入口: $dist\rembg-ui.exe" -ForegroundColor Green
+    Write-Host "[OK] 打包完成: $dist\rembg-ui.exe" -ForegroundColor Green
 } else {
     Write-Host "[FAIL] 打包失败" -ForegroundColor Red
 }
