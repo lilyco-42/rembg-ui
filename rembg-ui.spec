@@ -1,16 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 hiddenimports = ['uvicorn.logging', 'uvicorn.loops.auto', 'uvicorn.protocols.http.auto', 'fastapi', 'multipart', 'numpy', 'PIL._tkinter_finder', 'skimage']
 hiddenimports += collect_submodules('ultralytics')
 hiddenimports += collect_submodules('rembg')
 
+# 修复 Release 版启动崩溃（importlib.metadata.PackageNotFoundError，issue #1）：
+# pymatting/ultralytics 等在 import 时用 importlib.metadata.version() 读取自身/依赖版本，
+# 必须把这些发行版的 .dist-info 元数据一并打包。
+_datas = [('frontend', 'frontend'), ('sponsor\\assets', 'sponsor\\assets'), ('rembg.ico', '.')]
+_datas += copy_metadata('pymatting')
+_datas += copy_metadata('torchvision')
+_datas += copy_metadata('torch')
+_datas += copy_metadata('numpy')
+_datas += copy_metadata('ultralytics')
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('frontend', 'frontend'), ('sponsor\\assets', 'sponsor\\assets'), ('rembg.ico', '.')],
+    datas=_datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

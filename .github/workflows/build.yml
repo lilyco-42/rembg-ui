@@ -14,6 +14,11 @@ on:
 permissions:
   contents: write
 
+# 同一分支新推送时取消还在跑的旧构建，避免排队堆积
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
@@ -25,8 +30,20 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install uv
+      - name: Install uv (with dependency cache)
         uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      # Nuitka 的 C 编译缓存（clcache）在本机 %LOCALAPPDATA%\Nuitka。
+      # clcache 按内容寻址，源码改动只会重编译变更文件，因此缓存 key 用依赖锁文件即可最大化命中。
+      - name: Cache Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.os == 'Windows' && '~\AppData\Local\Nuitka' || '~/.cache/Nuitka' }}
+          key: nuitka-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-
 
       - name: Install dependencies
         run: uv sync

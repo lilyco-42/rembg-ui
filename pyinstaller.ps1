@@ -11,10 +11,14 @@ foreach ($d in @("dist", "build")) {
     if (Test-Path $p) { Remove-Item -Recurse -Force $p }
 }
 
+# 修复 Release 版启动崩溃（issue #1）：递归带上运行时依赖树的 .dist-info 元数据，
+# 避免 importlib.metadata 在打包后找不到包版本
 & $pyinstaller --onedir --name "rembg-ui" --noconsole `
     --add-data "frontend;frontend" `
     --add-data "sponsor\assets;sponsor\assets" `
     --add-data "rembg.ico;." `
+    --recursive-copy-metadata "rembg" `
+    --recursive-copy-metadata "ultralytics" `
     --hidden-import "uvicorn.logging" `
     --hidden-import "uvicorn.loops.auto" `
     --hidden-import "uvicorn.protocols.http.auto" `
