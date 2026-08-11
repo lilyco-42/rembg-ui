@@ -238,6 +238,49 @@
             color: #e6a817;
         }
 
+        /* Batch queue */
+        .batch-box { display: flex; flex-direction: column; gap: 10px; }
+        .batch-queue {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .batch-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 8px;
+        }
+        .batch-item img {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: border-color 0.15s;
+            border: 2px solid transparent;
+        }
+        .batch-item img:hover { border-color: var(--accent); }
+        .batch-item .bi-info { flex: 1; min-width: 0; }
+        .batch-item .bi-name {
+            font-size: 11px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .batch-item .bi-status { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+        .batch-item .bi-status.done { color: var(--success); }
+        .batch-item .bi-status.error { color: #e74c3c; }
+        .batch-item .bi-status.processing { color: var(--accent); }
+        .batch-status { font-size: 11px; color: var(--text-dim); text-align: center; }
+
         .sam-hint {
             font-size: 12px;
             color: var(--text-dim);
@@ -358,6 +401,24 @@
         .preprocess-bar button:hover { border-color: var(--accent); color: var(--text); }
         .preprocess-bar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
         .preprocess-bar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+        .rotate-control { display: flex; align-items: center; gap: 5px; }
+        .rotate-control input[type="range"] {
+            width: 80px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .rotate-control input[type="number"] {
+            width: 56px;
+            padding: 4px 4px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 11px;
+            text-align: center;
+            outline: none;
+        }
+        .rotate-control input[type="number"]:focus { border-color: var(--accent); }
 
         /* Crop overlay */
         #cropCanvas {
@@ -733,6 +794,33 @@
             </div>
         </div>
 
+        <div class="section-label">批量抠图</div>
+        <div class="batch-box">
+            <div class="drop-zone" id="batchDropZone" onclick="document.getElementById('batchInput').click()">
+                <input type="file" id="batchInput" accept="image/*" multiple style="display:none" />
+                <div class="icon">🗂️</div>
+                <div>批量添加图片（可多选）</div>
+                <div class="hint">拖拽多张到这里，或点击选择</div>
+            </div>
+            <button class="btn" style="background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border)" onclick="document.getElementById('batchFolderInput').click()">
+                📂 选择整个文件夹
+            </button>
+            <input type="file" id="batchFolderInput" webkitdirectory multiple style="display:none" />
+            <div id="batchQueue" class="batch-queue"></div>
+            <div id="batchStatus" class="batch-status"></div>
+            <button id="batchRunBtn" class="btn btn-primary" onclick="runBatch()" disabled>
+                ⚡ 批量开始抠图
+            </button>
+            <div style="display:flex;gap:8px">
+                <button id="batchSaveBtn" class="btn btn-success" style="flex:1" onclick="saveBatchAll()" disabled>
+                    💾 保存全部
+                </button>
+                <button id="batchClearBtn" class="btn" style="flex:1;background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border)" onclick="clearBatch()">
+                    🗑 清空
+                </button>
+            </div>
+        </div>
+
         <div class="section-label">输入</div>
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
             <input type="file" id="fileInput" accept="image/*" style="display:none" />
@@ -767,8 +855,14 @@
             <span id="statusText">就绪 — 选择图片开始</span>
             <div class="preprocess-bar" id="preprocessBar" style="display:none">
                 <button onclick="toggleCropMode()" id="cropBtn">✂ 裁剪</button>
-                <button onclick="rotateImage(90)">↻ 右旋</button>
-                <button onclick="rotateImage(-90)">↺ 左旋</button>
+                <button onclick="rotateImage(90)">↻ 右旋 90°</button>
+                <button onclick="rotateImage(-90)">↺ 左旋 90°</button>
+                <div class="sep"></div>
+                <div class="rotate-control" title="拖动或输入指定角度">
+                    <input type="range" id="rotateAngleRange" min="-180" max="180" step="1" value="90" oninput="syncRotateAngle(this.value)" />
+                    <input type="number" id="rotateAngleNum" min="-180" max="180" step="1" value="90" onchange="syncRotateAngle(this.value)" />
+                    <button onclick="applyRotateAngle()" title="按指定角度旋转">↺ 旋转</button>
+                </div>
                 <div class="sep"></div>
                 <button onclick="resetImage()" style="color:#e74c3c">✕ 重置</button>
             </div>
@@ -1158,21 +1252,43 @@
             const img = document.getElementById("origImg");
             if (!img.src || img.style.display === "none") return;
 
-            const canvas = document.createElement("canvas");
             const w = img.naturalWidth, h = img.naturalHeight;
-            canvas.width = deg === 90 || deg === -90 ? h : w;
-            canvas.height = deg === 90 || deg === -90 ? w : h;
+            const rad = deg * Math.PI / 180;
+            // 任意角度：按旋转后外接矩形尺寸扩展画布，避免内容被裁切
+            const cos = Math.abs(Math.cos(rad));
+            const sin = Math.abs(Math.sin(rad));
+            const nw = Math.max(1, Math.ceil(w * cos + h * sin));
+            const nh = Math.max(1, Math.ceil(w * sin + h * cos));
+
+            const canvas = document.createElement("canvas");
+            canvas.width = nw;
+            canvas.height = nh;
             const ctx = canvas.getContext("2d");
 
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(deg * Math.PI / 180);
+            ctx.translate(nw / 2, nh / 2);
+            ctx.rotate(rad);
             ctx.drawImage(img, -w / 2, -h / 2);
 
             canvas.toBlob(blob => {
                 blob.name = originalFileName || "rotated.png";
                 replaceDisplayedImage(blob);
-                document.getElementById("statusText").textContent = `↻ 旋转 ${deg}°`;
+                document.getElementById("statusText").textContent = `↻ 已旋转 ${deg}°`;
             }, "image/png");
+        }
+
+        // 滑块与数字输入框双向同步
+        function syncRotateAngle(val) {
+            const range = document.getElementById("rotateAngleRange");
+            const num = document.getElementById("rotateAngleNum");
+            const v = Math.max(-180, Math.min(180, Math.round(parseFloat(val) || 0)));
+            range.value = v;
+            num.value = v;
+        }
+
+        function applyRotateAngle() {
+            const num = document.getElementById("rotateAngleNum");
+            const deg = parseFloat(num.value) || 0;
+            rotateImage(deg);
         }
 
         function resetImage() {
@@ -1187,7 +1303,220 @@
 
         // ─── end preprocess ────────────────────────────────────────
 
-        // Mode switching
+        // ─── Batch background removal ─────────────────────────────
+        let batchQueue = [];
+        let batchRunning = false;
+        let batchIdCounter = 0;
+        const MAX_BATCH = 50;
+
+        function escapeHtml(s) {
+            return String(s ?? "").replace(/[&<>"']/g, c => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+            }[c]));
+        }
+
+        // 批量上传区：点击选择（可多选）
+        document.getElementById("batchInput").addEventListener("change", function() {
+            addBatchFiles(Array.from(this.files || []));
+            this.value = "";
+        });
+
+        // 批量上传区：选择整个文件夹（webkitdirectory 会列出文件夹内所有文件）
+        document.getElementById("batchFolderInput").addEventListener("change", function() {
+            addBatchFiles(Array.from(this.files || []));
+            this.value = "";
+        });
+
+        // 批量上传区：拖拽多张
+        const batchDropZone = document.getElementById("batchDropZone");
+        let batchDragCounter = 0;
+        batchDropZone.addEventListener("dragenter", e => { e.preventDefault(); batchDragCounter++; batchDropZone.classList.add("drag-over"); });
+        batchDropZone.addEventListener("dragleave", e => { batchDragCounter--; if (batchDragCounter <= 0) { batchDragCounter = 0; batchDropZone.classList.remove("drag-over"); } });
+        batchDropZone.addEventListener("dragover", e => e.preventDefault());
+        batchDropZone.addEventListener("drop", e => {
+            e.preventDefault();
+            batchDragCounter = 0;
+            batchDropZone.classList.remove("drag-over");
+            addBatchFiles(Array.from(e.dataTransfer.files || []));
+        });
+
+        function addBatchFiles(files) {
+            let added = 0;
+            for (const file of files) {
+                if (!file.type.startsWith("image/")) continue;
+                if (batchQueue.length >= MAX_BATCH) {
+                    document.getElementById("statusText").textContent = `⚠ 批量队列最多 ${MAX_BATCH} 张`;
+                    break;
+                }
+                batchQueue.push({
+                    id: ++batchIdCounter,
+                    file,
+                    name: file.name,
+                    status: "pending",
+                    result: null,
+                    error: null,
+                    thumb: URL.createObjectURL(file),
+                });
+                added++;
+            }
+            if (added > 0) {
+                renderBatchQueue();
+                updateBatchButtons();
+                document.getElementById("statusText").textContent = `已添加 ${added} 张图片到批量队列`;
+            }
+        }
+
+        function renderBatchQueue() {
+            const list = document.getElementById("batchQueue");
+            list.innerHTML = "";
+            const statusMap = { pending: "⏳ 等待中", processing: "🔄 处理中", done: "✅ 完成", error: "❌ 失败" };
+            batchQueue.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "batch-item";
+                div.dataset.id = item.id;
+                div.innerHTML = `
+                    <img src="${item.thumb}" alt="" title="点击查看/载入" />
+                    <div class="bi-info">
+                        <div class="bi-name">${escapeHtml(item.name)}</div>
+                        <div class="bi-status ${item.status}">${statusMap[item.status] || item.status}${item.error ? "：" + escapeHtml(item.error) : ""}</div>
+                    </div>
+                `;
+                div.querySelector("img").addEventListener("click", () => selectBatchItem(item));
+                list.appendChild(div);
+            });
+            updateBatchCounter();
+        }
+
+        // 处理中只更新单行状态，避免整列重建导致滚动位置丢失
+        function updateBatchItem(item) {
+            const statusMap = { pending: "⏳ 等待中", processing: "🔄 处理中", done: "✅ 完成", error: "❌ 失败" };
+            const el = document.querySelector(`.batch-item[data-id="${item.id}"] .bi-status`);
+            if (el) {
+                el.className = "bi-status " + item.status;
+                el.textContent = (statusMap[item.status] || item.status) + (item.error ? "：" + escapeHtml(item.error) : "");
+            }
+            updateBatchCounter();
+        }
+
+        function updateBatchCounter() {
+            const doneCount = batchQueue.filter(i => i.status === "done").length;
+            document.getElementById("batchStatus").textContent =
+                batchQueue.length ? `共 ${batchQueue.length} 张 · 已完成 ${doneCount} 张` : "";
+        }
+
+        function selectBatchItem(item) {
+            if (item.status === "done" && item.result) {
+                resultBase64 = item.result;
+                currentFileName = "rmbg_" + item.name.replace(/\.[^.]+$/, "") + ".png";
+                document.getElementById("resultImg").src = item.result;
+                document.getElementById("resultImg").style.display = "block";
+                document.getElementById("resultEmpty").style.display = "none";
+                document.getElementById("downloadBtn").disabled = false;
+                document.getElementById("statusText").textContent = "📋 已载入批量结果: " + item.name;
+            } else {
+                loadFile(item.file);
+                document.getElementById("statusText").textContent = "已载入: " + item.name;
+            }
+        }
+
+        function updateBatchButtons() {
+            const hasWork = batchQueue.some(i => i.status === "pending" || i.status === "error");
+            const hasDone = batchQueue.some(i => i.status === "done" && i.result);
+            document.getElementById("batchRunBtn").disabled = !hasWork || batchRunning;
+            document.getElementById("batchSaveBtn").disabled = !hasDone;
+            document.getElementById("batchClearBtn").disabled = batchRunning;
+        }
+
+        // 单张调用后端抠图（与单图流程共用同一组模型参数）
+        async function processBatchItem(item) {
+            const formData = new FormData();
+            formData.append("file", item.file, item.name);
+            formData.append("model_name", document.getElementById("modelSelect").value);
+            formData.append("alpha_matting", document.getElementById("paramAlpha").checked);
+            formData.append("alpha_matting_fg", document.getElementById("paramFg").value);
+            formData.append("alpha_matting_bg", document.getElementById("paramBg").value);
+            formData.append("alpha_matting_erode", document.getElementById("paramErode").value);
+            formData.append("post_process", document.getElementById("paramPostProcess").checked);
+            formData.append("only_mask", document.getElementById("paramOnlyMask").checked);
+            const response = await fetch("/api/remove-bg", { method: "POST", body: formData });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.detail || "处理失败");
+            }
+            return data.image;
+        }
+
+        // 顺序处理整个队列
+        async function runBatch() {
+            if (batchRunning) return;
+            const pending = batchQueue.filter(i => i.status === "pending" || i.status === "error");
+            if (!pending.length) return;
+
+            batchRunning = true;
+            updateBatchButtons();
+            document.getElementById("statusText").textContent = `批量处理中，共 ${pending.length} 张...`;
+
+            let ok = 0;
+            for (const item of pending) {
+                item.status = "processing";
+                item.error = null;
+                updateBatchItem(item);
+                try {
+                    item.result = await processBatchItem(item);
+                    item.status = "done";
+                    ok++;
+                    // 每张完成后自动流转到右侧结果面板预览
+                    selectBatchItem(item);
+                } catch (err) {
+                    item.status = "error";
+                    item.error = (err && err.message) || "处理失败";
+                }
+                updateBatchItem(item);
+            }
+
+            batchRunning = false;
+            updateBatchButtons();
+            document.getElementById("statusText").textContent =
+                `✅ 批量完成：${ok} 成功 / ${pending.length - ok} 失败`;
+        }
+
+        // 选择文件夹，一次性保存全部结果
+        async function saveBatchAll() {
+            const doneItems = batchQueue.filter(i => i.status === "done" && i.result);
+            if (!doneItems.length) return;
+            try {
+                const response = await fetch("/api/save-batch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        files: doneItems.map(i => ({
+                            base64_data: i.result,
+                            filename: "rmbg_" + i.name.replace(/\.[^.]+$/, "") + ".png",
+                        })),
+                    }),
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById("statusText").textContent = `💾 已保存 ${data.count} 张到: ${data.path}`;
+                } else if (data.msg) {
+                    document.getElementById("statusText").textContent = data.msg;
+                }
+            } catch (error) {
+                alert("批量保存失败");
+                console.error(error);
+            }
+        }
+
+        function clearBatch() {
+            if (batchRunning) return;
+            batchQueue.forEach(i => URL.revokeObjectURL(i.thumb));
+            batchQueue = [];
+            renderBatchQueue();
+            updateBatchButtons();
+            document.getElementById("statusText").textContent = "已清空批量队列";
+        }
+
+        // ─── Mode switching
         let currentMode = "rembg";
         function switchMode(mode) {
             exitCropMode();

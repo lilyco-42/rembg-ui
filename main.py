@@ -120,6 +120,10 @@ class SaveImageRequest(BaseModel):
     filename: str
 
 
+class BatchSaveRequest(BaseModel):
+    files: list[SaveImageRequest]
+
+
 @app.get("/api/models")
 async def list_models():
     """返回模型列表及本地安装状态"""
@@ -250,6 +254,51 @@ async def save_image(req: SaveImageRequest):
         return {"success": True, "path": save_path}
     except Exception as e:
         print(f"[Error] 保存文件失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/save-batch")
+async def save_batch(req: BatchSaveRequest):
+    """选择文件夹，一次性批量保存抠图结果"""
+    global window_instance
+    if not window_instance:
+        raise HTTPException(status_code=500, detail="桌面窗口句柄未初始化")
+    if not req.files:
+        raise HTTPException(status_code=400, detail="没有需要保存的文件")
+
+    try:
+        # 唤起原生"选择文件夹"对话框
+        folder = window_instance.create_file_dialog(
+            webview.FileDialog.FOLDER,
+            directory=os.path.expanduser("~/Desktop"),
+        )
+
+        folder_path = None
+        if isinstance(folder, (tuple, list)):
+            if len(folder) > 0 and folder[0]:
+                folder_path = folder[0]
+        elif isinstance(folder, str):
+            folder_path = folder
+
+        # 用户点击取消
+        if not folder_path:
+            return {"success": False, "msg": "用户取消了保存"}
+
+        saved = []
+        for item in req.files:
+            # 防御路径穿越：只取文件名，丢弃任何路径部分
+            safe_name = os.path.basename(item.filename or "output.png")
+            _, base64_str = item.base64_data.split(",", 1)
+            file_bytes = base64.b64decode(base64_str)
+            save_path = os.path.join(folder_path, safe_name)
+            with open(save_path, "wb") as f:
+                f.write(file_bytes)
+            saved.append(save_path)
+
+        print(f"[IO] 批量保存完成: {len(saved)} 个文件 → {folder_path}")
+        return {"success": True, "path": folder_path, "count": len(saved)}
+    except Exception as e:
+        print(f"[Error] 批量保存失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -400,7 +449,12 @@ async def read_index():
 
     try:
         with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
+            content = f.read()
+        # 禁止缓存：确保每次启动都加载最新的前端页面，避免 WebView2 展示旧版本
+        return HTMLResponse(
+            content=content,
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+        )
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
