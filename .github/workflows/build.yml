@@ -67,7 +67,7 @@ jobs:
         run: uv run python build_nuitka.py release
 
       - name: Package
-        run: Compress-Archive -Path dist/main.dist/* -DestinationPath Rembg-UI-windows.zip
+        run: Compress-Archive -Path dist/rembg-ui.dist/* -DestinationPath Rembg-UI-windows.zip
 
       # 固定版本号用法：
       #   - 推一个 v* tag 触发（例：git push origin v1.0.1），构建约 3 小时，完成后自动发 Release；
@@ -162,10 +162,79 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          tar -czf dist/Rembg-UI-linux.tar.gz -C dist/main.dist .
+          tar -czf dist/Rembg-UI-linux.tar.gz -C dist/rembg-ui.dist .
 
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ steps.version.outputs.tag }}" dist/Rembg-UI-linux.tar.gz --clobber
+
+  # macOS 构建：Nuitka 产出 .app 应用包（release 模式自动附带 .dmg），追加到同一 Release。
+  # 依赖 onnxruntime 已按平台区分（macOS 用 CPU 版），见 pyproject.toml 环境标记。
+  build-macos:
+    runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    needs: build
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Cache Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Nuitka
+          key: nuitka-macos-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            nuitka-macos-
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" =~ refs/tags/(v.*) ]]; then
+            tag="${BASH_REMATCH[1]}"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            tag="${{ inputs.version }}"
+          else
+            tag="v0.1.$(date +%Y%m%d-%H%M)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Version: $tag"
+
+      - name: Build with Nuitka
+        run: uv run python build_nuitka.py release
+
+      - name: Package (.app / .dmg)
+        id: package
+        shell: bash
+        run: |
+          cd dist
+          ls -la
+          if compgen -G "*.dmg" >/dev/null; then
+            mv *.dmg ../Rembg-UI-macOS.dmg
+            echo "asset=../Rembg-UI-macOS.dmg" >> "$GITHUB_OUTPUT"
+            echo "已生成 DMG"
+          else
+            zip -rq ../Rembg-UI-macOS.zip *.app
+            echo "asset=../Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
+            echo "已生成 .app zip"
+          fi
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.version.outputs.tag }}" "${{ steps.package.outputs.asset }}" --clobber
+

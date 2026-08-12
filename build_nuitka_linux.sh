@@ -9,7 +9,7 @@ uv run python build_nuitka.py release
 
 echo "[Build] 打包产物..."
 mkdir -p dist
-tar -czf dist/Rembg-UI-linux.tar.gz -C dist/main.dist .
+tar -czf dist/Rembg-UI-linux.tar.gz -C dist/rembg-ui.dist .
 
 echo "[OK] 打包完成: dist/Rembg-UI-linux.tar.gz"
-echo "     解压后运行: ./main.bin"
+echo "     解压后运行: ./rembg-ui.bin"
