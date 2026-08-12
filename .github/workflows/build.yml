@@ -69,11 +69,36 @@ jobs:
       - name: Package
         run: Compress-Archive -Path dist/main.dist/* -DestinationPath Rembg-UI-windows.zip
 
-      - name: Create tag
+      # 固定版本号用法：
+      #   - 推一个 v* tag 触发（例：git push origin v1.0.1），构建约 3 小时，完成后自动发 Release；
+      #   - 或 Actions 页手动 workflow_dispatch 填 version。重复用同一版本号会更新已有 Release。
+      # ⚠️ 构建期间不要再重推同 tag（concurrency 会取消进行中的构建）；也无需手动建草稿，
+      #    workflow 会自动清理同 tag 的旧草稿。
+      - name: Create tag (skip if already exists)
         if: "!startsWith(github.ref, 'refs/tags/')"
         run: |
-          git tag ${{ steps.version.outputs.tag }}
-          git push origin ${{ steps.version.outputs.tag }}
+          if ! git ls-remote --exit-code origin "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            git tag "${{ steps.version.outputs.tag }}"
+            git push origin "${{ steps.version.outputs.tag }}"
+            echo "已创建并推送 tag ${{ steps.version.outputs.tag }}"
+          else
+            echo "tag ${{ steps.version.outputs.tag }} 已存在，跳过推送（更新已有 Release）"
+          fi
+
+      # 防止「固定版本号 → 空草稿」残留：若同 tag 已有手动建的草稿，先清掉，
+      # 避免草稿与正式发布并存、Release 页出现空壳（此前 v0.2.0 / v0.1.20260722 均踩过）。
+      - name: Remove stale draft release for this tag
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $ids = gh api "repos/${{ github.repository }}/releases?per_page=100" `
+            --jq ".[] | select(.draft == true and .tag_name == '$tag') | .id"
+          foreach ($id in $ids) {
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id" | Out-Null
+            Write-Host "[Release] 已清理同 tag 的旧草稿 release id=$id"
+          }
 
       - name: Create/Update release
         uses: softprops/action-gh-release@v2
