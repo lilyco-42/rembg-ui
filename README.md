@@ -72,8 +72,11 @@ REMBG_HOST=0.0.0.0 uv run python main.py
 
 ### 直接下载
 
-- **Windows**：从 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 下载 `Rembg-UI-windows.zip`，解压运行 `main.exe`
-- **Linux**：下载 `Rembg-UI-linux.tar.gz`，解压后运行 `./main.bin`
+- **Windows**：从 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 下载 `Rembg-UI-windows.zip`，解压运行 `rembg-ui.exe`
+- **Linux**：下载 `Rembg-UI-linux.tar.gz`，解压后运行 `./rembg-ui.bin`
+- **macOS**：下载 `Rembg-UI-macOS.dmg`（或 `.app` 压缩包），拖入「应用程序」运行
+
+> macOS 未签名应用首次打开如提示「无法验证开发者」，右键 → 打开 即可；或用 `xattr -dr com.apple.quarantine "Rembg Studio.app"` 解除隔离。
 
 ## 工作流
 
@@ -121,10 +124,12 @@ SAM（Segment Anything Model）是 Meta 开源的分割模型，本工具使用 
 
 ## 打包
 
+各平台由 `build_nuitka.py` 按系统自动生成对应应用格式（Windows `rembg-ui.exe` / Linux `rembg-ui.bin` / macOS `rembg-ui.app` 并附带 `.dmg`）：
+
 ```powershell
-# Windows - Nuitka（自动清理并构建 dist/main.dist）
+# Windows - Nuitka（产物 dist/rembg-ui.dist/rembg-ui.exe）
 .\nuitka.ps1
-# Windows - PyInstaller
+# Windows - PyInstaller（备用）
 .\pyinstaller.ps1
 ```
 
@@ -133,7 +138,12 @@ SAM（Segment Anything Model）是 Meta 开源的分割模型，本工具使用 
 ./build_nuitka_linux.sh
 ```
 
-CI 会在打 `v*` tag 时构建 Windows 与 Linux 产物并发布 Release（见 `.github/workflows/build.yml`）。
+```bash
+# macOS - Nuitka（产物 dist/rembg-ui.app + dist/Rembg Studio.dmg，需在 macOS 上执行）
+uv run python build_nuitka.py release
+```
+
+CI 会在打 `v*` tag 时构建 Windows / Linux / macOS 三平台产物并发布到同一 Release（见 `.github/workflows/build.yml`，Linux/macOS 仅在打 tag 或手动触发时运行）。
 
 ## 项目结构
 
