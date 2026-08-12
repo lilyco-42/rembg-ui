@@ -107,3 +107,65 @@ jobs:
           name: ${{ steps.version.outputs.tag }}
           files: Rembg-UI-windows.zip
           generate_release_notes: true
+
+  # Linux 构建：仅在打 tag / 手动触发时运行（Nuitka 构建很耗时，不随每次 push 跑），
+  # 等 Windows job 建好 Release 后把自己的 tar.gz 追加进同一个 Release。
+  build-linux:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    needs: build
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install system build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc patchelf ccache
+
+      - name: Cache Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Nuitka
+          key: nuitka-linux-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            nuitka-linux-
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" =~ refs/tags/(v.*) ]]; then
+            tag="${BASH_REMATCH[1]}"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            tag="${{ inputs.version }}"
+          else
+            tag="v0.1.$(date +%Y%m%d-%H%M)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Version: $tag"
+
+      - name: Build with Nuitka
+        run: uv run python build_nuitka.py release
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czf dist/Rembg-UI-linux.tar.gz -C dist/main.dist .
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.version.outputs.tag }}" dist/Rembg-UI-linux.tar.gz --clobber

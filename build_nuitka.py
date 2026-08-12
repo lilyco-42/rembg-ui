@@ -35,28 +35,31 @@ def build(mode: str = "release"):
         "-m",
         "nuitka",
         "--standalone",
-        f"--windows-console-mode={'force' if is_debug else 'disable'}",
-        f"--windows-icon-from-ico={ROOT / 'rembg.ico'}",
         f"--include-data-dir={ROOT / 'frontend'}=frontend",
         f"--include-data-dir={ROOT / 'sponsor' / 'assets'}=sponsor/assets",
         "--include-package=fastapi",
         "--include-package=sponsor",
-        # 禁用 Nuitka 内置 pywebview 插件：Nuitka 4.1.3 的 PywebViewPlugin 在 Windows
-        # 白名单里漏了 webview.platforms.win32（上游 develop 已补、未发版），
-        # 导致 pywebview 的 winforms.py `from webview.platforms import win32` 抛
-        # "actively excluded from Nuitka compilation"，Release 版启动即静默退出。
-        # 实测 --include-module 强制包含会与插件排除冲突（FATAL），禁用插件最可靠；
-        # 等 Nuitka 发版含 win32 后可移除本行。
-        "--disable-plugin=pywebview",
         "--nofollow-import-to=fastapi.agents",
         # 跳过 torch._inductor：其生成的模板代码含非 UTF-8 字符，
-        # 在 Windows(gbk) 下 Nuitka anti-bloat 解析会崩（gbk 编码报错）
+        # 在 Windows(gbk) 下 Nuitka anti-bloat 解析会崩（gbk 编码报错）；Linux 下同样精简体积
         "--nofollow-import-to=torch._inductor",
-        "--include-windows-runtime-dlls=yes",
         "--assume-yes-for-downloads",
         f"--output-dir={ROOT / 'dist'}",
         str(ROOT / "main.py"),
     ]
+
+    # 平台相关的打包参数
+    if sys.platform.startswith("win"):
+        cmd += [
+            f"--windows-console-mode={'force' if is_debug else 'disable'}",
+            f"--windows-icon-from-ico={ROOT / 'rembg.ico'}",
+            "--include-windows-runtime-dlls=yes",
+        ]
+    elif sys.platform.startswith("linux"):
+        # Linux 桌面图标可选：若要给产物加图标，准备一个合适尺寸的 PNG 并取消下面两行
+        # icon_png = ROOT / "rembg.png"
+        # cmd.append(f"--linux-icon={icon_png}")
+        pass
 
     # 修复 Release 版启动崩溃（issue #1）：把会在 import 时读取自身/依赖版本的
     # 发行版元数据打进产物，避免 importlib.metadata 抛 PackageNotFoundError
