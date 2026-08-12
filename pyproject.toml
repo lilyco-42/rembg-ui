@@ -13,7 +13,6 @@ dependencies = [
     "pillow>=12.3.0",
     "pymatting>=1.1.12",
     "python-multipart>=0.0.32",
-    "pywebview>=6.2.1",
     "rembg>=2.0.69",
     "ultralytics>=8.4.104",
     "uvicorn>=0.51.0",
