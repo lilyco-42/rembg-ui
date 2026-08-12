@@ -2,7 +2,6 @@ $ErrorActionPreference = "Stop"
 $env:PYTHONUTF8 = 1
 
 $root = $PSScriptRoot
-$pyinstaller = Join-Path $root ".venv\Scripts\pyinstaller.exe"
 $dist = Join-Path $root "dist\rembg-ui"
 
 # clean old build
@@ -11,9 +10,10 @@ foreach ($d in @("dist", "build")) {
     if (Test-Path $p) { Remove-Item -Recurse -Force $p }
 }
 
+# 环境由 uv 管理：pyinstaller 不在项目依赖里，用 uv run --with 按需引入（不写入锁文件）
 # 修复 Release 版启动崩溃（issue #1）：递归带上运行时依赖树的 .dist-info 元数据，
 # 避免 importlib.metadata 在打包后找不到包版本
-& $pyinstaller --onedir --name "rembg-ui" --noconsole `
+& uv run --with pyinstaller pyinstaller --onedir --name "rembg-ui" --noconsole `
     --add-data "frontend;frontend" `
     --add-data "sponsor\assets;sponsor\assets" `
     --add-data "rembg.ico;." `

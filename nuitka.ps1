@@ -1,9 +1,8 @@
 $ErrorActionPreference = "Stop"
 $env:PYTHONUTF8 = 1
 
-$nuitka = Join-Path (Join-Path $PSScriptRoot ".venv") "Scripts\nuitka.cmd"
-
-& $nuitka --standalone `
+# 环境由 uv 管理：通过 uv run 调用已安装的 nuitka，无需关心 venv 路径
+& uv run nuitka --standalone `
     --output-dir=dist --python-flag=-O --assume-yes-for-downloads `
     --include-windows-runtime-dlls=yes `
     --include-data-dir=frontend=frontend --include-data-dir=processors=processors `

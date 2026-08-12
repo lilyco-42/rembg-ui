@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Linux 打包脚本：Nuitka 构建 + 打包 tar.gz
-# 依赖：uv（或已激活的 .venv）。产物在 dist/Rembg-UI-linux.tar.gz
+# 依赖：uv（环境由 uv 管理）。产物在 dist/Rembg-UI-linux.tar.gz
 set -euo pipefail
 cd "$(dirname "$0")"
 

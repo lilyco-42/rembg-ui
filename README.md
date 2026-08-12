@@ -38,7 +38,7 @@
 ```bash
 # 需要 Python 3.10+，推荐用 uv
 uv sync
-python main.py
+uv run python main.py
 ```
 
 启动后自动打开浏览器 `http://127.0.0.1:8042`。首次运行会自动下载模型，请保持网络连接。
@@ -48,9 +48,9 @@ python main.py
 默认只监听 `127.0.0.1`（仅本机）。想让手机（iOS/Android）访问，二选一：
 
 ```bash
-python main.py --lan            # 一键开启局域网访问
+uv run python main.py --lan            # 一键开启局域网访问
 # 或
-REMBG_HOST=0.0.0.0 python main.py
+REMBG_HOST=0.0.0.0 uv run python main.py
 ```
 
 开启后：

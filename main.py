@@ -136,7 +136,7 @@ async def on_startup():
         else:
             print("[Server] 未检测到局域网 IP，无法从手机访问", flush=True)
     else:
-        print("[Server] 仅本机可访问。如需手机/局域网访问：python main.py --lan  或  REMBG_HOST=0.0.0.0 python main.py", flush=True)
+        print("[Server] 仅本机可访问。如需手机/局域网访问：uv run python main.py --lan  或  REMBG_HOST=0.0.0.0 uv run python main.py", flush=True)
 
 
 # 允许跨域：页面与 API 同源即可，放开来源以兼容局域网 IP / 内网穿透等任意访问来源。
