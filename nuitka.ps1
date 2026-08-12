@@ -8,6 +8,7 @@ $nuitka = Join-Path (Join-Path $PSScriptRoot ".venv") "Scripts\nuitka.cmd"
     --include-windows-runtime-dlls=yes `
     --include-data-dir=frontend=frontend --include-data-dir=processors=processors `
     --include-package=fastapi --include-package=ultralytics `
+    --disable-plugin=pywebview `
     --nofollow-import-to=fastapi.agents `
     --nofollow-import-to=torch._inductor `
     --module-parameter=numba-disable-jit=yes --module-parameter=torch-disable-jit=yes `

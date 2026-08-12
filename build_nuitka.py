@@ -41,6 +41,13 @@ def build(mode: str = "release"):
         f"--include-data-dir={ROOT / 'sponsor' / 'assets'}=sponsor/assets",
         "--include-package=fastapi",
         "--include-package=sponsor",
+        # 禁用 Nuitka 内置 pywebview 插件：Nuitka 4.1.3 的 PywebViewPlugin 在 Windows
+        # 白名单里漏了 webview.platforms.win32（上游 develop 已补、未发版），
+        # 导致 pywebview 的 winforms.py `from webview.platforms import win32` 抛
+        # "actively excluded from Nuitka compilation"，Release 版启动即静默退出。
+        # 实测 --include-module 强制包含会与插件排除冲突（FATAL），禁用插件最可靠；
+        # 等 Nuitka 发版含 win32 后可移除本行。
+        "--disable-plugin=pywebview",
         "--nofollow-import-to=fastapi.agents",
         # 跳过 torch._inductor：其生成的模板代码含非 UTF-8 字符，
         # 在 Windows(gbk) 下 Nuitka anti-bloat 解析会崩（gbk 编码报错）
