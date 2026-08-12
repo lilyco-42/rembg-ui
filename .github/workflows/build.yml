@@ -22,7 +22,8 @@ concurrency:
 jobs:
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 180
+    # 冷构建实测约 179 分钟（接近 180 上限），留足余量避免误触超时
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
 
@@ -75,6 +76,9 @@ jobs:
       # ⚠️ 构建期间不要再重推同 tag（concurrency 会取消进行中的构建）；也无需手动建草稿，
       #    workflow 会自动清理同 tag 的旧草稿。
       - name: Create tag (skip if already exists)
+        # 该步骤是 bash 语法（if ! git ls-remote ... then/fi），必须显式指定 shell:
+        # 否则 Windows job 默认用 pwsh，解析会报 "Missing '(' after 'if'"（曾因此失败）
+        shell: bash
         if: "!startsWith(github.ref, 'refs/tags/')"
         run: |
           if ! git ls-remote --exit-code origin "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
