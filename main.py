@@ -3,10 +3,12 @@ import io
 import os
 import random
 import socket
+import subprocess
 import sys
 import threading
+import time
 import webbrowser
-from typing import Any, Optional  # 明确类型声明，让编辑器和静态检查彻底闭嘴
+from typing import Optional  # 明确类型声明，让编辑器和静态检查彻底闭嘴
 
 from sponsor import sponsor_router, set_config, SponsorConfig, SponsorMethod, TutorialLink
 
@@ -24,6 +26,21 @@ def find_available_port(default: int = 8042) -> int:
         print(f"[Port] 端口 {default} 被占用，随机使用 {port}")
         return port
 
+
+def open_path(path: str):
+    """跨平台用系统默认程序打开路径/URL（替代 Windows 专用的 os.startfile）"""
+    # 规范化路径，避免混合分隔符（如 C:/Users/liuqi/.u2net）导致 ShellExecute 静默失败
+    path = os.path.normpath(os.path.expanduser(path))
+    try:
+        if sys.platform == "win32":
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.run(["open", path])
+        else:
+            subprocess.run(["xdg-open", path])
+    except Exception as e:
+        print(f"[Warn] 无法打开 {path}: {e}")
+
 # 💡 强力注入国内 Hugging Face 镜像站，彻底解决大陆网络无法下载新模型的问题
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 os.environ["ORT_LOGGING_LEVEL"] = "3"
@@ -31,7 +48,6 @@ os.environ["ORT_CUDA_DEVICE_ID"] = "0"
 
 import numpy as np
 import uvicorn
-import webview
 
 
 def _detect_providers():
@@ -57,7 +73,6 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from PIL import Image
-from pydantic import BaseModel
 from rembg import new_session, remove
 from processors.sam_processor import MobileSAMProcessor
 
@@ -75,26 +90,67 @@ set_config(SponsorConfig(
     project_version="1.0.0",
     project_repo="https://github.com/lilyco-42/rembg-ui",
 ))
+# `--lan` 快捷开关：等价于 REMBG_HOST=0.0.0.0，供手机/局域网设备访问
+if "--lan" in sys.argv:
+    os.environ.setdefault("REMBG_HOST", "0.0.0.0")
+
+
+def get_lan_ips() -> list:
+    """尽力收集本机局域网 IPv4 地址（UDP「连接」只选路、不发任何数据包）"""
+    ips: set = set()
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ips.add(s.getsockname()[0])
+    except OSError:
+        pass
+    try:
+        for addr in socket.gethostbyname_ex(socket.gethostname())[2]:
+            ips.add(addr)
+    except OSError:
+        pass
+
+    def _usable(ip: str) -> bool:
+        if ip.count(".") != 3 or ip.startswith(("127.", "169.254.", "0.", "255.")):
+            return False
+        first = int(ip.split(".")[0])
+        return 1 <= first <= 223
+
+    return sorted(ip for ip in ips if _usable(ip))
+
+
 SERVER_PORT = find_available_port()
+# 监听地址：默认仅本机回环；移动端/局域网场景可用 REMBG_HOST=0.0.0.0（或 --lan）放开
+SERVER_HOST = os.environ.get("REMBG_HOST", "127.0.0.1")
 
 
 @app.on_event("startup")
 async def on_startup():
     server_ready.set()
+    print(f"[Server] 本机访问: http://127.0.0.1:{SERVER_PORT}", flush=True)
+    if SERVER_HOST in ("0.0.0.0", ""):
+        lan_ips = get_lan_ips()
+        if lan_ips:
+            for ip in lan_ips:
+                print(f"[Server] 手机/局域网访问: http://{ip}:{SERVER_PORT}  （同一 WiFi 扫码即可）", flush=True)
+        else:
+            print("[Server] 未检测到局域网 IP，无法从手机访问", flush=True)
+    else:
+        print("[Server] 仅本机可访问。如需手机/局域网访问：python main.py --lan  或  REMBG_HOST=0.0.0.0 python main.py", flush=True)
 
 
-# 允许跨域（本地回环地址互通，确保 Webview 内部请求顺畅）
+# 允许跨域：页面与 API 同源即可，放开来源以兼容局域网 IP / 内网穿透等任意访问来源。
+# 注意：这是本地工具，无鉴权，放开后同一局域网内的设备都能调用接口。
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[f"http://127.0.0.1:{SERVER_PORT}", f"http://localhost:{SERVER_PORT}"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 model_sessions = {}
 session_lock = threading.Lock()
-window_instance: Any = None
 uvicorn_server = None
 server_ready = threading.Event()
 
@@ -115,13 +171,18 @@ def get_model_session(model_name: str):
         return model_sessions[model_name]
 
 
-class SaveImageRequest(BaseModel):
-    base64_data: str
-    filename: str
-
-
-class BatchSaveRequest(BaseModel):
-    files: list[SaveImageRequest]
+@app.get("/api/network")
+async def network_info():
+    """返回本机访问地址，供前端生成「手机扫码连接」二维码"""
+    lan_ips = get_lan_ips() if SERVER_HOST in ("0.0.0.0", "") else []
+    return {
+        "host": SERVER_HOST,
+        "port": SERVER_PORT,
+        "lan_ips": lan_ips,
+        "lan_url": f"http://{lan_ips[0]}:{SERVER_PORT}" if lan_ips else None,
+        "local_url": f"http://127.0.0.1:{SERVER_PORT}",
+        "lan_enabled": bool(lan_ips),
+    }
 
 
 @app.get("/api/models")
@@ -158,7 +219,7 @@ async def open_model_dir():
     """用系统文件管理器打开模型目录"""
     model_dir = os.path.expanduser("~/.u2net")
     os.makedirs(model_dir, exist_ok=True)
-    os.startfile(model_dir)
+    open_path(model_dir)
     return {"success": True, "path": model_dir}
 
 
@@ -209,96 +270,6 @@ async def remove_bg(
         }
     except Exception as e:
         print(f"[Error] 处理失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/save-image")
-async def save_image(req: SaveImageRequest):
-    global window_instance
-    if not window_instance:
-        raise HTTPException(status_code=500, detail="桌面窗口句柄未初始化")
-
-    try:
-        # 唤起本地操作系统的原生“另存为”文件选择框
-        dialog_result = window_instance.create_file_dialog(
-            webview.FileDialog.SAVE,
-            directory=os.path.expanduser("~/Desktop"),
-            save_filename=req.filename,
-            file_types=("PNG Image (*.png)", "All files (*.*)"),
-        )
-
-        # 健壮的解包逻辑：兼容新老版本 pywebview 返回的多种数据类型 (str, tuple, list)
-        save_path = None
-        if isinstance(dialog_result, (tuple, list)):
-            if len(dialog_result) > 0 and dialog_result[0]:
-                save_path = dialog_result[0]
-        elif isinstance(dialog_result, str):
-            save_path = dialog_result
-
-        # 如果用户点击了取消
-        if not save_path:
-            return {"success": False, "msg": "用户取消了保存"}
-
-        # 解码前端发来的 base64 数据并写入本地磁盘
-        header, base64_str = (
-            req.base64_data.split(", ")
-            if ", " in req.base64_data
-            else req.base64_data.split(",")
-        )
-        file_bytes = base64.b64decode(base64_str)
-
-        with open(save_path, "wb") as f:
-            f.write(file_bytes)
-
-        print(f"[IO] 抠图结果成功保存到: {save_path}")
-        return {"success": True, "path": save_path}
-    except Exception as e:
-        print(f"[Error] 保存文件失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/save-batch")
-async def save_batch(req: BatchSaveRequest):
-    """选择文件夹，一次性批量保存抠图结果"""
-    global window_instance
-    if not window_instance:
-        raise HTTPException(status_code=500, detail="桌面窗口句柄未初始化")
-    if not req.files:
-        raise HTTPException(status_code=400, detail="没有需要保存的文件")
-
-    try:
-        # 唤起原生"选择文件夹"对话框
-        folder = window_instance.create_file_dialog(
-            webview.FileDialog.FOLDER,
-            directory=os.path.expanduser("~/Desktop"),
-        )
-
-        folder_path = None
-        if isinstance(folder, (tuple, list)):
-            if len(folder) > 0 and folder[0]:
-                folder_path = folder[0]
-        elif isinstance(folder, str):
-            folder_path = folder
-
-        # 用户点击取消
-        if not folder_path:
-            return {"success": False, "msg": "用户取消了保存"}
-
-        saved = []
-        for item in req.files:
-            # 防御路径穿越：只取文件名，丢弃任何路径部分
-            safe_name = os.path.basename(item.filename or "output.png")
-            _, base64_str = item.base64_data.split(",", 1)
-            file_bytes = base64.b64decode(base64_str)
-            save_path = os.path.join(folder_path, safe_name)
-            with open(save_path, "wb") as f:
-                f.write(file_bytes)
-            saved.append(save_path)
-
-        print(f"[IO] 批量保存完成: {len(saved)} 个文件 → {folder_path}")
-        return {"success": True, "path": folder_path, "count": len(saved)}
-    except Exception as e:
-        print(f"[Error] 批量保存失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -466,46 +437,33 @@ async def read_index():
 def run_server():
     """在子线程中安全运行 Uvicorn"""
     global uvicorn_server
-    config = uvicorn.Config(app, host="127.0.0.1", port=SERVER_PORT, log_level="warning")
+    config = uvicorn.Config(app, host=SERVER_HOST, port=SERVER_PORT, log_level="warning")
     uvicorn_server = uvicorn.Server(config)
     uvicorn_server.run()
 
 
-def on_window_closed():
-    """窗口关闭时触发，干净利落地扬了后端"""
-    print("[UI] 窗口已关闭，正在强制退出后端服务...")
-    global uvicorn_server
-    if uvicorn_server:
-        uvicorn_server.should_exit = True
-    # 强制杀死自身进程，防止任何可能的事件循环死锁残留
-    os._exit(0)
+def _open_browser_when_ready():
+    """服务就绪后自动打开浏览器访问本地 API"""
+    server_ready.wait(timeout=60)
+    url = f"http://127.0.0.1:{SERVER_PORT}"
+    print(f"[UI] 服务已就绪，自动打开: {url}", flush=True)
+    webbrowser.open(url)
 
 
 if __name__ == "__main__":
-    # 1. 创建窗口实例
-    active_window = webview.create_window(
-        title="AI 智能分层抠图工具 (完全体)",
-        url=f"http://127.0.0.1:{SERVER_PORT}",
-        width=1100,
-        height=800,
-        resizable=True,
-    )
-
-    # 2. 显式空值防线，让静态检查器确信 active_window 绝对存在且不是 None
-    if active_window is not None:
-        active_window.events.closed += on_window_closed
-
-    # 3. 赋值给全局变量供保存接口调用
-    window_instance = active_window
-
-    # 4. 后端丢给子线程启动
+    # 1. 后端丢给子线程启动
     server_thread = threading.Thread(target=run_server)
     server_thread.daemon = True
     server_thread.start()
 
-    server_ready.wait(timeout=10)
+    # 2. 自动打开浏览器访问对应端口（不打包任何原生窗口 / pywebview）
+    threading.Thread(target=_open_browser_when_ready, daemon=True).start()
 
-    # 5. GUI 占领主线程启动
-    print("[UI] 正在启动桌面窗口...")
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rembg.ico")
-    webview.start(icon=icon_path)
+    # 3. 主线程保持存活，Ctrl+C 退出
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        print("[Server] 正在退出...")
+        if uvicorn_server:
+            uvicorn_server.should_exit = True
