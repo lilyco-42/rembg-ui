@@ -977,6 +977,20 @@
     </div>
 
     <script>
+        // 本次启动的安全 token（由服务端注入），自动附加到所有写请求头
+        const REMBG_TOKEN = document.querySelector('meta[name="rembg-token"]')?.content || '';
+        const __origFetch = window.fetch;
+        window.fetch = function(input, init) {
+            init = init || {};
+            const method = (init.method || 'GET').toUpperCase();
+            if (method !== 'GET') {
+                const headers = new Headers(init.headers || {});
+                headers.set('X-Rembg-Token', REMBG_TOKEN);
+                init.headers = headers;
+            }
+            return __origFetch(input, init);
+        };
+
         let resultBase64 = null;
         let currentFileName = "output.png";
         let selectedFile = null;

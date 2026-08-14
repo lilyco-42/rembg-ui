@@ -1,7 +1,9 @@
 """赞助与教程模块 — FastAPI Router"""
 import os
+import re
 import sys
 import webbrowser
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import FileResponse
@@ -26,9 +28,20 @@ class OpenUrlRequest(BaseModel):
     url: str
 
 
+def _is_safe_url(url: str) -> bool:
+    """只允许 http/https 链接，拒绝 file://、javascript: 等危险协议。"""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+
+
 @router.post("/open-external")
 async def open_external(url: str = Form(...)):
     """用系统默认浏览器打开外部链接"""
+    if not _is_safe_url(url):
+        raise HTTPException(status_code=400, detail="仅允许 http/https 链接")
     try:
         webbrowser.open(url)
         return {"success": True}
@@ -39,6 +52,8 @@ async def open_external(url: str = Form(...)):
 @router.post("/open-url")
 async def open_url(req: OpenUrlRequest):
     """用系统默认浏览器打开外部链接（JSON body）"""
+    if not _is_safe_url(req.url):
+        raise HTTPException(status_code=400, detail="仅允许 http/https 链接")
     try:
         webbrowser.open(req.url)
         return {"success": True}
@@ -58,6 +73,10 @@ async def sponsor_config():
 @router.get("/assets/{filename}")
 async def serve_asset(filename: str):
     """提供 sponsor assets 目录中的静态文件"""
+    # 只允许文件名本身，防止路径穿越读取任意文件
+    filename = os.path.basename(filename)
+    if not filename:
+        raise HTTPException(status_code=404, detail="Asset not found")
     if getattr(sys, "frozen", False):
         # Nuitka 打包后
         base_dir = os.path.dirname(sys.executable)

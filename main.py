@@ -70,11 +70,11 @@ def _detect_providers():
 PROVIDERS = _detect_providers()
 print(f"[GPU] Provider: {PROVIDERS[0]}")
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from PIL import Image
 from rembg import new_session, remove
 from processors.sam_processor import MobileSAMProcessor
+from security import SecurityMiddleware, security
 
 app = FastAPI()
 app.include_router(sponsor_router)
@@ -139,15 +139,11 @@ async def on_startup():
         print("[Server] 仅本机可访问。如需手机/局域网访问：uv run python main.py --lan  或  REMBG_HOST=0.0.0.0 uv run python main.py", flush=True)
 
 
-# 允许跨域：页面与 API 同源即可，放开来源以兼容局域网 IP / 内网穿透等任意访问来源。
-# 注意：这是本地工具，无鉴权，放开后同一局域网内的设备都能调用接口。
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 安全中间件：校验 Host/Origin 必须是回环或私网地址，且所有写操作需携带
+# 每次启动随机生成的 X-Rembg-Token（防 DNS rebinding / CSRF）。
+# 前端页面与 API 同源，无需 CORS 放行；放开 CORS 反而会让任意网站读取
+# 页面中的 token。
+app.add_middleware(SecurityMiddleware, security_obj=security)
 
 model_sessions = {}
 session_lock = threading.Lock()
@@ -236,6 +232,8 @@ async def remove_bg(
 ):
     try:
         input_data = await file.read()
+        if model_name not in KNOWN_MODELS:
+            raise HTTPException(status_code=400, detail=f"未知模型: {model_name}")
         session = get_model_session(model_name)
         print(f"[Rembg] 模型={model_name} alpha={alpha_matting} fg={alpha_matting_fg} bg={alpha_matting_bg} erode={alpha_matting_erode}")
 
@@ -276,6 +274,21 @@ async def remove_bg(
 TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+KNOWN_MODELS = {
+    "bria-rmbg", "birefnet-general", "birefnet-massive", "birefnet-portrait",
+    "u2net_human_seg", "isnet-anime", "birefnet-general-lite", "u2net",
+    "u2netp", "silueta", "isnet-general-use", "u2net_cloth_seg",
+    "birefnet-dis", "birefnet-hrsod", "birefnet-cod", "sam",
+}
+
+
+def _safe_ext(filename: str) -> str:
+    """从上传文件名中提取安全的图片扩展名（防止路径穿越）。"""
+    ext = os.path.splitext(filename or "image.png")[1]
+    if not ext or "/" in ext or "\\" in ext or ".." in ext or len(ext) > 10:
+        return ".png"
+    return ext
+
 
 def _get_sam() -> MobileSAMProcessor:
     global sam_processor
@@ -290,7 +303,7 @@ async def sam_load_image(file: UploadFile = File(...)):
     global sam_temp_path
     try:
         content = await file.read()
-        ext = os.path.splitext(file.filename or "image.png")[1] or ".png"
+        ext = _safe_ext(file.filename)
         sam_temp_path = os.path.join(TEMP_DIR, f"sam_input{ext}")
         with open(sam_temp_path, "wb") as f:
             f.write(content)
@@ -421,6 +434,9 @@ async def read_index():
     try:
         with open(html_path, "r", encoding="utf-8") as f:
             content = f.read()
+        # 注入本次启动的安全 token，前端 JS 读取后附加到写请求头
+        meta = f'<meta name="rembg-token" content="{security.token}">'
+        content = content.replace("<head>", f"<head>\n    {meta}", 1)
         # 禁止缓存：确保每次启动都加载最新的前端页面，避免 WebView2 展示旧版本
         return HTMLResponse(
             content=content,
