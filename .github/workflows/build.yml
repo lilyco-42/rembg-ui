@@ -24,6 +24,10 @@ jobs:
     runs-on: windows-latest
     # 冷构建实测约 179 分钟（接近 180 上限），留足余量避免误触超时
     timeout-minutes: 240
+    # 把最终版本号输出给 Linux/macOS job：它们必须沿用 Windows 算出的同一个 tag，
+    # 不能自己重新算（时间戳跨分钟会不一致，导致追加到不存在的 Release）
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -91,18 +95,20 @@ jobs:
 
       # 防止「固定版本号 → 空草稿」残留：若同 tag 已有手动建的草稿，先清掉，
       # 避免草稿与正式发布并存、Release 页出现空壳（此前 v0.2.0 / v0.1.20260722 均踩过）。
+      # ⚠️ jq 的字符串字面量必须用双引号（.tag_name == "..."），单引号会让 jq 报
+      #    "failed to parse jq expression / unexpected token" 直接失败（曾因此中断发布）。
+      #    改用 bash 简化引号转义；Windows runner 自带 git-bash，可正常执行。
       - name: Remove stale draft release for this tag
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ steps.version.outputs.tag }}"
-          $ids = gh api "repos/${{ github.repository }}/releases?per_page=100" `
-            --jq ".[] | select(.draft == true and .tag_name == '$tag') | .id"
-          foreach ($id in $ids) {
-            gh api -X DELETE "repos/${{ github.repository }}/releases/$id" | Out-Null
-            Write-Host "[Release] 已清理同 tag 的旧草稿 release id=$id"
-          }
+          TAG="${{ steps.version.outputs.tag }}"
+          for id in $(gh api "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq ".[] | select(.draft == true and .tag_name == \"$TAG\") | .id" 2>/dev/null || true); do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id" >/dev/null || true
+            echo "[Release] 已清理同 tag 的旧草稿 release id=$id"
+          done
 
       - name: Create/Update release
         uses: softprops/action-gh-release@v2
@@ -112,11 +118,12 @@ jobs:
           files: Rembg-UI-windows.zip
           generate_release_notes: true
 
-  # Linux 构建：仅在打 tag / 手动触发时运行（Nuitka 构建很耗时，不随每次 push 跑），
-  # 等 Windows job 建好 Release 后把自己的 tar.gz 追加进同一个 Release。
+  # Linux 构建：与 Windows 同一次触发内运行，等 Windows job 建好 Release 后把 tar.gz
+  # 追加进同一个 Release。⚠️ 此前靠「Windows 自动 push tag → tag push 二次触发本 job」，
+  # 但 GITHUB_TOKEN push 的 tag 不会触发新的 workflow run，导致 Linux/macOS 从未真正跑过；
+  # 因此改为去掉 if 限制、直接从 build-windows 的 job outputs 取 tag，在同一 run 内完成。
   build-linux:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     needs: build-windows
     timeout-minutes: 240
     steps:
@@ -146,19 +153,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Get version
+      - name: Get version (from build-windows)
         id: version
         shell: bash
         run: |
-          if [[ "${{ github.ref }}" =~ refs/tags/(v.*) ]]; then
-            tag="${BASH_REMATCH[1]}"
-          elif [[ -n "${{ inputs.version }}" ]]; then
-            tag="${{ inputs.version }}"
-          else
-            tag="v0.1.$(date +%Y%m%d-%H%M)"
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Version: $tag"
+          echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${{ needs.build-windows.outputs.tag }}"
 
       - name: Build with Nuitka
         run: uv run python build_nuitka.py release
@@ -176,9 +176,9 @@ jobs:
 
   # macOS 构建：Nuitka 产出 .app 应用包（release 模式自动附带 .dmg），追加到同一 Release。
   # 依赖 onnxruntime 已按平台区分（macOS 用 CPU 版），见 pyproject.toml 环境标记。
+  # 与 build-linux 同理：去掉 if 限制，同一 run 内依赖 Windows 建好 Release 后追加资产。
   build-macos:
     runs-on: macos-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     needs: build-windows
     timeout-minutes: 240
     steps:
@@ -203,19 +203,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Get version
+      - name: Get version (from build-windows)
         id: version
         shell: bash
         run: |
-          if [[ "${{ github.ref }}" =~ refs/tags/(v.*) ]]; then
-            tag="${BASH_REMATCH[1]}"
-          elif [[ -n "${{ inputs.version }}" ]]; then
-            tag="${{ inputs.version }}"
-          else
-            tag="v0.1.$(date +%Y%m%d-%H%M)"
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Version: $tag"
+          echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${{ needs.build-windows.outputs.tag }}"
 
       - name: Build with Nuitka
         run: uv run python build_nuitka.py release
