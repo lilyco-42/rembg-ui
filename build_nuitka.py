@@ -53,12 +53,17 @@ def build(mode: str = "release"):
     is_debug = mode == "debug"
     version = _project_version()
 
+    # 编译模式：macOS 用 --mode=app 产出 .app 应用包（必须，且与 --standalone 互斥——
+    # 只给 --standalone 时 Nuitka 会警告 macos-app-* 选项全部失效、不生成 .app/.dmg）；
+    # Windows / Linux 用经典 --standalone
+    mode_flag = "--mode=app" if sys.platform.startswith("darwin") else "--standalone"
+
     # 跨平台通用参数
     cmd = [
         sys.executable,
         "-m",
         "nuitka",
-        "--standalone",
+        mode_flag,
         f"--output-folder-name={OUTPUT_NAME}",
         f"--output-filename={OUTPUT_NAME}",
         f"--include-data-dir={ROOT / 'frontend'}=frontend",

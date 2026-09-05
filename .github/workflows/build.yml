@@ -167,6 +167,14 @@ jobs:
         run: |
           mkdir -p dist
           tar -czf dist/Rembg-UI-linux.tar.gz -C dist/rembg-ui.dist .
+          ls -lh dist/Rembg-UI-linux.tar.gz
+          # GitHub Release 单资产硬上限 2 GiB，超限 gh release upload 直接 HTTP 422（曾因此失败）。
+          # torch 已锁 CPU 版（见 pyproject.toml），正常应远低于上限；此守卫防回归并给出可读报错。
+          SIZE=$(stat -c%s dist/Rembg-UI-linux.tar.gz)
+          if [ "$SIZE" -ge 2147483648 ]; then
+            echo "::error::tar.gz 为 $SIZE 字节，超过 GitHub Release 单资产 2 GiB 上限"
+            exit 1
+          fi
 
       - name: Upload to release
         env:
@@ -183,6 +191,16 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
+
+      # macOS runner 可用空间仅 ~14 GB，而 Nuitka+torch 全量构建（编译中间产物 + dist + DMG
+      # + ccache 缓存写入）轻松吃满：上次构建在 dist 数据文件复制阶段被硬杀，日志无任何报错。
+      # 移除本工作流用不到的 Android SDK / ghcup（不同镜像位置不同，逐个尝试），可释放 ~10 GB。
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /Users/runner/Library/Android/sdk
+          sudo rm -rf /usr/local/.ghcup ~/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h /
 
       - uses: actions/setup-python@v5
         with:
@@ -223,10 +241,13 @@ jobs:
             mv *.dmg ../Rembg-UI-macOS.dmg
             echo "asset=../Rembg-UI-macOS.dmg" >> "$GITHUB_OUTPUT"
             echo "已生成 DMG"
-          else
+          elif compgen -G "*.app" >/dev/null; then
             zip -rq ../Rembg-UI-macOS.zip *.app
             echo "asset=../Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
             echo "已生成 .app zip"
+          else
+            echo "::error::dist 下既无 .dmg 也无 .app（--mode=app 可能未生效，检查上方 ls 输出）"
+            exit 1
           fi
 
       - name: Upload to release
