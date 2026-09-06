@@ -74,6 +74,11 @@ def build(mode: str = "release"):
         # 跳过 torch._inductor：其生成的模板代码含非 UTF-8 字符，
         # 在 Windows(gbk) 下 Nuitka anti-bloat 解析会崩（gbk 编码报错）；Linux 下同样精简体积
         "--nofollow-import-to=torch._inductor",
+        # torch 的 include 头文件目录（~1 万个文件）运行时永远用不到，却会被 Nuitka 计入
+        # macOS codesign 命令行（Standalone.py 把 data_file_paths 一并传入签名），超出
+        # macOS ARG_MAX 报 "command line was too long" FATAL（曾致 macOS 构建失败）。
+        # 排除后三平台 dist 均减重、复制加速。
+        "--noinclude-data-files=torch/include",
         # 版本信息：写入 Windows 资源元数据 / macOS Info.plist / Linux 二进制
         # 注意：file-description 用 ASCII，避免 Nuitka 在 Windows(gbk) 解析参数时报错
         "--company-name=lilyco-42",
