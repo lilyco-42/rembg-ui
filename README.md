@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="docs/banner.svg" width="720" alt="banner">
+</div>
+
 # Rembg Studio
 
 基于 AI 的图像背景去除 + 智能抠图工具。**纯后端架构**：FastAPI 只提供服务，UI 由浏览器加载，一套前端同时适配桌面与手机。
