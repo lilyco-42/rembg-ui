@@ -20,7 +20,7 @@ OUTPUT_NAME = "rembg-ui"
 # 以下发行版在 import 时会读取自身/依赖的版本元数据，需要把它们的 .dist-info 一并打进产物。
 # 它们都会被 Nuitka 跟随导入自动包含（pymatting 经 rembg；torchvision/torch 经 ultralytics），
 # 因此只需 --include-distribution-metadata，无需强制 --include-package 增加体积。
-METADATA_DISTRIBUTIONS = ["pymatting", "torchvision", "torch"]
+METADATA_DISTRIBUTIONS = ["PyMatting", "torchvision", "torch"]
 
 
 def _project_version() -> str:
@@ -109,7 +109,10 @@ def build(mode: str = "release"):
             "--macos-app-mode=gui",
         ]
         if not is_debug:
-            cmd.append("--macos-app-create-dmg")
+            if shutil.which("create-dmg"):
+                cmd.append("--macos-app-create-dmg")
+            else:
+                print("[warn] 未找到 create-dmg，跳过 DMG（仍产出 .app）")
     elif sys.platform.startswith("linux"):
         # Linux 桌面图标可选：若要给产物加图标，准备一个合适尺寸的 PNG 并取消下面两行
         # icon_png = ROOT / "rembg.png"
@@ -129,6 +132,60 @@ def build(mode: str = "release"):
 
     print(f"Building [{mode.upper()}] with Nuitka (version {version})...")
     subprocess.run(cmd, check=True)
+    # CUDA 变体收尾（仅 win/linux）：macOS 用 --mode=app 无 .dist 目录，且 nvidia 包
+    # 本就因平台标记不会安装，无需调用
+    if sys.platform.startswith(("win", "linux")):
+        _bundle_cuda_runtime(build_dir / f"{OUTPUT_NAME}.dist")
+
+
+def _bundle_cuda_runtime(dist_dir: Path) -> None:
+    """-cuda 变体收尾：把构建环境里 nvidia-* wheel 的 CUDA 12 运行库拷进产物。
+    默认构建（无 --extra cuda）环境没有这些包，直接跳过。
+    - Windows：*.dll 平铺到 dist 根目录——exe 所在目录在 DLL 搜索路径首位，
+      onnxruntime 按名加载 cudart64_12.dll 等可直接命中；
+    - Linux：*.so* 收集到 dist/nvidia-cuda/lib/——运行时由 main._preload_cuda_runtime
+      用 ctypes 按绝对路径预加载（dlopen 的库不做相对搜索，必须显式加载）。
+    同时确保 onnxruntime 的 CUDA Provider 动态库真的进了产物（Nuitka 的 dll 追踪
+    只报过 1 个 DLL，Provider 是运行时 dlopen 的，不保证被复制）。"""
+    import shutil
+    import sysconfig
+
+    if not dist_dir.is_dir():
+        print(f"[cuda] 未找到产物目录 {dist_dir.name}，跳过 CUDA 打包")
+        return
+
+    purelib = Path(sysconfig.get_paths()["purelib"])
+    nvidia_root = purelib / "nvidia"
+
+    if not nvidia_root.is_dir():
+        print("[cuda] 构建环境未安装 nvidia 运行库（非 --extra cuda），跳过 CUDA 打包")
+        return
+
+    if sys.platform.startswith("win"):
+        target = dist_dir
+        count = 0
+        for dll in nvidia_root.glob("*/bin/*.dll"):
+            shutil.copy2(dll, target / dll.name)
+            count += 1
+        print(f"[cuda] 已拷贝 {count} 个 CUDA DLL 到 dist 根目录")
+    elif sys.platform.startswith("linux"):
+        target = dist_dir / "nvidia-cuda" / "lib"
+        target.mkdir(parents=True, exist_ok=True)
+        count = 0
+        for so in nvidia_root.glob("*/lib/lib*.so*"):
+            shutil.copy2(so, target / so.name)
+            count += 1
+        print(f"[cuda] 已拷贝 {count} 个 CUDA 运行库到 nvidia-cuda/lib/")
+
+    # 保险：补齐 onnxruntime/capi 下缺失的 Provider 动态库（providers_cuda/shared/tensorrt）
+    capi_src = purelib / "onnxruntime" / "capi"
+    capi_dst = dist_dir / "onnxruntime" / "capi"
+    if capi_src.is_dir():
+        capi_dst.mkdir(parents=True, exist_ok=True)
+        for f in capi_src.iterdir():
+            if f.suffix in (".dll", ".so") and not (capi_dst / f.name).exists():
+                shutil.copy2(f, capi_dst / f.name)
+                print(f"[cuda] 补拷缺失的 ORT Provider 库: {f.name}")
 
 
 if __name__ == "__main__":

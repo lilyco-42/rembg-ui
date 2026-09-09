@@ -36,3 +36,19 @@ torch = [
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[project.optional-dependencies]
+# -cuda 构建变体：把 onnxruntime-gpu 所需的 CUDA 12 运行库（NVIDIA 官方 wheel，
+# 含 cudnn 9 / cublas / cudart 等，安装后 ~2.5 GB）打进产物，用户免装 CUDA 即可 GPU 加速。
+# 仅 Win/Linux 有 wheel，标记避免 macOS 下通用锁解析失败；macOS 加速走 CoreML（无需额外包）。
+# 默认构建不装这组（CI 的 -cuda 变体 job 用 `uv sync --extra cuda`）。
+cuda = [
+    "nvidia-cublas-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-cuda-runtime-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-cudnn-cu12>=9; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-cufft-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-curand-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-cusolver-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-cusparse-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+    "nvidia-nvjitlink-cu12; sys_platform == 'win32' or sys_platform == 'linux'",
+]

@@ -63,7 +63,10 @@ jobs:
             $tag = "${{ inputs.version }}"
           } else {
             $date = Get-Date -Format "yyyyMMdd-HHmm"
-            $tag = "v0.1.$date"
+            $proj = "0.2.0"
+            $m = Select-String -Path pyproject.toml -Pattern '^\s*version\s*=\s*"([^"]+)"' | Select-Object -First 1
+            if ($m) { $proj = $m.Matches[0].Groups[1].Value }
+            $tag = "v$proj-$date"
           }
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $tag"
@@ -221,6 +224,9 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Install create-dmg
+        run: brew install create-dmg
+
       - name: Get version (from build-windows)
         id: version
         shell: bash
@@ -255,4 +261,121 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ steps.version.outputs.tag }}" "${{ steps.package.outputs.asset }}" --clobber
+
+  # ── CUDA 加速变体 ─────────────────────────────────────────────────────────
+  # 默认产物精简（torch CPU、ORT 不带 CUDA 运行库）；-cuda 变体通过
+  # `uv sync --extra cuda` 把 NVIDIA 官方 CUDA 12 运行库（cudnn9/cublas/cudart 等，
+  # ~2.5 GB）打进产物并上传为 -cuda 后缀资产，用户免装 CUDA 即可 GPU 加速。
+  # 依赖 build-windows 的 job outputs 提供同一个 tag，与其余变体追加进同一 Release。
+  build-windows-cuda:
+    runs-on: windows-latest
+    needs: build-windows
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Cache Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.os == 'Windows' && '~\AppData\Local\Nuitka' || '~/.cache/Nuitka' }}
+          key: nuitka-windows-cuda-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            nuitka-windows-cuda-
+
+      - name: Install dependencies (with CUDA runtime)
+        run: uv sync --extra cuda
+
+      - name: Get version (from build-windows)
+        id: version
+        shell: bash
+        run: |
+          echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build with Nuitka
+        run: uv run python build_nuitka.py release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/rembg-ui.dist/* -DestinationPath Rembg-UI-windows-cuda.zip
+          $size = (Get-Item Rembg-UI-windows-cuda.zip).Length
+          Write-Host "zip size: $([math]::Round($size / 1MB)) MB"
+          # GitHub Release 单资产硬上限 2 GiB，超限上传会 HTTP 422（曾因此失败）
+          if ($size -ge 2147483648) {
+            Write-Error "Rembg-UI-windows-cuda.zip 为 $size 字节，超过 2 GiB 资产上限"
+            exit 1
+          }
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.version.outputs.tag }}" Rembg-UI-windows-cuda.zip --clobber
+
+  build-linux-cuda:
+    runs-on: ubuntu-latest
+    needs: build-windows
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install system build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc patchelf ccache
+
+      - name: Cache Nuitka
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Nuitka
+          key: nuitka-linux-cuda-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            nuitka-linux-cuda-
+
+      - name: Install dependencies (with CUDA runtime)
+        run: uv sync --extra cuda
+
+      - name: Get version (from build-windows)
+        id: version
+        shell: bash
+        run: |
+          echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build with Nuitka
+        run: uv run python build_nuitka.py release
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czf dist/Rembg-UI-linux-cuda.tar.gz -C dist/rembg-ui.dist .
+          ls -lh dist/Rembg-UI-linux-cuda.tar.gz
+          # torch 已是 CPU 版 + CUDA 运行库 ~1 GB 压缩后，正常 ~1.6 GB，仍在 2 GiB 内；
+          # 守卫防回归并给出可读报错
+          SIZE=$(stat -c%s dist/Rembg-UI-linux-cuda.tar.gz)
+          if [ "$SIZE" -ge 2147483648 ]; then
+            echo "::error::tar.gz 为 $SIZE 字节，超过 GitHub Release 单资产 2 GiB 上限"
+            exit 1
+          fi
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.version.outputs.tag }}" dist/Rembg-UI-linux-cuda.tar.gz --clobber
 

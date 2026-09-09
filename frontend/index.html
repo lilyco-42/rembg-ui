@@ -809,7 +809,7 @@
         <!-- SAM mode content -->
         <div id="samModeContent">
             <div class="sam-hint">
-                框选 / 画笔 / 点选 → SAM 自动生成候选遮罩
+                点选衣服/帽子/印花 → 导出透明 PNG，可叠多张做动漫差分
             </div>
             <button id="samLoadBtn" class="btn btn-primary" onclick="samLoadImage()" disabled>
                 📥 载入到 SAM
@@ -817,9 +817,9 @@
 
             <div id="samToolGroup" style="display:none">
                 <div class="sam-tool-select">
-                    <button class="active" data-tool="box" onclick="setSamTool('box')">▭ 框选</button>
+                    <button data-tool="box" onclick="setSamTool('box')">▭ 框选</button>
                     <button data-tool="brush" onclick="setSamTool('brush')">✏ 画笔</button>
-                    <button data-tool="point" onclick="setSamTool('point')">◉ 点选</button>
+                    <button class="active" data-tool="point" onclick="setSamTool('point')">◉ 点选</button>
                 </div>
 
                 <div class="sam-point-options" id="samPointOptions" style="display:none">
@@ -845,6 +845,21 @@
             <div id="samCandidates" style="display:none">
                 <div class="section-label" style="margin-top:8px">候选遮罩</div>
                 <div class="candidate-row" id="candidateRowSide"></div>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                    <button class="btn btn-primary" style="flex:1;font-size:12px" onclick="addDiffLayer()">＋ 加入差分图层</button>
+                    <button class="btn" style="flex:1;font-size:12px" onclick="addAllSamCandidates()">＋ 全部候选</button>
+                    <button class="btn" style="flex:1;font-size:12px" onclick="zoomResultEdges()">🔍 看毛边</button>
+                </div>
+            </div>
+            <button id="clothSegBtn" class="btn" style="width:100%;margin-top:8px;font-size:12px" onclick="runClothSeg()">👕 服装分层（上/下/全身）</button>
+            <div id="diffLayerBox" style="display:none;margin-top:8px">
+                <div class="section-label">差分图层 <span id="diffLayerCount">0</span></div>
+                <div id="diffLayerList"></div>
+                <div style="display:flex;gap:6px;margin-top:6px">
+                    <button class="btn btn-success" style="flex:1;font-size:12px" onclick="downloadAllDiffLayers()">⬇ 下载全部图层</button>
+                    <button class="btn" style="font-size:12px" onclick="previewStackedDiff()">叠看</button>
+                    <button class="btn" style="font-size:12px" onclick="clearDiffLayers()">清空</button>
+                </div>
             </div>
         </div>
 
@@ -993,6 +1008,7 @@
 
         let resultBase64 = null;
         let currentFileName = "output.png";
+        let diffLayers = [];
         let selectedFile = null;
         let originalFileName = null;
         let originalFileRef = null; // original File object for reset
@@ -1174,6 +1190,257 @@
             } catch (error) {
                 alert("保存失败");
                 console.error(error);
+            }
+        }
+
+        function uniqueLayerName(base) {
+            let name = base.endsWith(".png") ? base : base + ".png";
+            const used = new Set(diffLayers.map(l => l.name));
+            if (!used.has(name)) return name;
+            const stem = name.replace(/\.png$/i, "");
+            let i = 2;
+            while (used.has(stem + "_" + i + ".png")) i++;
+            return stem + "_" + i + ".png";
+        }
+
+        function addDiffLayer() {
+            if (!resultBase64) {
+                alert("请先点选并生成抠图结果");
+                return;
+            }
+            const n = diffLayers.length + 1;
+            const name = uniqueLayerName((originalFileName || "layer").replace(/\.[^.]+$/, "") + "_diff_" + n + ".png");
+            diffLayers.push({ name, image: resultBase64 });
+            renderDiffLayers();
+            if (typeof clearSamPoints === "function") clearSamPoints();
+            document.getElementById("statusText").textContent = "已加入差分图层 " + n + "（原图仍在，可继续点下一件衣服）";
+        }
+
+        function addAllSamCandidates() {
+            const cands = window._samCandidates || [];
+            if (!cands.length) {
+                alert("请先生成 SAM 候选");
+                return;
+            }
+            const stem = (originalFileName || "layer").replace(/\.[^.]+$/, "");
+            cands.forEach((c, i) => {
+                if (!c.image) return;
+                diffLayers.push({
+                    name: uniqueLayerName(stem + "_cand_" + (i + 1) + ".png"),
+                    image: c.image,
+                });
+            });
+            renderDiffLayers();
+            document.getElementById("statusText").textContent = "已加入 " + cands.length + " 个候选图层";
+        }
+
+        function clearDiffLayers() {
+            diffLayers = [];
+            renderDiffLayers();
+            document.getElementById("statusText").textContent = "已清空差分图层";
+        }
+
+        function renderDiffLayers() {
+            const box = document.getElementById("diffLayerBox");
+            const list = document.getElementById("diffLayerList");
+            const count = document.getElementById("diffLayerCount");
+            if (!box || !list) return;
+            box.style.display = diffLayers.length ? "block" : "none";
+            if (count) count.textContent = String(diffLayers.length);
+            list.innerHTML = "";
+            diffLayers.forEach((layer, i) => {
+                const row = document.createElement("div");
+                row.style.cssText = "display:flex;align-items:center;gap:6px;margin:4px 0;font-size:12px";
+                const thumb = document.createElement("img");
+                thumb.src = layer.image;
+                thumb.title = "预览";
+                thumb.style.cssText = "width:36px;height:36px;object-fit:contain;background:#222;border-radius:4px;cursor:pointer";
+                thumb.onclick = () => previewDiffLayer(layer);
+                const nameEl = document.createElement("span");
+                nameEl.textContent = layer.name;
+                nameEl.title = "双击改名";
+                nameEl.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;cursor:text";
+                nameEl.ondblclick = () => {
+                    const next = prompt("图层文件名", layer.name);
+                    if (!next) return;
+                    const prev = layer.name;
+                    layer.name = "";
+                    layer.name = uniqueLayerName(next.replace(/[\\/:*?"<>|]+/g, "_")) || prev;
+                    renderDiffLayers();
+                };
+                const dl = document.createElement("button");
+                dl.textContent = "⬇";
+                dl.className = "btn";
+                dl.onclick = () => triggerDownload(layer.image, layer.name);
+                const rm = document.createElement("button");
+                rm.textContent = "✕";
+                rm.className = "btn";
+                rm.onclick = () => { diffLayers.splice(i, 1); renderDiffLayers(); };
+                row.appendChild(thumb);
+                row.appendChild(nameEl);
+                row.appendChild(dl);
+                row.appendChild(rm);
+                list.appendChild(row);
+            });
+        }
+
+        function previewStackedDiff() {
+            if (!diffLayers.length) return;
+            const orig = document.getElementById("origImg");
+            const imgs = [];
+            const load = (src) => new Promise((resolve, reject) => {
+                const im = new Image();
+                im.onload = () => resolve(im);
+                im.onerror = reject;
+                im.src = src;
+            });
+            const tasks = [];
+            if (orig && orig.src && orig.naturalWidth) tasks.push(load(orig.src));
+            diffLayers.forEach(l => tasks.push(load(l.image)));
+            Promise.all(tasks).then(loaded => {
+                const w = loaded[0].naturalWidth || loaded[0].width;
+                const h = loaded[0].naturalHeight || loaded[0].height;
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext("2d");
+                loaded.forEach(im => ctx.drawImage(im, 0, 0, w, h));
+                resultBase64 = canvas.toDataURL("image/png");
+                document.getElementById("resultImg").src = resultBase64;
+                document.getElementById("resultImg").style.display = "block";
+                document.getElementById("resultEmpty").style.display = "none";
+                document.getElementById("downloadBtn").disabled = false;
+                document.getElementById("statusText").textContent = "叠看 " + diffLayers.length + " 个图层";
+            }).catch(e => {
+                document.getElementById("statusText").textContent = "叠看失败";
+                console.error(e);
+            });
+        }
+
+        function previewDiffLayer(layer) {
+            resultBase64 = layer.image;
+            document.getElementById("resultImg").src = layer.image;
+            document.getElementById("resultImg").style.display = "block";
+            document.getElementById("resultEmpty").style.display = "none";
+            document.getElementById("downloadBtn").disabled = false;
+            document.getElementById("statusText").textContent = "预览图层: " + layer.name;
+        }
+
+        function downloadAllDiffLayers() {
+            if (!diffLayers.length) return;
+            const crcTable = (function() {
+                const t = new Uint32Array(256);
+                for (let n = 0; n < 256; n++) {
+                    let c = n;
+                    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                    t[n] = c >>> 0;
+                }
+                return t;
+            })();
+            function crc32(bytes) {
+                let c = 0xFFFFFFFF;
+                for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+                return (c ^ 0xFFFFFFFF) >>> 0;
+            }
+            function u16(n) { return new Uint8Array([n & 255, (n >>> 8) & 255]); }
+            function u32(n) { return new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]); }
+            function cat(parts) {
+                const len = parts.reduce((s, p) => s + p.length, 0);
+                const out = new Uint8Array(len);
+                let o = 0;
+                for (const p of parts) { out.set(p, o); o += p.length; }
+                return out;
+            }
+            const locals = [];
+            const centrals = [];
+            let offset = 0;
+            diffLayers.forEach((layer, i) => {
+                const name = (layer.name || ("layer_" + (i + 1) + ".png")).replace(/[\\/:*?"<>|]+/g, "_");
+                const nameBytes = new TextEncoder().encode(name);
+                const comma = (layer.image || "").indexOf(",");
+                const b64 = comma >= 0 ? layer.image.slice(comma + 1) : "";
+                const bin = atob(b64);
+                const data = new Uint8Array(bin.length);
+                for (let j = 0; j < bin.length; j++) data[j] = bin.charCodeAt(j);
+                const crc = crc32(data);
+                const local = cat([
+                    new Uint8Array([0x50,0x4b,0x03,0x04, 0x14,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
+                    u32(crc), u32(data.length), u32(data.length), u16(nameBytes.length), u16(0),
+                    nameBytes, data
+                ]);
+                const central = cat([
+                    new Uint8Array([0x50,0x4b,0x01,0x02, 0x14,0x00, 0x14,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
+                    u32(crc), u32(data.length), u32(data.length), u16(nameBytes.length), u16(0), u16(0), u16(0), u16(0),
+                    u32(0), u32(offset), nameBytes
+                ]);
+                locals.push(local);
+                centrals.push(central);
+                offset += local.length;
+            });
+            const centralBlob = cat(centrals);
+            const eocd = cat([
+                new Uint8Array([0x50,0x4b,0x05,0x06, 0x00,0x00, 0x00,0x00]),
+                u16(diffLayers.length), u16(diffLayers.length),
+                u32(centralBlob.length), u32(offset), u16(0)
+            ]);
+            const zip = cat([...locals, centralBlob, eocd]);
+            const url = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
+            const stem = (originalFileName || "diff").replace(/\.[^.]+$/, "");
+            triggerDownload(url, stem + "_layers.zip");
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        function zoomResultEdges() {
+            if (typeof zoomState !== "undefined") {
+                zoomState.result = 4;
+                if (typeof updateZoomUI === "function") updateZoomUI("result");
+            }
+            document.getElementById("statusText").textContent = "结果图已放大 4x，滚轮可继续看毛边";
+        }
+
+        async function runClothSeg() {
+            if (!selectedFile) {
+                alert("请先打开一张图");
+                return;
+            }
+            document.getElementById("loadingMask").classList.add("active");
+            document.getElementById("loadingText").textContent = "服装分层中...";
+            try {
+                const formData = new FormData();
+                formData.append("file", selectedFile, selectedFile.name || "image.png");
+                const resp = await fetch("/api/cloth-seg", { method: "POST", body: formData });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success || !data.layers) {
+                    throw new Error(data.detail || ("分层失败 HTTP " + resp.status));
+                }
+                if (!data.layers.length) {
+                    document.getElementById("statusText").textContent = "未检出上装/下装/全身，可改用 SAM 点选";
+                    return;
+                }
+                const labels = { upper: "上装", lower: "下装", full: "全身" };
+                data.layers.forEach((layer) => {
+                    const stem = (originalFileName || "cloth").replace(/\.[^.]+$/, "");
+                    diffLayers.push({
+                        name: uniqueLayerName(stem + "_" + (labels[layer.label] || layer.label) + ".png"),
+                        image: layer.image,
+                    });
+                });
+                renderDiffLayers();
+                if (data.layers[0]) {
+                    resultBase64 = data.layers[0].image;
+                    document.getElementById("resultImg").src = resultBase64;
+                    document.getElementById("resultImg").style.display = "block";
+                    document.getElementById("resultEmpty").style.display = "none";
+                    document.getElementById("downloadBtn").disabled = false;
+                }
+                const names = data.layers.map(l => labels[l.label] || l.label).join(" / ");
+                document.getElementById("statusText").textContent = "✅ 已生成图层: " + names;
+            } catch (e) {
+                document.getElementById("statusText").textContent = "❌ 服装分层失败: " + (e.message || e);
+                console.error(e);
+            } finally {
+                document.getElementById("loadingMask").classList.remove("active");
+                document.getElementById("loadingText").textContent = "正在处理...";
             }
         }
 
@@ -1605,7 +1872,7 @@
         let samPoints = [];
         let samPointType = "positive";
         let samSelectedIndex = 0;
-        let samTool = "box";
+        let samTool = "point";
         let samDrawing = false;
         let samDragStart = null;
         let samDragEnd = null;
@@ -1635,7 +1902,7 @@
                     document.getElementById("resultEmpty").innerHTML = '<div class="icon">🎯</div>选择工具后操作原图';
                     document.getElementById("resultImg").style.display = "none";
                     document.getElementById("statusText").textContent = `SAM 就绪 — ${data.width}x${data.height}`;
-                    setSamTool("box");
+                    setSamTool("point");
                     updateSamUI();
                 }
             } catch (e) {
@@ -1935,6 +2202,8 @@
                 Array.from(row.children).forEach((el, idx) => el.classList.toggle("active", idx === i));
                 zoomState.result = 1; updateZoomUI("result");
             }
+
+            window._samCandidates = candidates;
 
             candidates.forEach((c, i) => {
                 const div = document.createElement("div");

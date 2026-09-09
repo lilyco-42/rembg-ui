@@ -50,11 +50,45 @@ import numpy as np
 import uvicorn
 
 
+def _preload_cuda_runtime():
+    """Linux -cuda 产物：onnxruntime-gpu 依赖的 CUDA 运行库不在系统路径，
+    打包时随产物落在二进制同级的 nvidia-cuda/lib/。CUDAExecutionProvider 以
+    dlopen 方式按 SONAME 查找这些库，需先用 ctypes 以绝对路径预加载（加载后
+    其 SONAME 常驻进程，可满足后续 DT_NEEDED 解析，机制同 torch 的 _preload_cuda_deps）。
+    Windows 无需此步：DLL 拷贝在 exe 同目录，其本身就在 DLL 搜索路径首位。
+    开发环境 / 非 -cuda 产物没有该目录，直接返回。"""
+    if not sys.platform.startswith("linux"):
+        return
+    import ctypes
+    from glob import glob
+
+    base = os.path.join(os.path.dirname(sys.executable), "nvidia-cuda", "lib")
+    if not os.path.isdir(base):
+        return
+    for pattern in (
+        "libcudart.so*", "libcublasLt.so*", "libcublas.so*", "libcudnn*.so*",
+        "libcufft.so*", "libcurand.so*", "libcusolver.so*", "libcusparse.so*",
+        "libnvJitLink.so*",
+    ):
+        for path in glob(os.path.join(base, pattern)):
+            try:
+                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+            except OSError:
+                pass  # 个别库加载失败不致命，探测失败时由下方逻辑回退 CPU
+
+
 def _detect_providers():
-    """检测 CUDA 是否可用，不可用则回退 CPU"""
+    """按平台探测 GPU 加速：Linux/Windows 探测 CUDA（NVIDIA），macOS 探测 CoreML
+    （Apple GPU/神经网络引擎加速，标准 onnxruntime wheel 内置该 Provider），均不可用回退 CPU"""
     try:
         from onnxruntime import get_available_providers
-        if "CUDAExecutionProvider" not in get_available_providers():
+        available = get_available_providers()
+        if sys.platform == "darwin":
+            if "CoreMLExecutionProvider" in available:
+                return ["CoreMLExecutionProvider", "CPUExecutionProvider"]
+            return ["CPUExecutionProvider"]
+        _preload_cuda_runtime()
+        if "CUDAExecutionProvider" not in available:
             return ["CPUExecutionProvider"]
         # 尝试真正创建 CUDA session
         import onnxruntime as ort
@@ -73,6 +107,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from PIL import Image
 from rembg import new_session, remove
+from processors.cloth_seg import ClothSegProcessor
 from processors.sam_processor import MobileSAMProcessor
 from security import SecurityMiddleware, security
 
@@ -153,6 +188,7 @@ server_ready = threading.Event()
 sam_processor: Optional[MobileSAMProcessor] = None
 sam_temp_path: Optional[str] = None
 sam_last_result: Optional[dict] = None
+cloth_processor: Optional[ClothSegProcessor] = None
 
 
 def get_model_session(model_name: str):
@@ -413,6 +449,44 @@ async def sam_auto_segment():
         return {"success": True, "candidates": candidates}
     except Exception as e:
         print(f"[SAM Error] 自动分割失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _get_cloth() -> ClothSegProcessor:
+    global cloth_processor
+    if cloth_processor is None:
+        print("[Cloth] 初始化 u2net_cloth_seg...")
+        cloth_processor = ClothSegProcessor(session=get_model_session("u2net_cloth_seg"))
+    return cloth_processor
+
+
+@app.post("/api/cloth-seg")
+async def cloth_seg(file: UploadFile = File(...)):
+    """服装分层：上装 / 下装 / 全身，方便动漫差分图。"""
+    try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="空文件")
+        try:
+            img = Image.open(io.BytesIO(content))
+            img.load()
+        except Exception:
+            raise HTTPException(status_code=400, detail="无法解析图片")
+        layers = _get_cloth().segment_image(img)
+        out = []
+        for cat, img in layers.items():
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            out.append({
+                "label": cat,
+                "image": f"data:image/png;base64,{b64}",
+            })
+        return {"success": True, "layers": out}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Cloth Error] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
