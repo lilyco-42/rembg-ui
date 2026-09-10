@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rembg Studio</string>
+    <string name="offline_hint">模型在手机本地运行，无需连接电脑。</string>
+    <string name="empty_hint">选一张图片开始抠图</string>
+    <string name="pick">选图</string>
+    <string name="remove_bg">去背景</string>
+    <string name="save">保存</string>
+    <string name="model_loading">模型加载中，请稍候</string>
+    <string name="model_failed">模型加载失败：%1$s</string>
+    <string name="load_failed">读图失败：%1$s</string>
+    <string name="run_failed">抠图失败：%1$s</string>
+    <string name="done_tap_compare">完成。点图片可对比原图</string>
+    <string name="showing_result">当前：抠图结果</string>
+    <string name="showing_original">当前：原图</string>
+    <string name="saved_download">已保存到下载目录：%1$s</string>
+    <string name="save_failed">保存失败</string>
+    <string name="models">模型</string>
+    <string name="models_title">下载到本机私有目录</string>
+    <string name="model_current">当前模型：%1$s</string>
+    <string name="model_download">下载</string>
+    <string name="model_use">使用</string>
+    <string name="model_using">使用中</string>
+    <string name="model_ready">已下载 · %1$s</string>
+    <string name="model_missing">未下载 · %1$s</string>
+    <string name="model_progress">下载中 %1$d%%</string>
+    <string name="model_download_ok">已保存到应用私有目录</string>
+    <string name="model_download_fail">下载失败：%1$s</string>
+    <string name="model_switched">已切换：%1$s</string>
+</resources>

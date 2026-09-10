@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.cxx/
+app/release/
+*.apk
+test-*.png
+e1.png
+e2.png
+e3.png
+ui.xml
+ui2.xml
+
