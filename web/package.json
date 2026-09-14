@@ -1,0 +1,8 @@
+{
+  "name": "rembg-studio-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"build": "node build.mjs", "test": "node --test test/*.test.mjs"},
+  "dependencies": {"onnxruntime-web": "1.22.0"}
+}
