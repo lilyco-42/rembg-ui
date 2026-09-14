@@ -1,5 +1,7 @@
 # Rembg Studio WASM
 
+[在线打开](https://lilyco-42.github.io/rembg/) · [构建验证](https://github.com/lilyco-42/rembg-ui/actions/runs/34851787578)
+
 独立浏览器移植验证版，全部抠图在设备上执行。JavaScript 调度 + ONNX Runtime Web 1.22.0 的 WASM CPU 内核，未引入 Python/Rust 运行时。U2Netp 仅是轻量验证模型，不等同桌面端 BRIA 质量。
 
 ## 构建与预览
@@ -23,3 +25,5 @@ python serve.py
 尚未移植：SAM 修图、批次恢复、复核清单、ZIP、桌面端模型选择。刷新会清空结果。GitHub Pages 版本用于公开演示；付费 SaaS 托管需另行安排。
 
 验证：`npm test` 检查黑图输入、CHW 排列、mask 归一化和异常输出；真实浏览器测试覆盖模型加载、抠图、PNG 下载。浏览器 Canvas 重采样与桌面 Pillow Lanczos 不保证逐像素一致。
+
+2026-09-14：本地连续两图完成；GitHub Pages 发布成功（站点提交 `26b2749`），公网真实图片完成 WASM 推理及 1200×1200 PNG 下载。脚本响应为 `text/javascript`，WASM 为 `application/wasm`。首次迁移链路已验证，尚未验收移动端、低内存设备及商品样本质量。
