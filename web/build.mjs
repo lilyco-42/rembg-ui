@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 const out = new URL('./dist/', import.meta.url);
 await mkdir(new URL('vendor/',out), {recursive:true});
 await mkdir(new URL('models/',out), {recursive:true});
-for (const name of ['index.html','app.mjs','worker.mjs','pixels.mjs']) await copyFile(new URL(name,import.meta.url),new URL(name,out));
+for (const name of ['index.html','app.mjs','worker.mjs','pixels.mjs','zip.mjs','delivery.mjs']) await copyFile(new URL(name,import.meta.url),new URL(name,out));
 for (const name of ['ort.wasm.min.mjs','ort-wasm-simd-threaded.mjs','ort-wasm-simd-threaded.wasm']) await copyFile(new URL(`node_modules/onnxruntime-web/dist/${name}`,import.meta.url),new URL(`vendor/${name}`,out));
 const runtimeLicense=await fetch('https://raw.githubusercontent.com/microsoft/onnxruntime/v1.22.0/LICENSE');
 if(!runtimeLicense.ok) throw Error('Cannot fetch ONNX Runtime license');
