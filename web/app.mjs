@@ -1,6 +1,7 @@
 import {validateImageFile} from './image-limits.mjs?v=editor-2';
 import {editCutout} from './editor.mjs?v=editor-2';
 import {replaceOutput,setReviewed,isReviewed} from './revisions.mjs?v=editor-2';
+import {exportProjectArchive,importProjectArchive} from './project-archive.mjs?v=editor-2';
 import {createZip} from './zip.mjs?v=editor-2';
 import {outputName,deliveryManifest} from './delivery.mjs?v=editor-2';
 import {openProjectStore,PROJECT_SCHEMA_VERSION} from './project-store.mjs?v=editor-2';
@@ -9,6 +10,7 @@ const $=id=>document.getElementById(id);
 const files=$('files'),run=$('run'),status=$('status'),results=$('results');
 const exportBatch=$('exportBatch'),reviewedOnly=$('reviewedOnly'),deliveryStatus=$('deliveryStatus');
 const size=$('size'),saveStatus=$('saveStatus'),clearBatch=$('clearBatch');
+let projectExport,projectImport,projectInput;
 size.replaceChildren(...PRESETS.filter(preset=>preset.background==='white').map(preset=>{
  const option=document.createElement('option');option.value=String(preset.width);option.textContent=`${preset.label}，${preset.marginPercent}% 留白`;return option;
 }));
@@ -25,6 +27,28 @@ function addCommercialNotice(){
  host.before(box);
 }
 addCommercialNotice();
+function addProjectControls(){
+ const host=clearBatch.parentElement;if(!host)return;
+ const bar=document.createElement('div');bar.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px';
+ projectExport=document.createElement('button');projectExport.textContent='导出项目备份';
+ projectImport=document.createElement('label');projectImport.textContent='导入项目备份';projectImport.style.cssText='background:#e7eee8;color:#23694e;border-radius:8px;padding:10px 18px;cursor:pointer';
+ projectInput=document.createElement('input');projectInput.type='file';projectInput.accept='.rembg.zip,application/zip';projectInput.hidden=true;projectImport.append(projectInput);bar.append(projectExport,projectImport);host.after(bar);
+ projectExport.onclick=async()=>{
+  if(projectExport.disabled)return;exporting=true;updateControls();
+  try{const snapshot={schemaVersion:PROJECT_SCHEMA_VERSION,size:batchSize,reviewedOnly:reviewedOnly.checked,items:batch};const archive=await exportProjectArchive(snapshot);const url=URL.createObjectURL(archive),a=document.createElement('a');a.href=url;a.download='rembg-project.rembg.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);status.textContent='项目备份已导出，可迁移到同源的 Rembg Studio。';}
+  catch(error){status.textContent=`项目备份失败：${error.message}`;}
+  finally{exporting=false;updateControls();}
+ };
+ projectInput.onchange=async()=>{
+  const file=projectInput.files?.[0];projectInput.value='';if(!file||projectImport.getAttribute('aria-disabled')==='true')return;
+  if(batch.length&&!window.confirm('导入项目会替换当前批次；请先导出当前项目备份。继续吗？'))return;
+  const previous={batch,batchSize,reviewedOnly:reviewedOnly.checked};busy=true;restoring=true;updateControls();
+  try{const snapshot=await importProjectArchive(file);batch=snapshot.items;batchSize=snapshot.size;size.value=String(batchSize);reviewedOnly.checked=snapshot.reviewedOnly;restoring=false;render();const saved=await save();if(!saved)throw Error('项目已读取，但未能保存到当前浏览器');status.textContent=`项目备份已导入，恢复 ${batch.length} 张图片；未完成项可继续处理`;}
+  catch(error){batch=previous.batch;batchSize=previous.batchSize;size.value=String(batchSize);reviewedOnly.checked=previous.reviewedOnly;restoring=false;render();status.textContent=`项目导入失败：${error.message}。当前批次已保留`;}
+  finally{busy=false;restoring=false;render();}
+ };
+}
+addProjectControls();
 function updateControls(){
  const done=batch.filter(item=>item.status==='done'),reviewed=done.filter(isReviewed);
  const locked=busy||exporting||restoring;
@@ -32,6 +56,8 @@ function updateControls(){
  files.disabled=locked||conflict||!supported;
  size.disabled=locked||batch.length>0;
  clearBatch.disabled=locked||conflict||!batch.length;
+ if(projectExport)projectExport.disabled=locked||conflict||!batch.length;
+ if(projectImport){const importLocked=locked||conflict;projectImport.setAttribute('aria-disabled',String(importLocked));projectInput.disabled=importLocked;projectImport.style.opacity=importLocked?'.5':'1';}
  reviewedOnly.disabled=locked||conflict;
  exportBatch.disabled=locked||!(reviewedOnly.checked?reviewed.length:done.length);
  for(const check of results.querySelectorAll('input[type=checkbox],button'))check.disabled=locked||conflict;
