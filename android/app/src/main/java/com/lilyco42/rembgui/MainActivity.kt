@@ -151,6 +151,7 @@ class MainActivity : AppCompatActivity() {
         batchClearBtn = findViewById(R.id.batchClearBtn)
         batchStatus = findViewById(R.id.batchStatus)
         restoreBatch()
+        licenseLabel.setOnClickListener { showLicenseDialog() }
 
         pickBtn.setOnClickListener { pickImage.launch("image/*") }
         runBtn.setOnClickListener { runRemove() }
