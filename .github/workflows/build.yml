@@ -451,7 +451,7 @@ jobs:
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace :app:assembleRelease :app:bundleRelease
+          ./gradlew --no-daemon --stacktrace :app:assembleRelease :app:bundleRelease :app:lintRelease
 
       - name: Stage Android release assets
         shell: bash

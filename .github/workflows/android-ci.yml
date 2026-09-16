@@ -46,7 +46,7 @@ jobs:
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease :app:bundleRelease
+          ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease :app:bundleRelease :app:lintRelease
 
       - name: Upload ABI artifacts
         uses: actions/upload-artifact@v4
