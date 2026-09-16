@@ -14,4 +14,8 @@
         android:id="@+id/action_purchase"
         android:title="@string/purchase"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_license"
+        android:title="@string/license"
+        app:showAsAction="never" />
 </menu>

@@ -61,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     private var currentSpec: ModelSpec = ModelCatalog.all.first()
     private var downloadingId: String? = null
     private var modelList: LinearLayout? = null
+    private lateinit var licenseManager: LicenseManager
+    private lateinit var licenseLabel: TextView
     @Volatile
     private var loadGeneration = 0L
     private var loadingImage = false
@@ -94,6 +96,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         store = ModelStore(this)
+        licenseManager = LicenseManager(this)
         batchOutputDir = File(cacheDir, "batch-output").apply { mkdirs() }
         toolbar = findViewById(R.id.toolbar)
         toolbar.title = getString(R.string.app_name)
@@ -112,6 +115,10 @@ class MainActivity : AppCompatActivity() {
                     openPurchasePage()
                     true
                 }
+                R.id.action_license -> {
+                    showLicenseDialog()
+                    true
+                }
                 else -> false
             }
         }
@@ -122,6 +129,7 @@ class MainActivity : AppCompatActivity() {
         runBtn = findViewById(R.id.runBtn)
         saveBtn = findViewById(R.id.saveBtn)
         modelLabel = findViewById(R.id.modelLabel)
+        licenseLabel = findViewById(R.id.licenseLabel)
         batchPickBtn = findViewById(R.id.batchPickBtn)
         batchRunBtn = findViewById(R.id.batchRunBtn)
         batchExportBtn = findViewById(R.id.batchExportBtn)
@@ -152,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         switchModel(ModelCatalog.byId(savedId), toast = false)
 
         handleIncoming(intent)
+        updateLicenseUi()
         updateBatchUi()
     }
 
@@ -159,6 +168,11 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIncoming(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::licenseManager.isInitialized) updateLicenseUi()
     }
 
     private fun handleIncoming(intent: Intent?) {
@@ -284,6 +298,12 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.model_loading, Toast.LENGTH_SHORT).show()
             return
         }
+        val reservation = licenseManager.reserve()
+        if (reservation == null) {
+            Toast.makeText(this, R.string.quota_exhausted, Toast.LENGTH_LONG).show()
+            updateLicenseUi()
+            return
+        }
         progress.visibility = View.VISIBLE
         singleRunning = true
         runBtn.isEnabled = false
@@ -305,9 +325,11 @@ class MainActivity : AppCompatActivity() {
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
                     updateBatchUi()
+                    updateLicenseUi()
                     Toast.makeText(this, R.string.done_tap_compare, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                licenseManager.release(reservation)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     singleRunning = false
@@ -315,9 +337,11 @@ class MainActivity : AppCompatActivity() {
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
                     updateBatchUi()
+                    updateLicenseUi()
                     Toast.makeText(this, getString(R.string.run_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
                 }
             } catch (_: OutOfMemoryError) {
+                licenseManager.release(reservation)
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     singleRunning = false
@@ -325,6 +349,7 @@ class MainActivity : AppCompatActivity() {
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
                     updateBatchUi()
+                    updateLicenseUi()
                     Toast.makeText(this, R.string.memory_limit, Toast.LENGTH_LONG).show()
                 }
             }
@@ -529,6 +554,7 @@ class MainActivity : AppCompatActivity() {
         io.execute {
             var completed = 0
             var failed = 0
+            var quotaBlocked = false
             for ((index, entry) in batch.withIndex()) {
                 if (batchCancelRequested || Thread.currentThread().isInterrupted) break
                 if (entry.status == BatchStatus.DONE && entry.outputFile?.isFile == true) {
@@ -540,6 +566,17 @@ class MainActivity : AppCompatActivity() {
                 postBatchUi(getString(R.string.batch_processing, index + 1, batch.size))
                 var input: Bitmap? = null
                 var output: Bitmap? = null
+                val reservation = licenseManager.reserve()
+                if (reservation == null) {
+                    entry.status = BatchStatus.ERROR
+                    entry.error = getString(R.string.quota_exhausted)
+                    failed++
+                    quotaBlocked = true
+                    persistBatch()
+                    postBatchUi(null)
+                    break
+                }
+                var committed = false
                 try {
                     input = decodeImage(entry.uri)
                     output = engine.remove(input)
@@ -552,6 +589,7 @@ class MainActivity : AppCompatActivity() {
                     entry.outputFile = outputFile
                     entry.status = BatchStatus.DONE
                     completed++
+                    committed = true
                 } catch (e: OutOfMemoryError) {
                     entry.status = BatchStatus.ERROR
                     entry.error = getString(R.string.memory_limit)
@@ -561,6 +599,7 @@ class MainActivity : AppCompatActivity() {
                     entry.error = e.message?.take(120) ?: "未知错误"
                     failed++
                 } finally {
+                    if (!committed) licenseManager.release(reservation)
                     output?.let { if (!it.isRecycled) it.recycle() }
                     input?.let { if (!it.isRecycled) it.recycle() }
                     persistBatch()
@@ -570,9 +609,12 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 batchRunning = false
+                updateLicenseUi()
                 updateBatchUi()
                 val remaining = batch.count { it.status != BatchStatus.DONE }
-                if (batchCancelRequested) {
+                if (quotaBlocked) {
+                    batchStatus.text = getString(R.string.batch_quota_exhausted, completed, remaining)
+                } else if (batchCancelRequested) {
                     batchStatus.text = getString(R.string.batch_stopped, completed, remaining)
                 } else {
                     batchStatus.text = getString(R.string.batch_finished, completed, failed)
@@ -764,6 +806,61 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun updateLicenseUi() {
+        if (!::licenseLabel.isInitialized) return
+        val current = licenseManager.currentState()
+        licenseLabel.text = licenseManager.summary()
+        licenseLabel.setTextColor(getColor(if (current.licensed) R.color.accent else R.color.text_dim))
+    }
+
+    private fun showLicenseDialog() {
+        if (modelLoading || singleRunning || batchRunning || loadingImage || saveBusy || shareBusy) {
+            Toast.makeText(this, R.string.model_busy, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 0, 48, 0)
+        }
+        val hint = TextView(this).apply {
+            text = getString(R.string.license_hint)
+            setTextColor(getColor(R.color.text_dim))
+            setPadding(0, 0, 0, 12)
+        }
+        val input = android.widget.EditText(this).apply {
+            setText(licenseManager.token())
+            this.hint = getString(R.string.license_placeholder)
+            minLines = 3
+            maxLines = 6
+            isSingleLine = false
+            setSelectAllOnFocus(false)
+        }
+        content.addView(hint)
+        content.addView(input, LinearLayout.LayoutParams(-1, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.license_title)
+            .setView(content)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.purchase, { _, _ -> openPurchasePage() })
+            .setPositiveButton(R.string.license_verify, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    val next = licenseManager.activate(input.text?.toString().orEmpty())
+                    updateLicenseUi()
+                    updateBatchUi()
+                    dialog.dismiss()
+                    Toast.makeText(this, getString(R.string.license_enabled, next.label), Toast.LENGTH_SHORT).show()
+                } catch (error: LicenseManager.LicenseException) {
+                    Toast.makeText(this, getString(R.string.license_invalid, error.message ?: ""), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun openPurchasePage() {

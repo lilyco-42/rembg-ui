@@ -876,6 +876,7 @@
                     <button id="commercialClear" class="btn" style="background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border)">清除</button>
                 </div>
                 <small id="commercialEntitlement" role="status" style="color:var(--text-dim)">未设置授权令牌，当前使用公开试用限制。令牌只保存在此设备。</small>
+                <small id="commercialUsage" role="status" style="color:var(--text-dim)">本期用量：加载中…</small>
             </div>
             <small style="display:block;color:var(--text-dim);margin-top:10px;line-height:1.6">价格是第一轮假设，不是收款承诺。付款主体、退款规则和授权服务确认后才会接入支付；没有授权令牌时始终是受限试用。</small>
         </section>
@@ -1061,6 +1062,13 @@
         const COMMERCIAL_TOKEN_KEY = "rembg-commercial-license-token";
         let commercialToken = "";
         let commercialEntitlement = {status: "trial", plan_id: "trial", label: "公开试用", max_batch_images: 10, monthly_images: 30};
+        let commercialUsage = {used: 0, limit: 30, remaining: 30, period: null};
+
+        function commercialHeaders(extra = {}) {
+            const headers = new Headers(extra || {});
+            if (commercialToken) headers.set("X-Rembg-License", commercialToken);
+            return headers;
+        }
 
         function entitlementBatchLimit() {
             const planLimit = Number(commercialEntitlement.max_batch_images);
@@ -1080,12 +1088,46 @@
             if (commercialEntitlement.status === "licensed") {
                 const expiry = commercialEntitlement.expires_at ? new Date(commercialEntitlement.expires_at * 1000).toLocaleDateString() : "未设置";
                 const limit = entitlementBatchLimit();
-                status.textContent = `已验证 ${commercialEntitlement.label} · 本地工作台每批最多 ${limit} 张 · 月度额度由授权服务计量 · 有效至 ${expiry}`;
+                status.textContent = `已验证 ${commercialEntitlement.label} · 每批最多 ${limit} 张 · 本机按月计量 · 有效至 ${expiry}`;
             } else {
-                status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张（托管计量待接入）`;
+                status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张`;
             }
             updateBatchCounter?.();
             updateBatchButtons?.();
+        }
+
+        function setCommercialUsage(usage) {
+            const target = document.getElementById("commercialUsage");
+            if (!target) return;
+            if (!usage || !Number.isInteger(Number(usage.used))) {
+                commercialUsage = {used: 0, limit: commercialEntitlement.monthly_images, remaining: null, period: null};
+                target.textContent = "本期用量暂不可用；处理失败时会保守阻止请求";
+                return;
+            }
+            commercialUsage = usage;
+            const used = Number(usage.used);
+            const limit = Number.isInteger(Number(usage.limit)) ? Number(usage.limit) : null;
+            const remainingValue = Number(usage.remaining);
+            const remaining = limit === null ? null : Number.isFinite(remainingValue) ? Math.max(0, remainingValue) : Math.max(0, limit - used);
+            target.textContent = limit === null
+                ? `本期用量：已用 ${used} 张 · 不限额`
+                : `本期用量：已用 ${used}/${limit} 张 · 剩余 ${remaining} 张`;
+        }
+
+        async function fetchCommercialUsage() {
+            const response = await fetch("/api/commercial/usage", {headers: commercialHeaders()});
+            let data = {};
+            try { data = await response.json(); } catch (_) { /* status below remains useful */ }
+            if (!response.ok) throw new Error(data.detail || "用量查询失败");
+            return data;
+        }
+
+        async function refreshCommercialUsage() {
+            try {
+                setCommercialUsage(await fetchCommercialUsage());
+            } catch (_) {
+                setCommercialUsage(null);
+            }
         }
 
         async function fetchCommercialEntitlement(token = "") {
@@ -1104,12 +1146,14 @@
             try {
                 const entitlement = await fetchCommercialEntitlement(commercialToken);
                 setCommercialEntitlement(entitlement);
+                await refreshCommercialUsage();
                 if (!commercialToken) document.getElementById("commercialStatus").textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
             } catch (_) {
                 commercialToken = "";
                 try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
                 if (input) input.value = "";
                 setCommercialEntitlement(null);
+                await refreshCommercialUsage();
                 document.getElementById("commercialStatus").textContent = "授权服务不可用，当前使用公开试用限制";
             }
         }
@@ -1133,12 +1177,14 @@
                 commercialToken = token;
                 try { localStorage.setItem(COMMERCIAL_TOKEN_KEY, token); } catch (_) { /* token remains active for this page */ }
                 setCommercialEntitlement(entitlement);
+                await refreshCommercialUsage();
                 document.getElementById("commercialStatus").textContent = `已启用 ${entitlement.label}；批量上限已更新`;
             } catch (error) {
                 document.getElementById("commercialEntitlement").textContent = `授权无效：${error.message}。当前仍为公开试用`;
                 commercialToken = "";
                 try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
                 setCommercialEntitlement(null);
+                await refreshCommercialUsage();
             } finally {
                 apply.disabled = false;
             }
@@ -1150,6 +1196,7 @@
             commercialToken = "";
             try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
             setCommercialEntitlement(null);
+            if (typeof refreshCommercialUsage === "function") refreshCommercialUsage();
             document.getElementById("commercialStatus").textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
         });
 
@@ -1302,6 +1349,7 @@
             try {
                 const response = await fetch("/api/remove-bg", {
                     method: "POST",
+                    headers: commercialHeaders(),
                     body: formData,
                 });
                 const data = await response.json();
@@ -1312,6 +1360,7 @@
                     document.getElementById("resultEmpty").style.display = "none";
                     document.getElementById("downloadBtn").disabled = false;
                     document.getElementById("statusText").textContent = "✅ 完成 — " + modelSelect.value;
+                    if (typeof refreshCommercialUsage === "function") refreshCommercialUsage();
                 } else {
                     document.getElementById("statusText").textContent = "❌ 失败: " + (data.detail || "未知错误");
                     alert("抠图失败: " + data.detail);
@@ -1562,7 +1611,7 @@
             try {
                 const formData = new FormData();
                 formData.append("file", selectedFile, selectedFile.name || "image.png");
-                const resp = await fetch("/api/cloth-seg", { method: "POST", body: formData });
+                const resp = await fetch("/api/cloth-seg", { method: "POST", headers: commercialHeaders(), body: formData });
                 const data = await resp.json().catch(() => ({}));
                 if (!resp.ok || !data.success || !data.layers) {
                     throw new Error(data.detail || ("分层失败 HTTP " + resp.status));
@@ -1589,6 +1638,7 @@
                 }
                 const names = data.layers.map(l => labels[l.label] || l.label).join(" / ");
                 document.getElementById("statusText").textContent = "✅ 已生成图层: " + names;
+                if (typeof refreshCommercialUsage === "function") refreshCommercialUsage();
             } catch (e) {
                 document.getElementById("statusText").textContent = "❌ 服装分层失败: " + (e.message || e);
                 console.error(e);
@@ -2072,8 +2122,7 @@
             for (const [key, value] of Object.entries(batchSettings)) {
                 if (key !== "sku") formData.append(key, value);
             }
-            const headers = {"X-Rembg-Batch-Size": String(batchQueue.length)};
-            if (commercialToken) headers["X-Rembg-License"] = commercialToken;
+            const headers = commercialHeaders({"X-Rembg-Batch-Size": String(batchQueue.length)});
             const response = await fetch("/api/remove-bg", { method: "POST", headers, body: formData });
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.detail || "处理失败");
@@ -2122,6 +2171,7 @@
                 updateBatchItem(item);
                 await persistBatch();
             }
+            if (typeof refreshCommercialUsage === "function") refreshCommercialUsage();
 
             batchRunning = false;
             renderBatchQueue();
@@ -2220,7 +2270,7 @@
             formData.append("file", selectedFile, selectedFile.name || originalFileName || "image.png");
 
             try {
-                const resp = await fetch("/api/sam/load-image", { method: "POST", body: formData });
+                const resp = await fetch("/api/sam/load-image", { method: "POST", headers: commercialHeaders(), body: formData });
                 const data = await resp.json();
                 if (data.success) {
                     samLoaded = true;
@@ -2464,12 +2514,13 @@
             formData.append("points_json", JSON.stringify(samPoints));
 
             try {
-                const resp = await fetch("/api/sam/segment", { method: "POST", body: formData });
+                const resp = await fetch("/api/sam/segment", { method: "POST", headers: commercialHeaders(), body: formData });
                 const data = await resp.json();
                 if (data.success) {
                     showSamCandidates(data.candidates);
                     document.getElementById("statusText").textContent =
                         `✅ ${data.candidates.length} 个候选`;
+                    if (typeof refreshCommercialUsage === "function") refreshCommercialUsage();
                 } else {
                     document.getElementById("statusText").textContent = "❌ 分割失败";
                 }
@@ -2495,12 +2546,13 @@
             formData.append("y2", y2);
 
             try {
-                const resp = await fetch("/api/sam/segment-box", { method: "POST", body: formData });
+                const resp = await fetch("/api/sam/segment-box", { method: "POST", headers: commercialHeaders(), body: formData });
                 const data = await resp.json();
                 if (data.success) {
                     showSamCandidates(data.candidates);
                     document.getElementById("statusText").textContent =
                         `✅ ${data.candidates.length} 个候选（框选）`;
+                    if (typeof refreshCommercialUsage === "function") refreshCommercialUsage();
                 } else {
                     document.getElementById("statusText").textContent = "❌ 框选分割失败";
                 }

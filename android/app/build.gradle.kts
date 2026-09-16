@@ -118,4 +118,8 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.2")
+    // Small, API-29-compatible Ed25519 verifier for offline ``ol1`` licenses.
+    // The private signing key never ships in the application.
+    implementation("net.i2p.crypto:eddsa:0.3.0")
+    testImplementation("junit:junit:4.13.2")
 }

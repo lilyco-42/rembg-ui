@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import io
 import os
 import random
@@ -113,6 +114,7 @@ from processors.sam_processor import MobileSAMProcessor
 from security import SecurityMiddleware, security
 from commerce import LicenseError, public_plan_catalog, resolve_entitlement
 from license_config import OFFLINE_LICENSE_KEY_ID, OFFLINE_LICENSE_PUBLIC_KEY
+from usage import UsageError, UsageLimitError, release_usage, reserve_usage, usage_snapshot
 
 app = FastAPI()
 app.include_router(sponsor_router)
@@ -150,6 +152,71 @@ def _request_entitlement(request: Request) -> dict:
         raise HTTPException(status_code=401, detail=str(error)) from error
 
 
+def _usage_db_path() -> str:
+    configured = os.environ.get("REMBG_USAGE_DB")
+    if configured:
+        return os.path.expanduser(configured)
+    data_dir = os.environ.get("REMBG_DATA_DIR")
+    if data_dir:
+        return os.path.join(os.path.expanduser(data_dir), "usage.db")
+    return os.path.join(os.path.expanduser("~"), ".rembg-studio", "usage.db")
+
+
+def _usage_subject(request: Request, entitlement: dict) -> str:
+    license_id = entitlement.get("license_id")
+    if isinstance(license_id, str) and license_id:
+        return f"license:{license_id}"
+    # Do not persist a raw client header.  A local trial without a device
+    # header intentionally gets one quota bucket per installation/database.
+    device = request.headers.get("X-Rembg-Device-Hash") or "local-installation"
+    digest = hashlib.sha256(device.encode("utf-8", "ignore")).hexdigest()
+    return f"trial:{digest}"
+
+
+def _reserve_inference(request: Request, entitlement: dict, operation: str):
+    limit = entitlement.get("monthly_images")
+    if limit is None:
+        return None
+    try:
+        return reserve_usage(
+            _usage_db_path(),
+            _usage_subject(request, entitlement),
+            1,
+            int(limit),
+            operation,
+        )
+    except UsageLimitError as error:
+        snapshot = error.snapshot
+        raise HTTPException(
+            status_code=402,
+            detail=(
+                f"本期额度已用 {snapshot['used']}/{snapshot['limit']} 张，"
+                f"剩余 {snapshot['remaining']} 张；请升级方案或等待下个周期"
+            ),
+        ) from error
+    except UsageError as error:
+        raise HTTPException(status_code=500, detail="本地用量账本不可用") from error
+    except Exception as error:  # pragma: no cover - database/OS failures
+        # Do not expose the local path or SQLite diagnostic to the client.
+        raise HTTPException(status_code=500, detail="本地用量账本不可用") from error
+
+
+def _release_inference(request: Request, entitlement: dict, reservation, operation: str) -> None:
+    if not reservation or not entitlement:
+        return
+    try:
+        release_usage(
+            _usage_db_path(),
+            _usage_subject(request, entitlement),
+            1,
+            f"{operation}:rollback",
+            period=reservation["period"],
+            limit=entitlement.get("monthly_images"),
+        )
+    except Exception as error:  # pragma: no cover - defensive cleanup path
+        print(f"[Usage] 回滚失败: {error}")
+
+
 @app.get("/api/commercial/entitlement")
 async def commercial_entitlement(request: Request):
     """Resolve a private signed entitlement or the bounded public trial.
@@ -158,6 +225,30 @@ async def commercial_entitlement(request: Request):
     calls this endpoint and cannot mint a paid entitlement in the browser.
     """
     return _request_entitlement(request)
+
+
+@app.get("/api/commercial/usage")
+async def commercial_usage(request: Request):
+    """Return the current local monthly quota for the supplied entitlement."""
+
+    entitlement = _request_entitlement(request)
+    try:
+        usage = usage_snapshot(
+            _usage_db_path(),
+            _usage_subject(request, entitlement),
+            limit=entitlement.get("monthly_images"),
+        )
+    except UsageError as error:
+        raise HTTPException(status_code=500, detail="本地用量账本不可用") from error
+    except Exception as error:  # pragma: no cover - database/OS failures
+        raise HTTPException(status_code=500, detail="本地用量账本不可用") from error
+    return {
+        "status": entitlement.get("status"),
+        "plan_id": entitlement.get("plan_id"),
+        "label": entitlement.get("label"),
+        "monthly_images": entitlement.get("monthly_images"),
+        **{key: usage[key] for key in ("period", "used", "limit", "remaining", "updated_at")},
+    }
 # `--lan` 快捷开关：等价于 REMBG_HOST=0.0.0.0，供手机/局域网设备访问
 if "--lan" in sys.argv:
     os.environ.setdefault("REMBG_HOST", "0.0.0.0")
@@ -305,6 +396,8 @@ def remove_bg(
     product_background: str = Form("white"),
     product_format: str = Form("png"),
 ):
+    entitlement = None
+    reservation = None
     try:
         entitlement = _request_entitlement(request)
         batch_size_header = request.headers.get("X-Rembg-Batch-Size")
@@ -330,6 +423,7 @@ def remove_bg(
             raise HTTPException(status_code=413, detail="单张图片不能超过 25 MB")
         if model_name not in KNOWN_MODELS:
             raise HTTPException(status_code=400, detail=f"未知模型: {model_name}")
+        reservation = _reserve_inference(request, entitlement, f"remove-bg:{model_name}")
         # Serialize inference to avoid multiplying model memory across browser tabs.
         with inference_lock:
             session = get_model_session(model_name)
@@ -372,8 +466,10 @@ def remove_bg(
             "image": f"data:image/{mime};base64,{base64_encoded}",
         }
     except HTTPException:
+        _release_inference(request, entitlement, reservation, f"remove-bg:{model_name}")
         raise
     except Exception as e:
+        _release_inference(request, entitlement, reservation, f"remove-bg:{model_name}")
         print(f"[Error] 处理失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -426,8 +522,10 @@ async def sam_load_image(file: UploadFile = File(...)):
 
 
 @app.post("/api/sam/segment")
-async def sam_segment(points_json: str = Form(...)):
+async def sam_segment(request: Request, points_json: str = Form(...)):
     global sam_temp_path, sam_last_result
+    entitlement = None
+    reservation = None
     if not sam_temp_path or not os.path.exists(sam_temp_path):
         raise HTTPException(status_code=400, detail="请先加载图片")
     try:
@@ -436,6 +534,8 @@ async def sam_segment(points_json: str = Form(...)):
         pts = [(p["x"], p["y"]) for p in points_data]
         labels = [p["label"] for p in points_data]  # 1=前景, 0=背景
 
+        entitlement = _request_entitlement(request)
+        reservation = _reserve_inference(request, entitlement, "sam-segment")
         proc = _get_sam()
         result = proc.segment_with_points(pts, labels)
         orig = Image.open(sam_temp_path)
@@ -456,17 +556,27 @@ async def sam_segment(points_json: str = Form(...)):
             "candidates": result.candidates,
         }
         return {"success": True, "candidates": candidates}
+    except HTTPException:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "sam-segment")
+        raise
     except Exception as e:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "sam-segment")
         print(f"[SAM Error] 分割失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/sam/segment-box")
-async def sam_segment_box(x1: int = Form(...), y1: int = Form(...), x2: int = Form(...), y2: int = Form(...)):
+async def sam_segment_box(request: Request, x1: int = Form(...), y1: int = Form(...), x2: int = Form(...), y2: int = Form(...)):
     global sam_temp_path, sam_last_result
+    entitlement = None
+    reservation = None
     if not sam_temp_path or not os.path.exists(sam_temp_path):
         raise HTTPException(status_code=400, detail="请先加载图片")
     try:
+        entitlement = _request_entitlement(request)
+        reservation = _reserve_inference(request, entitlement, "sam-segment-box")
         proc = _get_sam()
         result = proc.segment_with_prompts(boxes=[(x1, y1, x2, y2)])
         orig = Image.open(sam_temp_path)
@@ -487,17 +597,27 @@ async def sam_segment_box(x1: int = Form(...), y1: int = Form(...), x2: int = Fo
             "candidates": result.candidates,
         }
         return {"success": True, "candidates": candidates}
+    except HTTPException:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "sam-segment-box")
+        raise
     except Exception as e:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "sam-segment-box")
         print(f"[SAM Error] 框选分割失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/sam/auto-segment")
-async def sam_auto_segment():
+async def sam_auto_segment(request: Request):
     global sam_temp_path, sam_last_result
+    entitlement = None
+    reservation = None
     if not sam_temp_path or not os.path.exists(sam_temp_path):
         raise HTTPException(status_code=400, detail="请先加载图片")
     try:
+        entitlement = _request_entitlement(request)
+        reservation = _reserve_inference(request, entitlement, "sam-auto-segment")
         proc = _get_sam()
         result = proc.auto_segment(sam_temp_path)
         orig = Image.open(sam_temp_path)
@@ -518,7 +638,13 @@ async def sam_auto_segment():
             "candidates": result.candidates,
         }
         return {"success": True, "candidates": candidates}
+    except HTTPException:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "sam-auto-segment")
+        raise
     except Exception as e:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "sam-auto-segment")
         print(f"[SAM Error] 自动分割失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -532,8 +658,10 @@ def _get_cloth() -> ClothSegProcessor:
 
 
 @app.post("/api/cloth-seg")
-async def cloth_seg(file: UploadFile = File(...)):
+async def cloth_seg(request: Request, file: UploadFile = File(...)):
     """服装分层：上装 / 下装 / 全身，方便动漫差分图。"""
+    entitlement = None
+    reservation = None
     try:
         content = await file.read()
         if not content:
@@ -543,6 +671,8 @@ async def cloth_seg(file: UploadFile = File(...)):
             img.load()
         except Exception:
             raise HTTPException(status_code=400, detail="无法解析图片")
+        entitlement = _request_entitlement(request)
+        reservation = _reserve_inference(request, entitlement, "cloth-seg")
         layers = _get_cloth().segment_image(img)
         out = []
         for cat, img in layers.items():
@@ -555,8 +685,12 @@ async def cloth_seg(file: UploadFile = File(...)):
             })
         return {"success": True, "layers": out}
     except HTTPException:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "cloth-seg")
         raise
     except Exception as e:
+        if reservation:
+            _release_inference(request, entitlement, reservation, "cloth-seg")
         print(f"[Cloth Error] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

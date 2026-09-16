@@ -4,3 +4,6 @@
 -keep class com.lilyco42.rembgui.** { *; }
 -keepattributes *Annotation*,InnerClasses,EnclosingMethod,Signature
 -dontwarn ai.onnxruntime.**
+# The verifier accepts raw Ed25519 public keys and never uses the JDK X.509
+# bridge; the optional desktop-only class is absent from Android.
+-dontwarn sun.security.x509.X509Key
