@@ -17,6 +17,14 @@ let batch=[],batchSize=1200,exporting=false,busy=false,restoring=true,conflict=f
 let worker,request=0,saveRequest=0;
 const urls=[];
 const supported='Worker' in window&&'OffscreenCanvas' in window&&'createImageBitmap' in window;
+function addCommercialNotice(){
+ const host=files.closest('section');if(!host)return;
+ const box=document.createElement('aside');box.className='commercial-notice';box.setAttribute('aria-label','商业试用');
+ box.style.cssText='background:#fff;border:1px solid #dbe1da;border-radius:16px;padding:16px 24px;margin:22px 0';
+ box.innerHTML='<strong>商业试用</strong><p>浏览器演示免费；付费授权尚未接入。第一轮建议测试价：创作者版 ¥29/月，小团队版 ¥99/月。</p><small>图片在设备本地处理。商家主体、退款规则和服务端校验确认后再开放付款。</small>';
+ host.before(box);
+}
+addCommercialNotice();
 function updateControls(){
  const done=batch.filter(item=>item.status==='done'),reviewed=done.filter(isReviewed);
  const locked=busy||exporting||restoring;

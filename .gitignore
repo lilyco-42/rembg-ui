@@ -20,7 +20,11 @@ temp/
 mobile_sam.pt
 
 # Temp test scripts
-tests/
+tests/*
+!tests/test_product_export.py
+!tests/test_product_zip.py
+!tests/product_workflow.test.cjs
+!tests/test_commerce.py
 需求.md
 
 sam_*.pt

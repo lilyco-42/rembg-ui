@@ -103,13 +103,15 @@ def _detect_providers():
 
 PROVIDERS = _detect_providers()
 print(f"[GPU] Provider: {PROVIDERS[0]}")
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from PIL import Image
+from product_export import compose_product, validate_product_settings
 from rembg import new_session, remove
 from processors.cloth_seg import ClothSegProcessor
 from processors.sam_processor import MobileSAMProcessor
 from security import SecurityMiddleware, security
+from commerce import LicenseError, public_plan_catalog, resolve_entitlement
 
 app = FastAPI()
 app.include_router(sponsor_router)
@@ -125,6 +127,29 @@ set_config(SponsorConfig(
     project_version="1.0.0",
     project_repo="https://github.com/lilyco-42/rembg-ui",
 ))
+
+
+@app.get("/api/commercial/plans")
+async def commercial_plans():
+    """Expose the current pricing experiment without implying checkout support."""
+    return {"status": "experiment", "plans": public_plan_catalog()}
+
+
+@app.get("/api/commercial/entitlement")
+async def commercial_entitlement(request: Request):
+    """Resolve a private signed entitlement or the bounded public trial.
+
+    The signing secret is server-side configuration. A GitHub Pages build never
+    calls this endpoint and cannot mint a paid entitlement in the browser.
+    """
+    try:
+        entitlement = resolve_entitlement(
+            request.headers.get("X-Rembg-License"),
+            os.environ.get("REMBG_LICENSE_SECRET"),
+        )
+    except LicenseError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    return entitlement
 # `--lan` 快捷开关：等价于 REMBG_HOST=0.0.0.0，供手机/局域网设备访问
 if "--lan" in sys.argv:
     os.environ.setdefault("REMBG_HOST", "0.0.0.0")
@@ -182,6 +207,7 @@ app.add_middleware(SecurityMiddleware, security_obj=security)
 
 model_sessions = {}
 session_lock = threading.Lock()
+inference_lock = threading.Lock()
 uvicorn_server = None
 server_ready = threading.Event()
 
@@ -222,7 +248,7 @@ async def list_models():
     """返回模型列表及本地安装状态"""
     model_dir = os.path.expanduser("~/.u2net")
     sessions = {
-        "bria-rmbg": {"name": "商业级 (bria-rmbg)", "group": "推荐", "size": "~170MB"},
+        "bria-rmbg": {"name": "BRIA RMBG-2.0（商用需授权）", "group": "推荐", "size": "~170MB"},
         "birefnet-general": {"name": "最强通用 (birefnet-general)", "group": "推荐", "size": "~970MB"},
         "birefnet-massive": {"name": "海量数据版 (birefnet-massive)", "group": "推荐", "size": "~970MB"},
         "birefnet-portrait": {"name": "人像专用 (birefnet-portrait)", "group": "人像", "size": "~970MB"},
@@ -256,7 +282,7 @@ async def open_model_dir():
 
 
 @app.post("/api/remove-bg")
-async def remove_bg(
+def remove_bg(
     file: UploadFile = File(...),
     model_name: str = Form("bria-rmbg"),
     alpha_matting: bool = Form(False),
@@ -265,24 +291,39 @@ async def remove_bg(
     alpha_matting_erode: int = Form(10),
     post_process: bool = Form(False),
     only_mask: bool = Form(False),
+    product_size: int = Form(0),
+    product_margin: int = Form(10),
+    product_background: str = Form("white"),
+    product_format: str = Form("png"),
 ):
     try:
-        input_data = await file.read()
+        if product_size and only_mask:
+            raise HTTPException(status_code=400, detail="商品图模式不支持仅输出遮罩")
+        if product_size:
+            try:
+                validate_product_settings(product_size, product_margin, product_background, product_format)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+        input_data = file.file.read(25 * 1024 * 1024 + 1)
+        if len(input_data) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="单张图片不能超过 25 MB")
         if model_name not in KNOWN_MODELS:
             raise HTTPException(status_code=400, detail=f"未知模型: {model_name}")
-        session = get_model_session(model_name)
-        print(f"[Rembg] 模型={model_name} alpha={alpha_matting} fg={alpha_matting_fg} bg={alpha_matting_bg} erode={alpha_matting_erode}")
+        # Serialize inference to avoid multiplying model memory across browser tabs.
+        with inference_lock:
+            session = get_model_session(model_name)
+            print(f"[Rembg] 模型={model_name} alpha={alpha_matting} fg={alpha_matting_fg} bg={alpha_matting_bg} erode={alpha_matting_erode}")
 
-        output_data = remove(
-            input_data,
-            session=session,
-            alpha_matting=alpha_matting,
-            alpha_matting_foreground_threshold=alpha_matting_fg,
-            alpha_matting_background_threshold=alpha_matting_bg,
-            alpha_matting_erode_size=alpha_matting_erode,
-            post_process_mask=post_process,
-            only_mask=only_mask,
-        )
+            output_data = remove(
+                input_data,
+                session=session,
+                alpha_matting=alpha_matting,
+                alpha_matting_foreground_threshold=alpha_matting_fg,
+                alpha_matting_background_threshold=alpha_matting_bg,
+                alpha_matting_erode_size=alpha_matting_erode,
+                post_process_mask=post_process,
+                only_mask=only_mask,
+            )
 
         # 统一输出格式为二进制 bytes
         if isinstance(output_data, Image.Image):
@@ -297,11 +338,20 @@ async def remove_bg(
         else:
             final_bytes = output_data
 
+        mime = "png"
+        if product_size:
+            try:
+                final_bytes = compose_product(final_bytes, product_size, product_margin, product_background, product_format)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            mime = product_format
         base64_encoded = base64.b64encode(final_bytes).decode("utf-8")
         return {
             "success": True,
-            "image": f"data:image/png;base64,{base64_encoded}",
+            "image": f"data:image/{mime};base64,{base64_encoded}",
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[Error] 处理失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

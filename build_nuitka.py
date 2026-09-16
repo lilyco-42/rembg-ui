@@ -5,6 +5,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+# GitHub Actions' Windows runner may expose a legacy cp1252 stdout.  Build
+# diagnostics are user-facing, so keep the existing Chinese messages without
+# allowing an optional CUDA step to abort an otherwise valid release build.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")
+except (AttributeError, ValueError):
+    pass
+
 try:
     import tomllib  # Python 3.11+
 except ImportError:  # pragma: no cover

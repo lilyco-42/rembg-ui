@@ -62,7 +62,7 @@
             margin-top: 8px;
         }
 
-        select, input[type="file"] {
+        select, input[type="file"], #productSku {
             width: 100%;
             padding: 10px 12px;
             background: var(--bg-input);
@@ -742,7 +742,7 @@
             <div class="section-label">模型</div>
             <select id="modelSelect">
                 <optgroup label="✨ 推荐">
-                    <option value="bria-rmbg" selected>商业级 (bria-rmbg)</option>
+                    <option value="bria-rmbg" selected>BRIA RMBG-2.0（商用需授权）</option>
                     <option value="birefnet-general">最强通用 (birefnet-general)</option>
                     <option value="birefnet-massive">海量数据版 (birefnet-massive)</option>
                 </optgroup>
@@ -863,7 +863,26 @@
             </div>
         </div>
 
-        <div class="section-label">批量抠图</div>
+        <div id="modelLicenseNote" style="font-size:12px;color:var(--text-dim)">BRIA 权重商用需另行授权。<a href="https://huggingface.co/briaai/RMBG-2.0" target="_blank" rel="noopener noreferrer">查看模型条款</a></div>
+        <div class="section-label" style="margin-top:14px">商业试用</div>
+        <section id="commercialBox" aria-label="商业试用" style="border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--bg-input)">
+            <div id="commercialStatus" role="status" style="font-size:12px;color:var(--text-dim)">公开演示免费；正在加载试用方案…</div>
+            <div id="commercialPlans" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px"></div>
+            <small style="display:block;color:var(--text-dim);margin-top:10px;line-height:1.6">价格是第一轮假设，不是收款承诺。付款主体、退款规则和授权服务确认后才会接入支付；没有授权令牌时始终是受限试用。</small>
+        </section>
+        <div class="section-label">商品图工作台</div>
+        <details id="productSpecs"><summary id="productSpecsSummary" style="cursor:pointer;font-size:13px;padding:10px 0">交付规格 · 1200px / 纯白 / PNG</summary>
+        <fieldset id="productSettings" style="border:1px solid var(--border);border-radius:10px;padding:12px;display:grid;gap:10px">
+            <legend>交付规格</legend>
+            <label><input id="productEnabled" type="checkbox" checked> 统一商品图（主体居中）</label>
+            <label>画布尺寸 <select id="productSize"><option value="800">800 × 800</option><option value="1200" selected>1200 × 1200</option><option value="1600">1600 × 1600</option><option value="2000">2000 × 2000</option></select></label>
+            <label>四周最小留白 <select id="productMargin"><option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option></select></label>
+            <label>背景 <select id="productBackground"><option value="white">纯白</option><option value="transparent">透明</option><option value="gray">浅灰</option></select></label>
+            <label>文件格式 <select id="productFormat"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></label>
+            <label>SKU / 批次前缀 <input id="productSku" maxlength="60" placeholder="如 SUMMER-001；留空保留原名" style="width:100%"></label>
+            <small>设置在首张处理时锁定，清空队列后可修改。关闭统一商品图可导出原尺寸透明 PNG。</small>
+        </fieldset>
+        </details>
         <div class="batch-box">
             <div class="drop-zone" id="batchDropZone" onclick="document.getElementById('batchInput').click()">
                 <input type="file" id="batchInput" accept="image/*" multiple style="display:none" />
@@ -875,14 +894,16 @@
                 📂 选择整个文件夹
             </button>
             <input type="file" id="batchFolderInput" webkitdirectory multiple style="display:none" />
+            <label style="font-size:12px"><input type="checkbox" id="batchReviewedOnly" onchange="updateBatchButtons();persistBatch()"> 仅导出已确认的图片</label>
+            <div id="batchPersistenceStatus" role="status" style="font-size:11px;color:var(--text-dim)">正在恢复本地批次…</div>
             <div id="batchQueue" class="batch-queue"></div>
-            <div id="batchStatus" class="batch-status"></div>
+            <div id="batchStatus" class="batch-status" role="status" aria-live="polite"></div><button id="batchPauseBtn" class="btn" onclick="batchPauseRequested=true;this.disabled=true;this.textContent='当前图片完成后暂停'" disabled>暂停队列</button>
             <button id="batchRunBtn" class="btn btn-primary" onclick="runBatch()" disabled>
-                ⚡ 批量开始抠图
+                开始 / 继续 / 重试失败项
             </button>
             <div style="display:flex;gap:8px">
                 <button id="batchSaveBtn" class="btn btn-success" style="flex:1" onclick="saveBatchAll()" disabled>
-                    💾 保存全部
+                    下载交付 ZIP
                 </button>
                 <button id="batchClearBtn" class="btn" style="flex:1;background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border)" onclick="clearBatch()">
                     🗑 清空
@@ -1022,9 +1043,38 @@
         // Model info / mode display
         document.getElementById("modelSelect").addEventListener("change", function() {
             document.getElementById("modelInfo").textContent = this.value;
+            document.getElementById("modelLicenseNote").hidden = this.value !== "bria-rmbg";
         });
         function updateToolbarInfo() {
             document.getElementById("modelInfo").textContent = currentMode === "sam" ? "MobileSAM" : document.getElementById("modelSelect").value;
+        }
+
+        async function loadCommercialPlans() {
+            const status = document.getElementById("commercialStatus");
+            const list = document.getElementById("commercialPlans");
+            const fallback = [
+                {id: "trial", label: "公开试用", price_label: "免费", max_batch_images: 10, monthly_images: 30, features: ["浏览器 WASM", "原图对比", "ZIP 交付"]},
+                {id: "creator", label: "创作者版", price_label: "建议测试价 ¥29/月", max_batch_images: 50, monthly_images: 500, features: ["桌面模型", "批量交付", "手动修边"]},
+                {id: "studio", label: "小团队版", price_label: "建议测试价 ¥99/月", max_batch_images: 200, monthly_images: 3000, features: ["桌面模型", "批量交付", "手动修边", "优先支持"]},
+            ];
+            let plans = fallback;
+            try {
+                const response = await fetch("/api/commercial/plans");
+                if (!response.ok) throw new Error("plans request failed");
+                const data = await response.json();
+                if (Array.isArray(data.plans) && data.plans.length) plans = data.plans;
+            } catch (_) {
+                status.textContent = "公开试用方案（离线目录）；付费授权尚未接入";
+            }
+            list.replaceChildren(...plans.map(plan => {
+                const card = document.createElement("div");
+                card.style.cssText = "border:1px solid var(--border);border-radius:8px;padding:9px;background:var(--bg-card,rgba(0,0,0,.08))";
+                const title = document.createElement("strong"); title.textContent = plan.label || plan.id;
+                const price = document.createElement("div"); price.textContent = plan.price_label || "待定"; price.style.margin = "4px 0";
+                const limit = document.createElement("small"); limit.textContent = `每批 ${plan.max_batch_images} 张 · 每期 ${plan.monthly_images ?? "按需"} 张`; limit.style.color = "var(--text-dim)";
+                card.append(title, price, limit); return card;
+            }));
+            if (!status.textContent || status.textContent.includes("正在加载")) status.textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
         }
 
         // Advanced toggle
@@ -1326,8 +1376,9 @@
             document.getElementById("statusText").textContent = "预览图层: " + layer.name;
         }
 
-        function downloadAllDiffLayers() {
-            if (!diffLayers.length) return;
+        function downloadAllDiffLayers() { saveImageZip(diffLayers, (originalFileName || "diff").replace(/\.[^.]+$/, "") + "_layers.zip"); }
+        function saveImageZip(layers, archiveName) {
+            if (!layers.length) return;
             const crcTable = (function() {
                 const t = new Uint32Array(256);
                 for (let n = 0; n < 256; n++) {
@@ -1354,22 +1405,22 @@
             const locals = [];
             const centrals = [];
             let offset = 0;
-            diffLayers.forEach((layer, i) => {
+            layers.forEach((layer, i) => {
                 const name = (layer.name || ("layer_" + (i + 1) + ".png")).replace(/[\\/:*?"<>|]+/g, "_");
                 const nameBytes = new TextEncoder().encode(name);
                 const comma = (layer.image || "").indexOf(",");
                 const b64 = comma >= 0 ? layer.image.slice(comma + 1) : "";
                 const bin = atob(b64);
-                const data = new Uint8Array(bin.length);
-                for (let j = 0; j < bin.length; j++) data[j] = bin.charCodeAt(j);
+                const data = layer.bytes || new Uint8Array(bin.length);
+                if (!layer.bytes) for (let j = 0; j < bin.length; j++) data[j] = bin.charCodeAt(j);
                 const crc = crc32(data);
                 const local = cat([
-                    new Uint8Array([0x50,0x4b,0x03,0x04, 0x14,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
+                    new Uint8Array([0x50,0x4b,0x03,0x04, 0x14,0x00, 0x00,0x08, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
                     u32(crc), u32(data.length), u32(data.length), u16(nameBytes.length), u16(0),
                     nameBytes, data
                 ]);
                 const central = cat([
-                    new Uint8Array([0x50,0x4b,0x01,0x02, 0x14,0x00, 0x14,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
+                    new Uint8Array([0x50,0x4b,0x01,0x02, 0x14,0x00, 0x14,0x00, 0x00,0x08, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
                     u32(crc), u32(data.length), u32(data.length), u16(nameBytes.length), u16(0), u16(0), u16(0), u16(0),
                     u32(0), u32(offset), nameBytes
                 ]);
@@ -1380,13 +1431,12 @@
             const centralBlob = cat(centrals);
             const eocd = cat([
                 new Uint8Array([0x50,0x4b,0x05,0x06, 0x00,0x00, 0x00,0x00]),
-                u16(diffLayers.length), u16(diffLayers.length),
+                u16(layers.length), u16(layers.length),
                 u32(centralBlob.length), u32(offset), u16(0)
             ]);
             const zip = cat([...locals, centralBlob, eocd]);
             const url = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
-            const stem = (originalFileName || "diff").replace(/\.[^.]+$/, "");
-            triggerDownload(url, stem + "_layers.zip");
+            triggerDownload(url, archiveName);
             setTimeout(() => URL.revokeObjectURL(url), 2000);
         }
 
@@ -1642,10 +1692,108 @@
         // ─── end preprocess ────────────────────────────────────────
 
         // ─── Batch background removal ─────────────────────────────
+        document.getElementById("productSettings").addEventListener("change", () => {
+            const enabled = document.getElementById("productEnabled").checked;
+            const bg = document.getElementById("productBackground");
+            document.getElementById("productSpecsSummary").textContent = enabled
+                ? `交付规格 · ${document.getElementById("productSize").value}px / ${bg.options[bg.selectedIndex].text} / ${document.getElementById("productFormat").value.toUpperCase()}`
+                : "交付规格 · 原尺寸透明 PNG";
+            if (!batchRestoring && batchQueue.length) persistBatch();
+        });
         let batchQueue = [];
         let batchRunning = false;
+        let batchPauseRequested = false;
+        let batchSettings = null;
+        let batchExporting = false;
         let batchIdCounter = 0;
         const MAX_BATCH = 50;
+        let batchRestoring = true;
+        let batchDb = null;
+        let batchRevision = 0;
+        let batchSaveChain = Promise.resolve();
+        let batchSaveRequested = 0;
+        let batchStorageConflict = false;
+
+        function batchSnapshot() {
+            return {version: 1, settings: batchSettings, draft: captureBatchSettings(false),
+                reviewedOnly: document.getElementById("batchReviewedOnly").checked,
+                items: batchQueue.map(({thumb, ...item}) => ({...item}))};
+        }
+
+        function persistBatch() {
+            if (!batchDb || batchRestoring || batchStorageConflict) return Promise.resolve();
+            const snapshot = batchSnapshot();
+            const saveRequest = ++batchSaveRequested;
+            const status = document.getElementById("batchPersistenceStatus");
+            status.textContent = "正在保存本地批次…";
+            batchSaveChain = batchSaveChain.then(() => new Promise((resolve, reject) => {
+                if (batchStorageConflict) { resolve(); return; }
+                const tx = batchDb.transaction("batches", "readwrite");
+                const store = tx.objectStore("batches");
+                const read = store.get("current");
+                read.onsuccess = () => {
+                    if ((read.result?.revision || 0) !== batchRevision) {
+                        batchStorageConflict = true;
+                        tx.abort();
+                        return;
+                    }
+                    store.put({...snapshot, revision: batchRevision + 1}, "current");
+                };
+                tx.oncomplete = () => { batchRevision++; resolve(); };
+                tx.onabort = tx.onerror = () => reject(tx.error || new Error("另一个页面已修改批次，请下载当前结果后刷新"));
+            })).then(() => {
+                if (!batchStorageConflict && saveRequest === batchSaveRequested) status.textContent = "批次已保存到此浏览器，可刷新恢复";
+            }).catch(error => {
+                status.textContent = "未保存：" + (error.message || "浏览器存储不可用") + "。请先下载结果。";
+            });
+            return batchSaveChain;
+        }
+
+        async function restoreBatch() {
+            try {
+                batchDb = await new Promise((resolve, reject) => {
+                    const open = indexedDB.open("rembg-product-workspace", 1);
+                    open.onupgradeneeded = () => open.result.createObjectStore("batches");
+                    open.onsuccess = () => resolve(open.result);
+                    open.onerror = () => reject(open.error);
+                    open.onblocked = () => reject(new Error("请关闭其他工作台页面后刷新"));
+                });
+                const saved = await new Promise((resolve, reject) => {
+                    const request = batchDb.transaction("batches").objectStore("batches").get("current");
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                if (saved) {
+                    if (saved.version !== 1 || !Array.isArray(saved.items) || saved.items.length > MAX_BATCH) throw new Error("本地批次格式不兼容");
+                    batchRevision = saved.revision || 0;
+                    batchSettings = saved.settings;
+                    batchQueue = saved.items.map(item => ({...item,
+                        status: item.status === "processing" ? "pending" : item.status,
+                        thumb: URL.createObjectURL(item.file)}));
+                    batchIdCounter = Math.max(0, ...batchQueue.map(item => item.id));
+                    document.getElementById("batchReviewedOnly").checked = !!saved.reviewedOnly;
+                    const restoredSettings = batchSettings || saved.draft;
+                    if (restoredSettings) {
+                        const controls = {productSize:"product_size",productMargin:"product_margin",productBackground:"product_background",productFormat:"product_format",productSku:"sku",modelSelect:"model_name",paramFg:"alpha_matting_fg",paramBg:"alpha_matting_bg",paramErode:"alpha_matting_erode"};
+                        for (const [id,key] of Object.entries(controls)) document.getElementById(id).value = restoredSettings[key];
+                        document.getElementById("productEnabled").checked = !!Number(restoredSettings.product_size);
+                        document.getElementById("paramAlpha").checked = !!restoredSettings.alpha_matting;
+                        document.getElementById("paramPostProcess").checked = !!restoredSettings.post_process;
+                        document.getElementById("productSettings").dispatchEvent(new Event("change"));
+                        document.getElementById("modelSelect").dispatchEvent(new Event("change"));
+                    }
+                }
+                document.getElementById("batchPersistenceStatus").textContent = batchQueue.length ? `已恢复 ${batchQueue.length} 张；中断项可继续处理` : "批次会自动保存在此浏览器";
+            } catch (error) {
+                batchDb = null;
+                document.getElementById("batchPersistenceStatus").textContent = "本地恢复不可用：" + error.message + "。当前工作请及时下载。";
+            } finally {
+                batchRestoring = false;
+                renderBatchQueue();
+                updateBatchButtons();
+            }
+        }
+
 
         function escapeHtml(s) {
             return String(s ?? "").replace(/[&<>"']/g, c => ({
@@ -1679,9 +1827,11 @@
         });
 
         function addBatchFiles(files) {
+            if (batchRunning || batchExporting || batchRestoring) return;
             let added = 0;
             for (const file of files) {
                 if (!file.type.startsWith("image/")) continue;
+                if (file.size > 25 * 1024 * 1024) { document.getElementById("statusText").textContent = "单张图片不能超过 25 MB"; continue; }
                 if (batchQueue.length >= MAX_BATCH) {
                     document.getElementById("statusText").textContent = `⚠ 批量队列最多 ${MAX_BATCH} 张`;
                     break;
@@ -1692,12 +1842,14 @@
                     name: file.name,
                     status: "pending",
                     result: null,
+                    reviewed: false,
                     error: null,
                     thumb: URL.createObjectURL(file),
                 });
                 added++;
             }
             if (added > 0) {
+                persistBatch();
                 renderBatchQueue();
                 updateBatchButtons();
                 document.getElementById("statusText").textContent = `已添加 ${added} 张图片到批量队列`;
@@ -1713,13 +1865,23 @@
                 div.className = "batch-item";
                 div.dataset.id = item.id;
                 div.innerHTML = `
-                    <img src="${item.thumb}" alt="" title="点击查看/载入" />
+                    <img src="${item.result || item.thumb}" alt="" title="点击查看/载入" />
                     <div class="bi-info">
                         <div class="bi-name">${escapeHtml(item.name)}</div>
                         <div class="bi-status ${item.status}">${statusMap[item.status] || item.status}${item.error ? "：" + escapeHtml(item.error) : ""}</div>
                     </div>
                 `;
                 div.querySelector("img").addEventListener("click", () => selectBatchItem(item));
+                const review = document.createElement("label");
+                review.style.fontSize = "11px";
+                const check = document.createElement("input");
+                check.type = "checkbox";
+                check.checked = !!item.reviewed;
+                check.disabled = item.status !== "done" || batchRunning;
+                check.setAttribute("aria-label", "确认图片 " + item.name);
+                check.addEventListener("change", () => { item.reviewed = check.checked; updateBatchButtons(); updateBatchCounter(); persistBatch(); });
+                review.append(check, " 已确认");
+                div.appendChild(review);
                 list.appendChild(div);
             });
             updateBatchCounter();
@@ -1739,13 +1901,13 @@
         function updateBatchCounter() {
             const doneCount = batchQueue.filter(i => i.status === "done").length;
             document.getElementById("batchStatus").textContent =
-                batchQueue.length ? `共 ${batchQueue.length} 张 · 已完成 ${doneCount} 张` : "";
+                batchQueue.length ? `共 ${batchQueue.length} 张 · 已完成 ${doneCount} 张 · 已确认 ${batchQueue.filter(i => i.status === "done" && i.reviewed).length} 张` : "";
         }
 
         function selectBatchItem(item) {
             if (item.status === "done" && item.result) {
                 resultBase64 = item.result;
-                currentFileName = "rmbg_" + item.name.replace(/\.[^.]+$/, "") + ".png";
+                currentFileName = item.outputName || ("rmbg_" + item.name.replace(/\.[^.]+$/, "") + ".png");
                 document.getElementById("resultImg").src = item.result;
                 document.getElementById("resultImg").style.display = "block";
                 document.getElementById("resultEmpty").style.display = "none";
@@ -1759,48 +1921,79 @@
 
         function updateBatchButtons() {
             const hasWork = batchQueue.some(i => i.status === "pending" || i.status === "error");
-            const hasDone = batchQueue.some(i => i.status === "done" && i.result);
-            document.getElementById("batchRunBtn").disabled = !hasWork || batchRunning;
-            document.getElementById("batchSaveBtn").disabled = !hasDone;
-            document.getElementById("batchClearBtn").disabled = batchRunning;
+            const hasDone = batchDeliverableItems().length > 0;
+            document.getElementById("batchRunBtn").disabled = !hasWork || batchRunning || batchRestoring;
+            document.getElementById("batchSaveBtn").disabled = !hasDone || batchRunning || batchExporting || batchRestoring;
+            document.getElementById("batchPauseBtn").disabled = !batchRunning || batchPauseRequested;
+            document.getElementById("productSettings").disabled = !!batchSettings;
+            document.getElementById("batchClearBtn").disabled = batchRunning || batchExporting || batchRestoring;
         }
 
         // 单张调用后端抠图（与单图流程共用同一组模型参数）
+        function captureBatchSettings(validate = true) {
+            const enabled = document.getElementById("productEnabled").checked;
+            const settings = {
+                model_name: document.getElementById("modelSelect").value,
+                alpha_matting: document.getElementById("paramAlpha").checked,
+                alpha_matting_fg: document.getElementById("paramFg").value,
+                alpha_matting_bg: document.getElementById("paramBg").value,
+                alpha_matting_erode: document.getElementById("paramErode").value,
+                post_process: document.getElementById("paramPostProcess").checked,
+                only_mask: false,
+                product_size: enabled ? document.getElementById("productSize").value : 0,
+                product_margin: document.getElementById("productMargin").value,
+                product_background: document.getElementById("productBackground").value,
+                product_format: enabled ? document.getElementById("productFormat").value : "png",
+                sku: document.getElementById("productSku").value.trim(),
+            };
+            if (validate && enabled && settings.product_background === "transparent" && settings.product_format === "jpeg") throw new Error("透明背景请选择 PNG 或 WebP");
+            return settings;
+        }
+
+        function batchOutputName(item) {
+            const stem = (batchSettings.sku || item.name.replace(/\.[^.]+$/, ""))
+                .replace(/[\\/:*?"<>|\x00-\x1f]/g, "_").replace(/[. ]+$/g, "").slice(0, 80) || "product";
+            return "product_" + stem + "_" + String(item.id).padStart(3, "0") + "." + (batchSettings.product_format === "jpeg" ? "jpg" : batchSettings.product_format);
+        }
+
         async function processBatchItem(item) {
             const formData = new FormData();
             formData.append("file", item.file, item.name);
-            formData.append("model_name", document.getElementById("modelSelect").value);
-            formData.append("alpha_matting", document.getElementById("paramAlpha").checked);
-            formData.append("alpha_matting_fg", document.getElementById("paramFg").value);
-            formData.append("alpha_matting_bg", document.getElementById("paramBg").value);
-            formData.append("alpha_matting_erode", document.getElementById("paramErode").value);
-            formData.append("post_process", document.getElementById("paramPostProcess").checked);
-            formData.append("only_mask", document.getElementById("paramOnlyMask").checked);
+            for (const [key, value] of Object.entries(batchSettings)) {
+                if (key !== "sku") formData.append(key, value);
+            }
             const response = await fetch("/api/remove-bg", { method: "POST", body: formData });
             const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.detail || "处理失败");
-            }
+            if (!response.ok || !data.success) throw new Error(data.detail || "处理失败");
             return data.image;
         }
 
         // 顺序处理整个队列
         async function runBatch() {
-            if (batchRunning) return;
+            if (batchRunning || batchRestoring) return;
             const pending = batchQueue.filter(i => i.status === "pending" || i.status === "error");
             if (!pending.length) return;
 
+            try { batchSettings = batchSettings || captureBatchSettings(); }
+            catch (error) { document.getElementById("statusText").textContent = error.message; return; }
+            batchPauseRequested = false;
+            document.getElementById("batchPauseBtn").textContent = "暂停队列";
             batchRunning = true;
+            renderBatchQueue();
             updateBatchButtons();
             document.getElementById("statusText").textContent = `批量处理中，共 ${pending.length} 张...`;
 
             let ok = 0;
             for (const item of pending) {
+                if (batchPauseRequested) break;
                 item.status = "processing";
                 item.error = null;
                 updateBatchItem(item);
+                await persistBatch();
                 try {
                     item.result = await processBatchItem(item);
+                    item.outputName = batchOutputName(item);
+                    item.reviewed = false;
                     item.status = "done";
                     ok++;
                     // 每张完成后自动流转到右侧结果面板预览
@@ -1810,40 +2003,60 @@
                     item.error = (err && err.message) || "处理失败";
                 }
                 updateBatchItem(item);
+                await persistBatch();
             }
 
             batchRunning = false;
+            renderBatchQueue();
             updateBatchButtons();
             document.getElementById("statusText").textContent =
-                `✅ 批量完成：${ok} 成功 / ${pending.length - ok} 失败`;
+                `本轮成功 ${ok} 张 · 失败 ${batchQueue.filter(i => i.status === "error").length} 张 · 待处理 ${batchQueue.filter(i => i.status === "pending").length} 张${batchPauseRequested ? " · 已暂停" : ""}`;
         }
 
-        // 一次性下载全部结果（浏览器逐个下载）
+        function batchDeliverableItems() {
+            const reviewedOnly = document.getElementById("batchReviewedOnly").checked;
+            return batchQueue.filter(i => i.status === "done" && i.result && (!reviewedOnly || i.reviewed));
+        }
+
+        function batchDeliveryManifest(items) {
+            const exported = new Set(items.map(i => i.id));
+            return {version: 1, settings: batchSettings, items: batchQueue.map(i => ({
+                source: i.name, output: i.outputName || null, status: i.status,
+                reviewed: !!i.reviewed, exported: exported.has(i.id), error: i.error || null,
+            }))};
+        }
+
+        // 单个 ZIP，避免浏览器拦截多文件下载；保留失败项以便重试。
         async function saveBatchAll() {
-            const doneItems = batchQueue.filter(i => i.status === "done" && i.result);
+            if (batchRunning || batchExporting || batchRestoring) return;
+            const doneItems = batchDeliverableItems();
             if (!doneItems.length) return;
+            batchExporting = true;
+            updateBatchButtons();
             try {
-                let ok = 0;
-                for (const item of doneItems) {
-                    const filename = "rmbg_" + item.name.replace(/\.[^.]+$/, "") + ".png";
-                    triggerDownload(item.result, filename);
-                    ok++;
-                }
-                document.getElementById("statusText").textContent = `💾 已下载 ${ok} 张`;
+                const files = doneItems.map(item => ({name: item.outputName, image: item.result}));
+                files.push({name: "delivery-manifest.json", bytes: new TextEncoder().encode(JSON.stringify(batchDeliveryManifest(doneItems), null, 2))});
+                saveImageZip(files, "product-delivery.zip");
+                document.getElementById("statusText").textContent = `已打包 ${doneItems.length} 张；清单记录全部任务，未完成或筛除项不导出图片`;
             } catch (error) {
-                alert("批量保存失败");
-                console.error(error);
-            }
+                document.getElementById("statusText").textContent = "打包失败：" + error.message;
+            } finally { batchExporting = false; updateBatchButtons(); }
         }
 
         function clearBatch() {
-            if (batchRunning) return;
+            if (batchRunning || batchExporting || batchRestoring) return;
+            batchSettings = null;
+            batchIdCounter = 0;
             batchQueue.forEach(i => URL.revokeObjectURL(i.thumb));
             batchQueue = [];
+            persistBatch();
             renderBatchQueue();
             updateBatchButtons();
             document.getElementById("statusText").textContent = "已清空批量队列";
         }
+
+        restoreBatch();
+        if (typeof loadCommercialPlans === "function") loadCommercialPlans();
 
         // ─── Mode switching
         let currentMode = "rembg";
