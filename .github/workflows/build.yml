@@ -82,25 +82,6 @@ jobs:
       - name: Package
         run: Compress-Archive -Path dist/rembg-ui.dist/* -DestinationPath Rembg-UI-windows.zip
 
-      # 固定版本号用法：
-      #   - 推一个 v* tag 触发（例：git push origin v1.0.1），构建约 3 小时，完成后自动发 Release；
-      #   - 或 Actions 页手动 workflow_dispatch 填 version。重复用同一版本号会更新已有 Release。
-      # ⚠️ 构建期间不要再重推同 tag（concurrency 会取消进行中的构建）；也无需手动建草稿，
-      #    workflow 会自动清理同 tag 的旧草稿。
-      - name: Create tag (skip if already exists)
-        # 该步骤是 bash 语法（if ! git ls-remote ... then/fi），必须显式指定 shell:
-        # 否则 Windows job 默认用 pwsh，解析会报 "Missing '(' after 'if'"（曾因此失败）
-        shell: bash
-        if: "!startsWith(github.ref, 'refs/tags/')"
-        run: |
-          if ! git ls-remote --exit-code origin "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            git tag "${{ steps.version.outputs.tag }}"
-            git push origin "${{ steps.version.outputs.tag }}"
-            echo "已创建并推送 tag ${{ steps.version.outputs.tag }}"
-          else
-            echo "tag ${{ steps.version.outputs.tag }} 已存在，跳过推送（更新已有 Release）"
-          fi
-
       # 防止「固定版本号 → 空草稿」残留：若同 tag 已有手动建的草稿，先清掉，
       # 避免草稿与正式发布并存、Release 页出现空壳（此前 v0.2.0 / v0.1.20260722 均踩过）。
       # ⚠️ jq 的字符串字面量必须用双引号（.tag_name == "..."），单引号会让 jq 报
@@ -122,6 +103,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
+          # The release API creates a missing tag at the exact checked-out SHA.
+          # Do not git-push a tag from GITHUB_TOKEN: GitHub rejects a ref update
+          # when this commit also changes workflow files (the token has no
+          # workflow permission).
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.tag }}
           files: Rembg-UI-windows.zip
           generate_release_notes: true
