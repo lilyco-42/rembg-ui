@@ -29,11 +29,23 @@
 
 watcher 已使用 `pending → processing → paid` 的原子事务：同一笔交易再次轮询时不会重复签发；签名或写库失败会回滚到 `pending`，由下一轮重试。交易匹配仍按试验通道的金额窗口工作，正式经营前要改为订单唯一备注/回调并保留完整的幂等账本。
 
+## 积分接口
+
+积分与支付分离，使用整数账本，不会把积分变成已付款订单：
+
+- `GET /studio/api/points`：登录用户查询余额和最近流水。
+- `POST /studio/api/points/consume`：登录用户消费积分，JSON 为 `{ "points": 125, "reason": "商品图测试消耗", "reference": "job-001" }`；引用号可安全重试，余额不足返回 400。
+- `POST /studio/api/admin/points/grant`：管理员加分，JSON 为 `{ "username": "lilyco42", "points": 1000, "reason": "封闭测试额度", "reference": "admin-test-lilyco42-20260916-v1" }`，通过 `X-Admin-Token` 认证。
+- `GET /studio/api/admin/points/{username}`：管理员查看指定账号余额和流水。
+
+账本表为 `points_accounts` 与 `points_ledger`；每笔记录保存变更量、变更后余额、原因、引用号和时间。当前积分还没有自动扣到 Rembg 推理配额或支付订单，先用于封闭测试和后续计费接入。
+
 ## 密钥轮换与回滚
 
 - 轮换时在服务器生成新密钥，设置新的 `REMBG_OFFLINE_KEY_ID`，把新公钥写入 `license_config.py` 后再构建发行包；旧发行包需要在过渡期继续接受旧 key id，因此生产代码应扩展为公钥集合后再切换。
 - 本次部署前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-103830/`，含 `app.py`、`.env`、`billing.db`、购买页和 README。
 - 幂等修复前的线上代码另存为该目录下的 `app.py.before-idempotency`；当前线上 `app.py` SHA-256 为 `9b15cb9a62ccee47409576b57e642fa39a0dae813857b9c1eae1df9069f0435e`。
+- 积分接口部署前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-1235-points/`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
