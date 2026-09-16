@@ -23,6 +23,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.appbar.MaterialToolbar
 import java.io.BufferedOutputStream
 import java.io.File
@@ -50,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var batchExportBtn: Button
     private lateinit var batchClearBtn: Button
     private lateinit var batchStatus: TextView
+    private lateinit var root: View
 
     private var source: Bitmap? = null
     private var result: Bitmap? = null
@@ -93,12 +97,23 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 15 enforces edge-to-edge for targetSdk 35. Apply system-bar
+        // insets to the root once so the same layout remains usable on API 29+
+        // and on gesture-navigation devices with a bottom cutout.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
 
         store = ModelStore(this)
         licenseManager = LicenseManager(this)
         batchOutputDir = File(cacheDir, "batch-output").apply { mkdirs() }
         toolbar = findViewById(R.id.toolbar)
+        root = findViewById(R.id.root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(view.paddingLeft, bars.top, view.paddingRight, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
         toolbar.title = getString(R.string.app_name)
         toolbar.inflateMenu(R.menu.main)
         toolbar.setOnMenuItemClickListener { item ->
