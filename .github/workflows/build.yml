@@ -176,7 +176,7 @@ jobs:
         run: |
           gh release upload "${{ steps.version.outputs.tag }}" dist/Rembg-UI-linux.tar.gz --clobber
 
-  # macOS 构建：Nuitka 产出 .app 应用包（release 模式自动附带 .dmg），追加到同一 Release。
+  # macOS 构建：Nuitka 产出 .app 应用包，压缩为可下载的 .app.zip，追加到同一 Release。
   # 依赖 onnxruntime 已按平台区分（macOS 用 CPU 版），见 pyproject.toml 环境标记。
   # 与 build-linux 同理：去掉 if 限制，同一 run 内依赖 Windows 建好 Release 后追加资产。
   build-macos:
@@ -186,7 +186,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # macOS runner 可用空间仅 ~14 GB，而 Nuitka+torch 全量构建（编译中间产物 + dist + DMG
+      # macOS runner 可用空间仅 ~14 GB，而 Nuitka+torch 全量构建（编译中间产物 + dist
       # + ccache 缓存写入）轻松吃满：上次构建在 dist 数据文件复制阶段被硬杀，日志无任何报错。
       # 移除本工作流用不到的 Android SDK / ghcup（不同镜像位置不同，逐个尝试），可释放 ~10 GB。
       - name: Free disk space
@@ -215,9 +215,6 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Install create-dmg
-        run: brew install create-dmg
-
       - name: Get version (from build-windows)
         id: version
         shell: bash
@@ -226,33 +223,41 @@ jobs:
           echo "Version: ${{ needs.build-windows.outputs.tag }}"
 
       - name: Build with Nuitka
+        env:
+          # Nuitka 的自动 DMG 在部分 runner 上会生成只有 UDIF/XML 元数据的空镜像；
+          # 发行时直接压缩经过校验的 .app，避免上传不可安装的伪 DMG。
+          REMBG_MACOS_CREATE_DMG: "0"
         run: uv run python build_nuitka.py release
 
-      - name: Package (.app / .dmg)
+      - name: Package (.app.zip)
         id: package
         shell: bash
         run: |
-          cd dist
-          ls -la
-          if compgen -G "*.dmg" >/dev/null; then
-            mv *.dmg ../Rembg-UI-macOS.dmg
-            # The next step runs from the repository root, so keep the output
-            # path relative to that directory.
-            echo "asset=Rembg-UI-macOS.dmg" >> "$GITHUB_OUTPUT"
-            echo "已生成 DMG"
-          elif compgen -G "*.app" >/dev/null; then
-            zip -rq ../Rembg-UI-macOS.zip *.app
-            echo "asset=Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
-            echo "已生成 .app zip"
-          else
-            echo "::error::dist 下既无 .dmg 也无 .app（--mode=app 可能未生效，检查上方 ls 输出）"
+          set -euo pipefail
+          ls -la dist
+          app_path="$(find dist -maxdepth 1 -type d -name '*.app' -print -quit)"
+          if [ -z "$app_path" ]; then
+            echo "::error::dist 下没有 .app（--mode=app 可能未生效）"
             exit 1
           fi
+          test -x "$app_path/Contents/MacOS/rembg-ui"
+          app_size_kb="$(du -sk "$app_path" | awk '{print $1}')"
+          if [ "$app_size_kb" -lt 10240 ]; then
+            echo "::error::应用包只有 ${app_size_kb} KiB，拒绝生成空的 macOS 资产"
+            exit 1
+          fi
+          # ditto 保留 .app bundle 的资源叉和符号链接，macOS 解压后可直接拖入应用程序。
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" Rembg-UI-macOS.zip
+          ls -lh Rembg-UI-macOS.zip
+          echo "asset=Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
+          echo "已生成并校验 .app zip（${app_size_kb} KiB）"
 
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # 清理早期同名版本中由 Nuitka 生成的空 DMG，避免用户误下错误资产。
+          gh release delete-asset "${{ steps.version.outputs.tag }}" Rembg-UI-macOS.dmg --yes || true
           gh release upload "${{ steps.version.outputs.tag }}" "${{ steps.package.outputs.asset }}" --clobber
 
   # ── CUDA 加速变体 ─────────────────────────────────────────────────────────

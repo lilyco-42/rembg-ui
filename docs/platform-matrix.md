@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | Windows x64 | `build_nuitka.py` / `nuitka.ps1` | `Rembg-UI-windows.zip` | 完整桌面工作台、SAM、批次、离线授权 | Windows 目标设备压力、显卡/CPU 变体、签名安装包 |
 | Linux x64 | `build_nuitka.py` / `build_nuitka_linux.sh` | `Rembg-UI-linux.tar.gz` | 完整桌面工作台、CPU/GPU 变体 | 发行版依赖、显卡驱动、桌面会话 |
-| macOS arm64 / x64 | `build_nuitka.py` | `.dmg` 或 `.app.zip` | 完整桌面工作台；CPU/系统后端按平台选择 | Apple Silicon/Intel 真机、未签名提示、公证与签名 |
+| macOS arm64（CI）/ x64（本地） | `build_nuitka.py` | `.app.zip` | 完整桌面工作台；CPU/系统后端按平台选择 | Apple Silicon/Intel 真机、未签名提示、公证与签名 |
 | Android arm64-v8a / armeabi-v7a / x86_64 | `android/gradlew` | ABI 拆分 APK + AAB | 原生端侧单图与最多 10 张顺序批处理、原图/结果切换、系统分享接收、可停止与重启恢复、ZIP 清单导出、模型按需下载 | 真机耗时、峰值内存、相册分享、后台切换和签名安装 |
 | Android 移动浏览器 | `web/npm run build` | 可安装 PWA | 浏览器 WASM 批次、原图对比、规格合成、ZIP；首载后可缓存运行时/模型 | 多浏览器触控、存储配额、弱网/离线恢复和长批次 |
 | iOS / iPadOS 浏览器 | `web/npm run build` | Safari PWA/网页 | 同上，受 Safari WASM、内存和文件系统限制 | iPhone/iPad 真机、后台回收、文件导出 |

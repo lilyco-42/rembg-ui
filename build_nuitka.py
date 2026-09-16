@@ -1,4 +1,5 @@
 import importlib.metadata
+import os
 import re
 import shutil
 import subprocess
@@ -118,9 +119,15 @@ def build(mode: str = "release"):
             "--macos-app-mode=gui",
         ]
         if not is_debug:
-            if shutil.which("create-dmg"):
+            create_dmg_enabled = os.getenv("REMBG_MACOS_CREATE_DMG", "1").strip().lower() not in {
+                "0",
+                "false",
+                "no",
+                "off",
+            }
+            if create_dmg_enabled and shutil.which("create-dmg"):
                 cmd.append("--macos-app-create-dmg")
-            else:
+            elif create_dmg_enabled:
                 print("[warn] 未找到 create-dmg，跳过 DMG（仍产出 .app）")
     elif sys.platform.startswith("linux"):
         # Linux 桌面图标可选：若要给产物加图标，准备一个合适尺寸的 PNG 并取消下面两行
