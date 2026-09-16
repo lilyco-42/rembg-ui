@@ -112,6 +112,7 @@ from processors.cloth_seg import ClothSegProcessor
 from processors.sam_processor import MobileSAMProcessor
 from security import SecurityMiddleware, security
 from commerce import LicenseError, public_plan_catalog, resolve_entitlement
+from license_config import OFFLINE_LICENSE_KEY_ID, OFFLINE_LICENSE_PUBLIC_KEY
 
 app = FastAPI()
 app.include_router(sponsor_router)
@@ -141,8 +142,8 @@ def _request_entitlement(request: Request) -> dict:
         return resolve_entitlement(
             request.headers.get("X-Rembg-License"),
             os.environ.get("REMBG_LICENSE_SECRET"),
-            public_key=os.environ.get("REMBG_LICENSE_PUBLIC_KEY"),
-            expected_key_id=os.environ.get("REMBG_LICENSE_KEY_ID") or None,
+            public_key=os.environ.get("REMBG_LICENSE_PUBLIC_KEY") or OFFLINE_LICENSE_PUBLIC_KEY,
+            expected_key_id=os.environ.get("REMBG_LICENSE_KEY_ID") or OFFLINE_LICENSE_KEY_ID,
             device_hash=request.headers.get("X-Rembg-Device-Hash"),
         )
     except LicenseError as error:
