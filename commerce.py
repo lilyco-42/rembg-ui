@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
+from offline_license import OfflineLicenseError, verify_offline_license
+
 
 SCHEMA_VERSION = 1
 TOKEN_VERSION = "v1"
@@ -208,15 +210,40 @@ def entitlement_view(claims: Mapping[str, Any], *, now: int | None = None) -> di
     }
 
 
-def resolve_entitlement(token: str | None, secret: str | None, *, now: int | None = None) -> dict[str, Any]:
+def resolve_entitlement(
+    token: str | None,
+    secret: str | None,
+    *,
+    public_key: str | bytes | None = None,
+    expected_key_id: str | None = None,
+    device_hash: str | None = None,
+    now: int | None = None,
+) -> dict[str, Any]:
     """Resolve a licensed plan or fall back to the bounded public trial.
 
-    A configured secret without a token is intentionally still trial. A token
-    without a configured secret is rejected rather than treated as paid.
+    HMAC ``v1`` remains the private pilot path.  ``ol1`` is an Ed25519 signed
+    offline token: the verifier needs only a public key, which is safe to ship
+    in a desktop build.  A configured key without a token is intentionally
+    still trial. A token without its verifier configuration is rejected rather
+    than treated as paid.
     """
 
     if token is None or not token.strip():
         return trial_entitlement(now=now)
+    if token.startswith("ol1."):
+        if not public_key:
+            raise LicenseError("离线授权公钥尚未配置")
+        try:
+            claims = verify_offline_license(
+                token,
+                public_key,
+                expected_key_id=expected_key_id,
+                device_hash=device_hash,
+                now=now,
+            )
+        except OfflineLicenseError as error:
+            raise LicenseError(str(error)) from error
+        return entitlement_view(claims, now=now)
     if not secret:
         raise LicenseError("授权服务尚未配置签名密钥")
     claims = verify_license(token, secret, now=now)

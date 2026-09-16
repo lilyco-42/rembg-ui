@@ -25,6 +25,8 @@ tests/*
 !tests/test_product_zip.py
 !tests/product_workflow.test.cjs
 !tests/test_commerce.py
+!tests/test_offline_license.py
+!tests/test_issue_offline_license.py
 需求.md
 
 sam_*.pt

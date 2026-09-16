@@ -141,6 +141,9 @@ def _request_entitlement(request: Request) -> dict:
         return resolve_entitlement(
             request.headers.get("X-Rembg-License"),
             os.environ.get("REMBG_LICENSE_SECRET"),
+            public_key=os.environ.get("REMBG_LICENSE_PUBLIC_KEY"),
+            expected_key_id=os.environ.get("REMBG_LICENSE_KEY_ID") or None,
+            device_hash=request.headers.get("X-Rembg-Device-Hash"),
         )
     except LicenseError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error

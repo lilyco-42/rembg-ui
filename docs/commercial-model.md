@@ -10,7 +10,7 @@
 
 ## 软件边界
 
-`commerce.py` 提供套餐目录、HMAC 签名授权、有效期校验和纯函数用量检查。签名密钥只能留在未来的托管服务或私有发行流程，不能放进 GitHub Pages、浏览器 JavaScript 或桌面安装包。没有密钥或没有授权令牌时，系统明确返回受限试用；前端显示一个布尔开关不能成为付费墙。
+`commerce.py` 提供套餐目录、HMAC 签名授权、Ed25519 离线授权、有效期校验和纯函数用量检查。HMAC 只用于本机服务和私有试单；离线桌面版只需要 Ed25519 公钥，私钥留在发行方签发器，不能放进 GitHub Pages、浏览器 JavaScript 或桌面安装包。没有密钥或没有授权令牌时，系统明确返回受限试用；前端显示一个布尔开关不能成为付费墙。
 
 在支付渠道确定前，可用私有环境中的 `scripts/issue_license.py` 为已核验的手工试单签发短期令牌。脚本只从 `REMBG_LICENSE_SECRET` 读取密钥，标准输出只打印令牌；不要把密钥、客户原图或未核验的客户标识提交到仓库。桌面工作台粘贴令牌后会向本机服务校验，并按签名套餐更新批次上限。
 
@@ -22,6 +22,23 @@
 $env:REMBG_LICENSE_SECRET = "在私有密码管理器中读取的随机密钥"
 python scripts/issue_license.py --plan creator --subject "pilot-001" --days 30
 ```
+
+## 离线桌面授权（已实现签名层，尚未接支付）
+
+弱网或空网客户使用 `ol1` 授权文件。签发端只在私有环境生成一次 Ed25519 密钥对；公钥可以放入桌面构建配置，私钥必须留在仓库之外。设备绑定时，发行方只接收本地生成的 SHA-256 设备摘要，不接收原始硬件标识。
+
+```powershell
+python scripts/generate_license_keys.py `
+  --private-key "$env:USERPROFILE\rembg-keys\private.key" `
+  --public-key "$env:USERPROFILE\rembg-keys\public.key"
+
+python scripts/issue_offline_license.py `
+  --private-key-file "$env:USERPROFILE\rembg-keys\private.key" `
+  --plan creator --subject "pilot-001" --days 30 `
+  --output .\pilot-001.lic
+```
+
+当前本机服务可通过 `REMBG_LICENSE_PUBLIC_KEY` 验证 `ol1`，也可以设置 `REMBG_LICENSE_KEY_ID` 和请求头 `X-Rembg-Device-Hash` 做密钥轮换与设备绑定。`REMBG_LICENSE_SECRET` 仍只服务于旧的 HMAC 试单，不应写入安装包。过期会在离线端立即生效；撤销、换机和退款需要下一次在线刷新或签发替换文件，尚未接入支付回调和撤销账本。
 
 月度用量账本和自动续费仍属于托管授权服务职责；当前本地工作台只对签名令牌做有效期和每批上限校验，不能把手工令牌流程描述成完整支付系统。
 
