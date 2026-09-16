@@ -1,3 +1,5 @@
+import {revisionState} from './revisions.mjs?v=editor-2';
+
 export const PROJECT_SCHEMA_VERSION = 1;
 const STORE = 'projects';
 const KEY = 'active';
@@ -28,7 +30,9 @@ export function validateProject(snapshot, {restore = false} = {}) {
   if (typeof item.reviewed !== 'boolean') invalid('图片确认必须为布尔值');
   if (item.error !== undefined && typeof item.error !== 'string') invalid('错误信息必须为文本');
   const status = restore && item.status === 'processing' ? 'pending' : item.status;
-  const result = {id: item.id, source: item.source, file: item.file, status, reviewed: status === 'done' && item.reviewed};
+  const revisions = revisionState(item);
+  const result = {id: item.id, source: item.source, file: item.file, status, ...revisions};
+  if (status !== 'done') { result.reviewed = false; result.reviewedRevision = null; }
   if (status === 'done') {
    if (!object(item.output) || !(item.output.product instanceof Blob) || !(item.output.transparent instanceof Blob)) invalid('已完成图片缺少商品图或透明底稿');
    result.output = {product: item.output.product, transparent: item.output.transparent};

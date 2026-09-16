@@ -1,6 +1,14 @@
 // ZIP writer reused from the desktop product workflow.
         export function createZip(layers) {
             if (!layers.length) return;
+            if(layers.length>65535)throw Error('ZIP 文件数量超限');
+            let total=0;
+            for(const layer of layers){
+                if(!(layer.bytes instanceof Uint8Array))throw Error('ZIP 需要二进制数据');
+                total+=layer.bytes.byteLength;
+                if(total>64*1024*1024)throw Error('ZIP 超过 64 MB，请分批下载');
+                if(new TextEncoder().encode(layer.name||'').length>65535)throw Error('ZIP 文件名过长');
+            }
             const crcTable = (function() {
                 const t = new Uint32Array(256);
                 for (let n = 0; n < 256; n++) {
@@ -39,16 +47,16 @@
                 const local = cat([
                     new Uint8Array([0x50,0x4b,0x03,0x04, 0x14,0x00, 0x00,0x08, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
                     u32(crc), u32(data.length), u32(data.length), u16(nameBytes.length), u16(0),
-                    nameBytes, data
+                    nameBytes
                 ]);
                 const central = cat([
                     new Uint8Array([0x50,0x4b,0x01,0x02, 0x14,0x00, 0x14,0x00, 0x00,0x08, 0x00,0x00, 0x00,0x00, 0x00,0x00]),
                     u32(crc), u32(data.length), u32(data.length), u16(nameBytes.length), u16(0), u16(0), u16(0), u16(0),
                     u32(0), u32(offset), nameBytes
                 ]);
-                locals.push(local);
+                locals.push(local, data);
                 centrals.push(central);
-                offset += local.length;
+                offset += local.length + data.length;
             });
             const centralBlob = cat(centrals);
             const eocd = cat([
@@ -56,6 +64,5 @@
                 u16(layers.length), u16(layers.length),
                 u32(centralBlob.length), u32(offset), u16(0)
             ]);
-            const zip = cat([...locals, centralBlob, eocd]);
-            return new Blob([zip], {type: "application/zip"});
+            return new Blob([...locals, centralBlob, eocd], {type: "application/zip"});
         }

@@ -23,3 +23,17 @@ test('ZIP writes UTF-8 flags and matching local / central entries',async()=>{
  assert.equal(view.getUint32(central,true),0x02014b50);
  assert.equal(view.getUint16(bytes.length-12,true),1);
 });
+
+test('manifest carries image revisions and excludes stale confirmations',()=>{
+ const items=[
+  {source:'current.png',status:'done',reviewed:true,imageRevision:3,reviewedRevision:3},
+  {source:'changed.png',status:'done',reviewed:true,imageRevision:3,reviewedRevision:2},
+  {source:'legacy.png',status:'done',reviewed:true},
+ ];
+ const manifest=deliveryManifest(items,1200,true);
+ assert.deepEqual(manifest.items.map(item=>item.exported),[true,false,true]);
+ assert.deepEqual(manifest.items.map(item=>item.reviewed),[true,false,true]);
+ assert.deepEqual(manifest.items.map(item=>item.imageRevision),[3,3,1]);
+ assert.deepEqual(manifest.items.map(item=>item.reviewedRevision),[3,2,1]);
+ assert.deepEqual(deliveryManifest(items,1200,false).items.map(item=>item.exported),[true,true,true]);
+});

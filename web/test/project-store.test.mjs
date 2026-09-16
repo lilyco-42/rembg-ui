@@ -158,3 +158,25 @@ test('save before load and unavailable browser storage fail explicitly', async (
  await store.save(project());
  await assert.rejects(openProjectStore({indexedDB: null}), /无法使用 IndexedDB/);
 });
+
+test('schema 1 migrates legacy review, preserves revisions, and invalidates mismatched review', async () => {
+ const legacy = validateProject(project());
+ assert.equal(legacy.items[0].imageRevision, 1);
+ assert.equal(legacy.items[0].reviewedRevision, 1);
+ const pending = validateProject(project('pending'));
+ assert.equal(pending.items[0].imageRevision, 0);
+ assert.equal(pending.items[0].reviewedRevision, null);
+ const input = project();
+ Object.assign(input.items[0], {imageRevision: 3, reviewedRevision: 2});
+ const {factory} = memoryIndexedDB();
+ const store = await openProjectStore({indexedDB: factory});
+ await store.load(); await store.save(input);
+ const restored = (await store.load()).items[0];
+ assert.equal(restored.imageRevision, 3);
+ assert.equal(restored.reviewedRevision, 2);
+ assert.equal(restored.reviewed, false);
+ for (const imageRevision of [-1, 0, NaN, '3']) {
+  input.items[0].imageRevision = imageRevision;
+  assert.throws(() => validateProject(input), /图片修订号无效/);
+ }
+});
