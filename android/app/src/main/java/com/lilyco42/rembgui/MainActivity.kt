@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
     private var loadGeneration = 0L
     private var loadingImage = false
     private var modelLoading = false
+    private var singleRunning = false
     private var batchRunning = false
     private var batchCancelRequested = false
     private var shareBusy = false
@@ -201,6 +202,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadImage(uri: Uri) {
+        if (singleRunning || batchRunning || modelLoading || saveBusy || shareBusy) return
         val request = ++loadGeneration
         loadingImage = true
         progress.visibility = View.VISIBLE
@@ -273,7 +275,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runRemove() {
-        if (loadingImage || modelLoading || batchRunning || saveBusy || shareBusy) return
+        if (loadingImage || modelLoading || singleRunning || batchRunning || saveBusy || shareBusy) return
         val src = source ?: return
         val engine = remover
         if (engine == null) {
@@ -281,12 +283,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
         progress.visibility = View.VISIBLE
+        singleRunning = true
         runBtn.isEnabled = false
         pickBtn.isEnabled = false
+        updateBatchUi()
         io.execute {
             try {
                 val out = engine.remove(src)
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    singleRunning = false
                     result?.recycle()
                     result = out
                     showingResult = true
@@ -296,10 +302,13 @@ class MainActivity : AppCompatActivity() {
                     progress.visibility = View.GONE
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
+                    updateBatchUi()
                     Toast.makeText(this, R.string.done_tap_compare, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    singleRunning = false
                     progress.visibility = View.GONE
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
@@ -308,6 +317,8 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (_: OutOfMemoryError) {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    singleRunning = false
                     progress.visibility = View.GONE
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
@@ -320,7 +331,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun saveResult() {
         val bmp = result ?: return
-        if (saveBusy || shareBusy || batchRunning) return
+        if (saveBusy || shareBusy || singleRunning || batchRunning) return
         val name = "rembg_${System.currentTimeMillis()}.png"
         saveBusy = true
         pickBtn.isEnabled = false
@@ -372,7 +383,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun selectBatch(uris: List<Uri>) {
-        if (batchRunning || loadingImage || shareBusy || saveBusy) return
+        if (singleRunning || batchRunning || loadingImage || shareBusy || saveBusy) return
         releaseSinglePreview()
         clearBatchOutputs()
         batch.clear()
@@ -487,11 +498,12 @@ class MainActivity : AppCompatActivity() {
         } else {
             batchStatus.text = getString(R.string.batch_status, done, total, failed, pending)
         }
-        val controlsReady = !batchRunning && !modelLoading && !loadingImage && !shareBusy && !saveBusy
+        val controlsReady = !singleRunning && !batchRunning && !modelLoading && !loadingImage && !shareBusy && !saveBusy
         toolbar.menu.findItem(R.id.action_models)?.isEnabled = controlsReady
+        toolbar.menu.findItem(R.id.action_share)?.isEnabled = controlsReady && result != null
         batchPickBtn.isEnabled = controlsReady
         batchRunBtn.isEnabled = if (batchRunning) true else {
-            !modelLoading && !saveBusy &&
+            !singleRunning && !modelLoading && !saveBusy &&
             remover != null && batch.any { it.status != BatchStatus.DONE || it.outputFile?.isFile != true }
         }
         batchRunBtn.text = if (batchRunning) getString(R.string.batch_cancel) else getString(R.string.batch_run)
@@ -500,7 +512,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runBatch() {
-        if (batchRunning || batch.isEmpty() || saveBusy || shareBusy) return
+        if (singleRunning || batchRunning || batch.isEmpty() || saveBusy || shareBusy) return
         val engine = remover
         if (engine == null) {
             Toast.makeText(this, R.string.model_loading, Toast.LENGTH_SHORT).show()
@@ -580,7 +592,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun clearBatch() {
-        if (batchRunning || shareBusy || saveBusy) return
+        if (singleRunning || batchRunning || shareBusy || saveBusy) return
         clearBatchOutputs()
         batch.clear()
         batchCancelRequested = false
@@ -603,7 +615,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exportBatch() {
-        if (batchRunning || shareBusy || saveBusy) return
+        if (singleRunning || batchRunning || shareBusy || saveBusy) return
         val done = batch.filter { it.status == BatchStatus.DONE && it.outputFile?.isFile == true }
         if (done.isEmpty()) {
             Toast.makeText(this, R.string.batch_no_done, Toast.LENGTH_SHORT).show()
@@ -695,7 +707,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun shareResult() {
         val bmp = result ?: return
-        if (shareBusy || saveBusy || batchRunning) return
+        if (shareBusy || saveBusy || singleRunning || batchRunning) return
         shareBusy = true
         toolbar.menu.findItem(R.id.action_share)?.isEnabled = false
         pickBtn.isEnabled = false
@@ -761,7 +773,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showModelDialog() {
-        if (modelLoading || batchRunning || loadingImage || saveBusy || shareBusy) {
+        if (modelLoading || singleRunning || batchRunning || loadingImage || saveBusy || shareBusy) {
             Toast.makeText(this, R.string.model_busy, Toast.LENGTH_SHORT).show()
             return
         }
@@ -787,7 +799,7 @@ class MainActivity : AppCompatActivity() {
             val meta = row.findViewById<TextView>(R.id.modelMeta)
             val action = row.findViewById<Button>(R.id.modelAction)
             when {
-                modelLoading -> {
+                modelLoading || singleRunning -> {
                     meta.text = getString(R.string.model_loading)
                     action.text = getString(R.string.model_loading)
                     action.isEnabled = false
@@ -818,6 +830,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadModel(spec: ModelSpec) {
+        if (singleRunning || batchRunning || modelLoading || saveBusy || shareBusy) return
         if (spec.url == null) {
             store.ensureBundled(spec)
             switchModel(spec)
@@ -858,7 +871,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchModel(spec: ModelSpec, toast: Boolean = true) {
-        if (modelLoading || batchRunning || saveBusy || shareBusy) return
+        if (modelLoading || singleRunning || batchRunning || saveBusy || shareBusy) return
         if (!store.isReady(spec)) {
             store.ensureBundled(spec)
         }
@@ -890,9 +903,9 @@ class MainActivity : AppCompatActivity() {
                     modelLoading = false
                     bindModelList()
                     updateBatchUi()
-                    pickBtn.isEnabled = !loadingImage && !batchRunning && !saveBusy && !shareBusy
-                    runBtn.isEnabled = source != null && !loadingImage && !batchRunning && !saveBusy && !shareBusy
-                    saveBtn.isEnabled = result != null && !batchRunning && !saveBusy && !shareBusy
+                    pickBtn.isEnabled = !loadingImage && !singleRunning && !batchRunning && !saveBusy && !shareBusy
+                    runBtn.isEnabled = source != null && !loadingImage && !singleRunning && !batchRunning && !saveBusy && !shareBusy
+                    saveBtn.isEnabled = result != null && !singleRunning && !batchRunning && !saveBusy && !shareBusy
                     if (toast) Toast.makeText(this, getString(R.string.model_switched, spec.title), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
@@ -901,9 +914,9 @@ class MainActivity : AppCompatActivity() {
                     modelLoading = false
                     bindModelList()
                     updateBatchUi()
-                    pickBtn.isEnabled = !loadingImage && !batchRunning && !saveBusy && !shareBusy
-                    runBtn.isEnabled = source != null && !loadingImage && !batchRunning && !saveBusy && !shareBusy
-                    saveBtn.isEnabled = result != null && !batchRunning && !saveBusy && !shareBusy
+                    pickBtn.isEnabled = !loadingImage && !singleRunning && !batchRunning && !saveBusy && !shareBusy
+                    runBtn.isEnabled = source != null && !loadingImage && !singleRunning && !batchRunning && !saveBusy && !shareBusy
+                    saveBtn.isEnabled = result != null && !singleRunning && !batchRunning && !saveBusy && !shareBusy
                     Toast.makeText(this, getString(R.string.model_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
                 }
             }
