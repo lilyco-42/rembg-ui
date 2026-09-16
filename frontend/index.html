@@ -1080,9 +1080,9 @@
             if (commercialEntitlement.status === "licensed") {
                 const expiry = commercialEntitlement.expires_at ? new Date(commercialEntitlement.expires_at * 1000).toLocaleDateString() : "未设置";
                 const limit = entitlementBatchLimit();
-                status.textContent = `已验证 ${commercialEntitlement.label} · 本地工作台每批最多 ${limit} 张 · 有效至 ${expiry}`;
+                status.textContent = `已验证 ${commercialEntitlement.label} · 本地工作台每批最多 ${limit} 张 · 月度额度由授权服务计量 · 有效至 ${expiry}`;
             } else {
-                status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张`;
+                status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张（托管计量待接入）`;
             }
             updateBatchCounter?.();
             updateBatchButtons?.();
@@ -1175,7 +1175,7 @@
                 card.style.cssText = "border:1px solid var(--border);border-radius:8px;padding:9px;background:var(--bg-card,rgba(0,0,0,.08))";
                 const title = document.createElement("strong"); title.textContent = plan.label || plan.id;
                 const price = document.createElement("div"); price.textContent = plan.price_label || "待定"; price.style.margin = "4px 0";
-                const limit = document.createElement("small"); limit.textContent = `每批 ${plan.max_batch_images} 张 · 每期 ${plan.monthly_images ?? "按需"} 张`; limit.style.color = "var(--text-dim)";
+                const limit = document.createElement("small"); limit.textContent = `每批 ${plan.max_batch_images} 张 · 每期 ${plan.monthly_images ?? "按需"} 张（托管计量）`; limit.style.color = "var(--text-dim)";
                 card.append(title, price, limit); return card;
             }));
             if (commercialEntitlement.status !== "licensed" && (!status.textContent || status.textContent.includes("正在加载"))) status.textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
