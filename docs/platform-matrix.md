@@ -19,4 +19,4 @@
 
 ## CI 和签名
 
-`.github/workflows/android-ci.yml` 在 Android 目录或 PR 改动时快速编译 debug 与 unsigned release，便于移动端回归；`.github/workflows/build.yml` 的 `build-android` job 与桌面 job 复用同一版本 tag，构建三个 ABI APK 和 AAB。没有 `REMBG_ANDROID_KEYSTORE_BASE64` 等 secrets 时，CI 仍会上传 unsigned 产物用于安装测试；配置签名后才适合上传 Play Console。Android 具体属性、内存策略和本地命令见 [`android/README.md`](../android/README.md)。
+`.github/workflows/android-ci.yml` 在 Android 目录或 PR 改动时快速编译 debug 与 unsigned release，便于移动端回归；`.github/workflows/build.yml` 的 `build-android` job 与桌面 job 复用同一版本 tag，构建三个 ABI APK 和 AAB。没有 `REMBG_ANDROID_KEYSTORE_BASE64` 等 secrets 时，CI 仍会上传 unsigned 产物用于安装测试；配置签名后才适合上传 Play Console。CUDA 桌面变体只在手动运行工作流并勾选 `include_cuda` 时启用，因为它可能超过 GitHub Release 的单资产大小限制。Android 具体属性、内存策略和本地命令见 [`android/README.md`](../android/README.md)。

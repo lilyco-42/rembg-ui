@@ -10,6 +10,11 @@ on:
         description: "Version tag (e.g. v1.0.1)"
         required: false
         type: string
+      include_cuda:
+        description: "Build optional CUDA bundles (large; not part of the default release)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -245,11 +250,13 @@ jobs:
           ls -la
           if compgen -G "*.dmg" >/dev/null; then
             mv *.dmg ../Rembg-UI-macOS.dmg
-            echo "asset=../Rembg-UI-macOS.dmg" >> "$GITHUB_OUTPUT"
+            # The next step runs from the repository root, so keep the output
+            # path relative to that directory.
+            echo "asset=Rembg-UI-macOS.dmg" >> "$GITHUB_OUTPUT"
             echo "已生成 DMG"
           elif compgen -G "*.app" >/dev/null; then
             zip -rq ../Rembg-UI-macOS.zip *.app
-            echo "asset=../Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
+            echo "asset=Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
             echo "已生成 .app zip"
           else
             echo "::error::dist 下既无 .dmg 也无 .app（--mode=app 可能未生效，检查上方 ls 输出）"
@@ -268,6 +275,9 @@ jobs:
   # ~2.5 GB）打进产物并上传为 -cuda 后缀资产，用户免装 CUDA 即可 GPU 加速。
   # 依赖 build-windows 的 job outputs 提供同一个 tag，与其余变体追加进同一 Release。
   build-windows-cuda:
+    # CUDA runtime bundles are optional: they can exceed GitHub's 2 GiB
+    # per-release-asset limit and should not block the CPU/mobile release.
+    if: github.event_name == 'workflow_dispatch' && inputs.include_cuda == true
     runs-on: windows-latest
     needs: build-windows
     timeout-minutes: 240
@@ -321,6 +331,7 @@ jobs:
           gh release upload "${{ steps.version.outputs.tag }}" Rembg-UI-windows-cuda.zip --clobber
 
   build-linux-cuda:
+    if: github.event_name == 'workflow_dispatch' && inputs.include_cuda == true
     runs-on: ubuntu-latest
     needs: build-windows
     timeout-minutes: 240

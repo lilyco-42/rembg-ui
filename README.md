@@ -177,7 +177,7 @@ cd android
 ./gradlew.bat :app:assembleRelease :app:bundleRelease
 ```
 
-CI 会在同一版本 tag 下构建 Windows / Linux / macOS / Android 产物并发布到同一 Release；WASM PWA 由 `web` workflow 构建，Pages 站点同步 `web/dist`（见 `.github/workflows/build.yml`、`.github/workflows/web.yml`）。Android 的签名密钥只从 Actions secrets 注入，未配置时会明确产出 unsigned 包，详见 [`android/README.md`](android/README.md)。完整边界见 [`docs/platform-matrix.md`](docs/platform-matrix.md)。
+CI 会在同一版本 tag 下构建 Windows / Linux / macOS / Android 产物并发布到同一 Release；WASM PWA 由 `web` workflow 构建，Pages 站点同步 `web/dist`（见 `.github/workflows/build.yml`、`.github/workflows/web.yml`）。Android 的签名密钥只从 Actions secrets 注入，未配置时会明确产出 unsigned 包，详见 [`android/README.md`](android/README.md)。CUDA 桌面包体积很大，只有手动运行 `Build & Release` 并勾选 `include_cuda` 才会构建，不会阻塞默认 CPU / Android 发布。完整边界见 [`docs/platform-matrix.md`](docs/platform-matrix.md)。
 
 ## 项目结构
 
