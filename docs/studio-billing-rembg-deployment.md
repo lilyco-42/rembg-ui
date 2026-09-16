@@ -51,6 +51,7 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 - 积分接口部署前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-1235-points/`。
 - 积分兑换上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange/`。
 - 请求体校验补丁上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v2/`。
+- 首页积分提示上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v3/`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
