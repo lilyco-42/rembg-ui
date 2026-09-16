@@ -43,6 +43,18 @@ class PointsLedgerTests(unittest.TestCase):
             adjust_points(self.connection, 7, -11, "消费")
         self.assertEqual(snapshot(self.connection, 7)["balance"], 10)
 
+    def test_caller_can_roll_back_a_surrounding_transaction(self):
+        self.connection.execute("BEGIN IMMEDIATE")
+        adjust_points(
+            self.connection,
+            7,
+            100,
+            "待回滚",
+            manage_transaction=False,
+        )
+        self.connection.rollback()
+        self.assertEqual(snapshot(self.connection, 7)["balance"], 0)
+
     def test_parse_points_rejects_non_integer_values(self):
         self.assertEqual(parse_points("12"), 12)
         for value in (True, 0, -1, 1.5, "1.5", ""):

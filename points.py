@@ -119,12 +119,14 @@ def adjust_points(
     meta: Mapping[str, Any] | None = None,
     *,
     now: str | None = None,
+    manage_transaction: bool = True,
 ) -> dict[str, Any]:
     """Apply one atomic ledger mutation and return its resulting entry.
 
     ``reference`` makes retries idempotent for a user. Reusing a reference
     with a different delta or reason fails closed instead of silently changing
-    the original operation.
+    the original operation. Set ``manage_transaction=False`` when the caller
+    already owns a surrounding SQLite transaction.
     """
 
     if isinstance(delta, bool) or not isinstance(delta, int) or delta == 0:
@@ -142,7 +144,8 @@ def adjust_points(
         raise PointsError("积分附加信息必须是 JSON 对象") from error
     timestamp = now or _now_utc()
 
-    connection.execute("BEGIN IMMEDIATE")
+    if manage_transaction:
+        connection.execute("BEGIN IMMEDIATE")
     try:
         if reference is not None:
             existing = connection.execute(
@@ -153,7 +156,8 @@ def adjust_points(
             if existing:
                 if int(existing["delta"]) != delta or str(existing["reason"]) != reason:
                     raise PointsError("积分引用号已用于另一笔变更")
-                connection.commit()
+                if manage_transaction:
+                    connection.commit()
                 return _entry(existing, idempotent=True)
 
         account = connection.execute(
@@ -191,10 +195,12 @@ def adjust_points(
             "meta": metadata,
             "idempotent": False,
         }
-        connection.commit()
+        if manage_transaction:
+            connection.commit()
         return entry
     except Exception:
-        connection.rollback()
+        if manage_transaction:
+            connection.rollback()
         raise
 
 
