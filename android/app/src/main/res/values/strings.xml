@@ -32,6 +32,7 @@
     <string name="purchase_failed">无法打开购买页：%1$s</string>
     <string name="share_ready">正在准备分享…</string>
     <string name="model_loading">模型加载中，请稍候</string>
+    <string name="model_busy">当前任务完成后再切换模型</string>
     <string name="model_failed">模型加载失败：%1$s</string>
     <string name="load_failed">读图失败：%1$s</string>
     <string name="memory_limit">设备可用内存不足。请换一张较小的图片或关闭后台应用后重试。</string>

@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private var modelList: LinearLayout? = null
     private var loadGeneration = 0L
     private var loadingImage = false
+    private var modelLoading = false
     private var batchRunning = false
     private var batchCancelRequested = false
     private var shareBusy = false
@@ -272,7 +273,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runRemove() {
-        if (loadingImage) return
+        if (loadingImage || modelLoading || batchRunning || saveBusy || shareBusy) return
         val src = source ?: return
         val engine = remover
         if (engine == null) {
@@ -486,14 +487,16 @@ class MainActivity : AppCompatActivity() {
         } else {
             batchStatus.text = getString(R.string.batch_status, done, total, failed, pending)
         }
-        batchPickBtn.isEnabled = !batchRunning && !loadingImage && !shareBusy && !saveBusy
+        val controlsReady = !batchRunning && !modelLoading && !loadingImage && !shareBusy && !saveBusy
+        toolbar.menu.findItem(R.id.action_models)?.isEnabled = controlsReady
+        batchPickBtn.isEnabled = controlsReady
         batchRunBtn.isEnabled = if (batchRunning) true else {
-            !saveBusy &&
+            !modelLoading && !saveBusy &&
             remover != null && batch.any { it.status != BatchStatus.DONE || it.outputFile?.isFile != true }
         }
         batchRunBtn.text = if (batchRunning) getString(R.string.batch_cancel) else getString(R.string.batch_run)
-        batchExportBtn.isEnabled = !batchRunning && done > 0 && !shareBusy && !saveBusy
-        batchClearBtn.isEnabled = !batchRunning && total > 0 && !shareBusy && !saveBusy
+        batchExportBtn.isEnabled = controlsReady && done > 0
+        batchClearBtn.isEnabled = controlsReady && total > 0
     }
 
     private fun runBatch() {
@@ -758,6 +761,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showModelDialog() {
+        if (modelLoading || batchRunning || loadingImage || saveBusy || shareBusy) {
+            Toast.makeText(this, R.string.model_busy, Toast.LENGTH_SHORT).show()
+            return
+        }
         val content = LayoutInflater.from(this).inflate(R.layout.dialog_models, null)
         modelList = content.findViewById(R.id.modelList)
         bindModelList()
@@ -780,6 +787,11 @@ class MainActivity : AppCompatActivity() {
             val meta = row.findViewById<TextView>(R.id.modelMeta)
             val action = row.findViewById<Button>(R.id.modelAction)
             when {
+                modelLoading -> {
+                    meta.text = getString(R.string.model_loading)
+                    action.text = getString(R.string.model_loading)
+                    action.isEnabled = false
+                }
                 downloadingId == spec.id -> {
                     meta.text = getString(R.string.model_missing, spec.sizeLabel)
                     action.text = getString(R.string.model_progress, 0)
@@ -846,6 +858,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchModel(spec: ModelSpec, toast: Boolean = true) {
+        if (modelLoading || batchRunning || saveBusy || shareBusy) return
         if (!store.isReady(spec)) {
             store.ensureBundled(spec)
         }
@@ -857,21 +870,40 @@ class MainActivity : AppCompatActivity() {
             }
             return
         }
-        currentSpec = spec
-        modelLabel.text = getString(R.string.model_current, spec.title)
-        getSharedPreferences("rembg", MODE_PRIVATE).edit().putString(KEY_MODEL, spec.id).apply()
+        modelLoading = true
+        bindModelList()
+        updateBatchUi()
         io.execute {
             try {
                 val next = BackgroundRemover(store.file(spec), spec, memoryClassMb)
-                val old = remover
-                remover = next
-                old?.close()
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) {
+                        next.close()
+                        return@runOnUiThread
+                    }
+                    val old = remover
+                    remover = next
+                    old?.close()
+                    currentSpec = spec
+                    modelLabel.text = getString(R.string.model_current, spec.title)
+                    getSharedPreferences("rembg", MODE_PRIVATE).edit().putString(KEY_MODEL, spec.id).apply()
+                    modelLoading = false
                     bindModelList()
+                    updateBatchUi()
+                    pickBtn.isEnabled = !loadingImage && !batchRunning && !saveBusy && !shareBusy
+                    runBtn.isEnabled = source != null && !loadingImage && !batchRunning && !saveBusy && !shareBusy
+                    saveBtn.isEnabled = result != null && !batchRunning && !saveBusy && !shareBusy
                     if (toast) Toast.makeText(this, getString(R.string.model_switched, spec.title), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    modelLoading = false
+                    bindModelList()
+                    updateBatchUi()
+                    pickBtn.isEnabled = !loadingImage && !batchRunning && !saveBusy && !shareBusy
+                    runBtn.isEnabled = source != null && !loadingImage && !batchRunning && !saveBusy && !shareBusy
+                    saveBtn.isEnabled = result != null && !batchRunning && !saveBusy && !shareBusy
                     Toast.makeText(this, getString(R.string.model_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
                 }
             }
