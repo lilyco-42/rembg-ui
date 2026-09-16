@@ -152,7 +152,7 @@ SAM（Segment Anything Model）是 Meta 开源的分割模型，本工具使用 
 
 ## 打包与多平台发行
 
-桌面端由 `build_nuitka.py` 按系统生成对应应用格式（Windows `rembg-ui.exe` / Linux `rembg-ui.bin` / macOS `rembg-ui.app` 并附带 `.dmg`）。Android 使用独立原生端侧实现，按 ABI 拆分 APK 并同时生成 AAB；浏览器版构建为可安装的 WASM PWA。
+桌面端由 `build_nuitka.py` 按系统生成对应应用格式（Windows `rembg-ui.exe` / Linux `rembg-ui.bin` / macOS `rembg-ui.app` 并附带 `.dmg`）。Android 使用独立原生端侧实现，按 ABI 拆分 APK 并同时生成 AAB；原生端支持单图、最多 10 张顺序批处理、重启恢复、系统分享和 ZIP 清单导出。浏览器版构建为可安装的 WASM PWA。
 
 ```powershell
 # Windows - Nuitka（产物 dist/rembg-ui.dist/rembg-ui.exe）
