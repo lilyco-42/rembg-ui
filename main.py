@@ -135,6 +135,17 @@ async def commercial_plans():
     return {"status": "experiment", "plans": public_plan_catalog()}
 
 
+def _request_entitlement(request: Request) -> dict:
+    """Resolve the signed plan for a local API request, failing closed."""
+    try:
+        return resolve_entitlement(
+            request.headers.get("X-Rembg-License"),
+            os.environ.get("REMBG_LICENSE_SECRET"),
+        )
+    except LicenseError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+
+
 @app.get("/api/commercial/entitlement")
 async def commercial_entitlement(request: Request):
     """Resolve a private signed entitlement or the bounded public trial.
@@ -142,14 +153,7 @@ async def commercial_entitlement(request: Request):
     The signing secret is server-side configuration. A GitHub Pages build never
     calls this endpoint and cannot mint a paid entitlement in the browser.
     """
-    try:
-        entitlement = resolve_entitlement(
-            request.headers.get("X-Rembg-License"),
-            os.environ.get("REMBG_LICENSE_SECRET"),
-        )
-    except LicenseError as error:
-        raise HTTPException(status_code=401, detail=str(error)) from error
-    return entitlement
+    return _request_entitlement(request)
 # `--lan` 快捷开关：等价于 REMBG_HOST=0.0.0.0，供手机/局域网设备访问
 if "--lan" in sys.argv:
     os.environ.setdefault("REMBG_HOST", "0.0.0.0")
@@ -283,6 +287,7 @@ async def open_model_dir():
 
 @app.post("/api/remove-bg")
 def remove_bg(
+    request: Request,
     file: UploadFile = File(...),
     model_name: str = Form("bria-rmbg"),
     alpha_matting: bool = Form(False),
@@ -297,6 +302,18 @@ def remove_bg(
     product_format: str = Form("png"),
 ):
     try:
+        entitlement = _request_entitlement(request)
+        batch_size_header = request.headers.get("X-Rembg-Batch-Size")
+        if batch_size_header is not None:
+            try:
+                requested_batch = int(batch_size_header)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="批量数量标头无效") from exc
+            if requested_batch < 1 or requested_batch > entitlement["max_batch_images"]:
+                raise HTTPException(
+                    status_code=402,
+                    detail=f"当前方案每批最多 {entitlement['max_batch_images']} 张",
+                )
         if product_size and only_mask:
             raise HTTPException(status_code=400, detail="商品图模式不支持仅输出遮罩")
         if product_size:

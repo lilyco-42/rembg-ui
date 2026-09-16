@@ -868,6 +868,15 @@
         <section id="commercialBox" aria-label="商业试用" style="border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--bg-input)">
             <div id="commercialStatus" role="status" style="font-size:12px;color:var(--text-dim)">公开演示免费；正在加载试用方案…</div>
             <div id="commercialPlans" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px"></div>
+            <div style="display:grid;gap:6px;margin-top:10px">
+                <label for="commercialToken" style="font-size:12px">付费试用授权令牌（可选）</label>
+                <input id="commercialToken" type="password" autocomplete="off" placeholder="粘贴 v1.… 令牌" style="width:100%;box-sizing:border-box">
+                <div style="display:flex;gap:8px">
+                    <button id="commercialApply" class="btn" style="flex:1;background:var(--accent);color:#fff;border:0">验证授权</button>
+                    <button id="commercialClear" class="btn" style="background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border)">清除</button>
+                </div>
+                <small id="commercialEntitlement" role="status" style="color:var(--text-dim)">未设置授权令牌，当前使用公开试用限制。令牌只保存在此设备。</small>
+            </div>
             <small style="display:block;color:var(--text-dim);margin-top:10px;line-height:1.6">价格是第一轮假设，不是收款承诺。付款主体、退款规则和授权服务确认后才会接入支付；没有授权令牌时始终是受限试用。</small>
         </section>
         <div class="section-label">商品图工作台</div>
@@ -1049,6 +1058,100 @@
             document.getElementById("modelInfo").textContent = currentMode === "sam" ? "MobileSAM" : document.getElementById("modelSelect").value;
         }
 
+        const COMMERCIAL_TOKEN_KEY = "rembg-commercial-license-token";
+        let commercialToken = "";
+        let commercialEntitlement = {status: "trial", plan_id: "trial", label: "公开试用", max_batch_images: 10, monthly_images: 30};
+
+        function entitlementBatchLimit() {
+            const planLimit = Number(commercialEntitlement.max_batch_images);
+            return Number.isInteger(planLimit) && planLimit > 0 ? Math.min(MAX_BATCH, planLimit) : Math.min(MAX_BATCH, 10);
+        }
+
+        function storedCommercialToken() {
+            try { return localStorage.getItem(COMMERCIAL_TOKEN_KEY) || ""; }
+            catch (_) { return ""; }
+        }
+
+        function setCommercialEntitlement(entitlement) {
+            commercialEntitlement = entitlement && entitlement.status === "licensed"
+                ? entitlement
+                : {status: "trial", plan_id: "trial", label: "公开试用", max_batch_images: 10, monthly_images: 30};
+            const status = document.getElementById("commercialEntitlement");
+            if (commercialEntitlement.status === "licensed") {
+                const expiry = commercialEntitlement.expires_at ? new Date(commercialEntitlement.expires_at * 1000).toLocaleDateString() : "未设置";
+                status.textContent = `已验证 ${commercialEntitlement.label} · 每批最多 ${commercialEntitlement.max_batch_images} 张 · 有效至 ${expiry}`;
+            } else {
+                status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张`;
+            }
+            updateBatchCounter?.();
+            updateBatchButtons?.();
+        }
+
+        async function fetchCommercialEntitlement(token = "") {
+            const headers = token ? {"X-Rembg-License": token} : {};
+            const response = await fetch("/api/commercial/entitlement", {headers});
+            let data = {};
+            try { data = await response.json(); } catch (_) { /* keep the status-specific error below */ }
+            if (!response.ok) throw new Error(data.detail || "授权校验失败");
+            return data;
+        }
+
+        async function loadCommercialEntitlement() {
+            const input = document.getElementById("commercialToken");
+            commercialToken = storedCommercialToken();
+            if (input) input.value = commercialToken;
+            try {
+                const entitlement = await fetchCommercialEntitlement(commercialToken);
+                setCommercialEntitlement(entitlement);
+                if (!commercialToken) document.getElementById("commercialStatus").textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
+            } catch (_) {
+                commercialToken = "";
+                try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
+                if (input) input.value = "";
+                setCommercialEntitlement(null);
+                document.getElementById("commercialStatus").textContent = "授权服务不可用，当前使用公开试用限制";
+            }
+        }
+
+        async function applyCommercialToken() {
+            const input = document.getElementById("commercialToken");
+            const apply = document.getElementById("commercialApply");
+            const token = input?.value.trim() || "";
+            if (!token) {
+                commercialToken = "";
+                try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
+                setCommercialEntitlement(null);
+                document.getElementById("commercialStatus").textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
+                return;
+            }
+            apply.disabled = true;
+            document.getElementById("commercialEntitlement").textContent = "正在验证授权令牌…";
+            try {
+                const entitlement = await fetchCommercialEntitlement(token);
+                if (entitlement.status !== "licensed") throw new Error("令牌未授予付费方案");
+                commercialToken = token;
+                try { localStorage.setItem(COMMERCIAL_TOKEN_KEY, token); } catch (_) { /* token remains active for this page */ }
+                setCommercialEntitlement(entitlement);
+                document.getElementById("commercialStatus").textContent = `已启用 ${entitlement.label}；批量上限已更新`;
+            } catch (error) {
+                document.getElementById("commercialEntitlement").textContent = `授权无效：${error.message}。当前仍为公开试用`;
+                commercialToken = "";
+                try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
+                setCommercialEntitlement(null);
+            } finally {
+                apply.disabled = false;
+            }
+        }
+
+        document.getElementById("commercialApply").addEventListener("click", applyCommercialToken);
+        document.getElementById("commercialClear").addEventListener("click", () => {
+            document.getElementById("commercialToken").value = "";
+            commercialToken = "";
+            try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
+            setCommercialEntitlement(null);
+            document.getElementById("commercialStatus").textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
+        });
+
         async function loadCommercialPlans() {
             const status = document.getElementById("commercialStatus");
             const list = document.getElementById("commercialPlans");
@@ -1074,7 +1177,7 @@
                 const limit = document.createElement("small"); limit.textContent = `每批 ${plan.max_batch_images} 张 · 每期 ${plan.monthly_images ?? "按需"} 张`; limit.style.color = "var(--text-dim)";
                 card.append(title, price, limit); return card;
             }));
-            if (!status.textContent || status.textContent.includes("正在加载")) status.textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
+            if (commercialEntitlement.status !== "licensed" && (!status.textContent || status.textContent.includes("正在加载"))) status.textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
         }
 
         // Advanced toggle
@@ -1714,6 +1817,10 @@
         let batchSaveRequested = 0;
         let batchStorageConflict = false;
 
+        function currentBatchLimit() {
+            return typeof entitlementBatchLimit === "function" ? entitlementBatchLimit() : MAX_BATCH;
+        }
+
         function batchSnapshot() {
             return {version: 1, settings: batchSettings, draft: captureBatchSettings(false),
                 reviewedOnly: document.getElementById("batchReviewedOnly").checked,
@@ -1828,12 +1935,13 @@
 
         function addBatchFiles(files) {
             if (batchRunning || batchExporting || batchRestoring) return;
+            const batchLimit = currentBatchLimit();
             let added = 0;
             for (const file of files) {
                 if (!file.type.startsWith("image/")) continue;
                 if (file.size > 25 * 1024 * 1024) { document.getElementById("statusText").textContent = "单张图片不能超过 25 MB"; continue; }
-                if (batchQueue.length >= MAX_BATCH) {
-                    document.getElementById("statusText").textContent = `⚠ 批量队列最多 ${MAX_BATCH} 张`;
+                if (batchQueue.length >= batchLimit) {
+                    document.getElementById("statusText").textContent = `⚠ 当前方案每批最多 ${batchLimit} 张`;
                     break;
                 }
                 batchQueue.push({
@@ -1901,7 +2009,7 @@
         function updateBatchCounter() {
             const doneCount = batchQueue.filter(i => i.status === "done").length;
             document.getElementById("batchStatus").textContent =
-                batchQueue.length ? `共 ${batchQueue.length} 张 · 已完成 ${doneCount} 张 · 已确认 ${batchQueue.filter(i => i.status === "done" && i.reviewed).length} 张` : "";
+                batchQueue.length ? `共 ${batchQueue.length} 张 · 已完成 ${doneCount} 张 · 已确认 ${batchQueue.filter(i => i.status === "done" && i.reviewed).length} 张${batchQueue.length > currentBatchLimit() ? ` · 当前方案上限 ${currentBatchLimit()}` : ""}` : "";
         }
 
         function selectBatchItem(item) {
@@ -1922,7 +2030,8 @@
         function updateBatchButtons() {
             const hasWork = batchQueue.some(i => i.status === "pending" || i.status === "error");
             const hasDone = batchDeliverableItems().length > 0;
-            document.getElementById("batchRunBtn").disabled = !hasWork || batchRunning || batchRestoring;
+            const overLimit = batchQueue.length > currentBatchLimit();
+            document.getElementById("batchRunBtn").disabled = !hasWork || batchRunning || batchRestoring || overLimit;
             document.getElementById("batchSaveBtn").disabled = !hasDone || batchRunning || batchExporting || batchRestoring;
             document.getElementById("batchPauseBtn").disabled = !batchRunning || batchPauseRequested;
             document.getElementById("productSettings").disabled = !!batchSettings;
@@ -1962,7 +2071,9 @@
             for (const [key, value] of Object.entries(batchSettings)) {
                 if (key !== "sku") formData.append(key, value);
             }
-            const response = await fetch("/api/remove-bg", { method: "POST", body: formData });
+            const headers = {"X-Rembg-Batch-Size": String(batchQueue.length)};
+            if (commercialToken) headers["X-Rembg-License"] = commercialToken;
+            const response = await fetch("/api/remove-bg", { method: "POST", headers, body: formData });
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.detail || "处理失败");
             return data.image;
@@ -1971,6 +2082,11 @@
         // 顺序处理整个队列
         async function runBatch() {
             if (batchRunning || batchRestoring) return;
+            if (batchQueue.length > currentBatchLimit()) {
+                document.getElementById("statusText").textContent = `当前方案每批最多 ${currentBatchLimit()} 张，请验证授权或移除多余图片`;
+                updateBatchButtons();
+                return;
+            }
             const pending = batchQueue.filter(i => i.status === "pending" || i.status === "error");
             if (!pending.length) return;
 
@@ -2057,6 +2173,7 @@
 
         restoreBatch();
         if (typeof loadCommercialPlans === "function") loadCommercialPlans();
+        if (typeof loadCommercialEntitlement === "function") loadCommercialEntitlement();
 
         // ─── Mode switching
         let currentMode = "rembg";
