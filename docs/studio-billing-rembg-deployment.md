@@ -58,7 +58,8 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 - 无引用幂等回归前的账本快照位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v5/`；回归误触发的测试兑换已退款并撤销，当前余额已恢复。
 - 五分钟保护范围与会话引用修正上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v6/`。
 - 页面错误态修正上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v7/`。
-- 当前线上 `app.py` SHA-256 为 `1ec933ee4cdaab57bf7ed07dee3a8919629056d8ac2f8afba893e90a7e086a0d`，购买页 SHA-256 为 `0387c5962dc99ab946c68dd5ec79618c9993a740b69c5bf0f509a4d37edbe095`，首页 SHA-256 为 `f701713446c8e850de72c197180540acde30ff7068237512b6dab64668e6d481`。
+- 已撤销权益隐藏失效令牌上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v8/`。
+- 当前线上 `app.py` SHA-256 为 `1ec933ee4cdaab57bf7ed07dee3a8919629056d8ac2f8afba893e90a7e086a0d`，购买页 SHA-256 为 `f1972d1b234d83fd2b200e73584bdf069abddd70ff09dd7d517a54b046e66692`，首页 SHA-256 为 `1447a997f5f231ebebb4be75d51996c57c7bae8d3459f79af0dfd4004351e479`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
