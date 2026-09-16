@@ -28,6 +28,8 @@ Rembg 的默认购买方式是积分兑换，USDT 只负责充值积分；代理
 4. 用户在“我的权益”点击“复制授权”，下载 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 的桌面版，把令牌粘贴到工作台。
 5. 换机或退款暂时由运营方重新签发/停用处理；离线文件在下一次在线校验前不能即时感知撤销，不能把当前版本描述成完整的自动退款系统。
 
+购买页现在会在提交、处理中、成功/失败和订单到账时显示持久状态卡与短时 Toast；提交中的按钮会锁定，成功兑换的按钮会变为“已兑换 · 查看权益”。浏览器会为每个套餐保存会话级引用，服务端另外对无引用的旧客户端启用 5 分钟内同账号同套餐已支付订单保护，重复点击只返回原订单，不再次扣分。被运营方补回积分的重复订单会在权益列表显示“已撤销”，不再提供可复制的失效授权。
+
 watcher 已使用 `pending → processing → paid` 的原子事务：同一笔交易再次轮询时不会重复签发；签名或写库失败会回滚到 `pending`，由下一轮重试。交易匹配仍按试验通道的金额窗口工作，正式经营前要改为订单唯一备注/回调并保留完整的幂等账本。
 
 ## 积分接口
@@ -52,6 +54,11 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 - 积分兑换上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange/`。
 - 请求体校验补丁上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v2/`。
 - 首页积分提示上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v3/`。
+- 购买反馈与无引用重复兑换保护上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v4/`；该备份包含当前账本（含重复点击退款记录）。
+- 无引用幂等回归前的账本快照位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v5/`；回归误触发的测试兑换已退款并撤销，当前余额已恢复。
+- 五分钟保护范围与会话引用修正上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v6/`。
+- 页面错误态修正上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v7/`。
+- 当前线上 `app.py` SHA-256 为 `1ec933ee4cdaab57bf7ed07dee3a8919629056d8ac2f8afba893e90a7e086a0d`，购买页 SHA-256 为 `0387c5962dc99ab946c68dd5ec79618c9993a740b69c5bf0f509a4d37edbe095`，首页 SHA-256 为 `f701713446c8e850de72c197180540acde30ff7068237512b6dab64668e6d481`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
