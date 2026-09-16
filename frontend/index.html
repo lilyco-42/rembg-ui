@@ -1079,7 +1079,8 @@
             const status = document.getElementById("commercialEntitlement");
             if (commercialEntitlement.status === "licensed") {
                 const expiry = commercialEntitlement.expires_at ? new Date(commercialEntitlement.expires_at * 1000).toLocaleDateString() : "未设置";
-                status.textContent = `已验证 ${commercialEntitlement.label} · 每批最多 ${commercialEntitlement.max_batch_images} 张 · 有效至 ${expiry}`;
+                const limit = entitlementBatchLimit();
+                status.textContent = `已验证 ${commercialEntitlement.label} · 本地工作台每批最多 ${limit} 张 · 有效至 ${expiry}`;
             } else {
                 status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张`;
             }
