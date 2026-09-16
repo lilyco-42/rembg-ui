@@ -47,9 +47,10 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 
 - 轮换时在服务器生成新密钥，设置新的 `REMBG_OFFLINE_KEY_ID`，把新公钥写入 `license_config.py` 后再构建发行包；旧发行包需要在过渡期继续接受旧 key id，因此生产代码应扩展为公钥集合后再切换。
 - 本次部署前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-103830/`，含 `app.py`、`.env`、`billing.db`、购买页和 README。
-- 幂等修复前的线上代码另存为该目录下的 `app.py.before-idempotency`；当前线上 `app.py` SHA-256 为 `93c252ed820b2953de057ace3a9951293862c8bd5abe00f002a688e183cdb881`。
+- 幂等修复前的线上代码另存为该目录下的 `app.py.before-idempotency`；当前线上 `app.py` SHA-256 为 `b236ee1202f9e622b9f1e9b8143dfa1efebcfa2181714d003b5f6d4bc4974752`。
 - 积分接口部署前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-1235-points/`。
 - 积分兑换上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange/`。
+- 请求体校验补丁上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v2/`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
