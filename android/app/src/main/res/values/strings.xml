@@ -9,6 +9,7 @@
     <string name="model_loading">模型加载中，请稍候</string>
     <string name="model_failed">模型加载失败：%1$s</string>
     <string name="load_failed">读图失败：%1$s</string>
+    <string name="memory_limit">设备可用内存不足。请换一张较小的图片或关闭后台应用后重试。</string>
     <string name="run_failed">抠图失败：%1$s</string>
     <string name="done_tap_compare">完成。点图片可对比原图</string>
     <string name="showing_result">当前：抠图结果</string>

@@ -1,5 +1,9 @@
 # Rembg Studio WASM
 
+The Pages build is installable as a lightweight PWA on Android and other
+mobile browsers. `sw.js` caches the same-origin runtime and model after the
+first successful load; bump `CACHE_NAME` when changing the static shell.
+
 [在线打开](https://lilyco-42.github.io/rembg/) · [构建验证](https://github.com/lilyco-42/rembg-ui/actions/runs/34851787578)
 
 独立浏览器移植验证版，全部抠图在设备上执行。JavaScript 调度 + ONNX Runtime Web 1.22.0 的 WASM CPU 内核，未引入 Python/Rust 运行时。U2Netp 仅是轻量验证模型，不等同桌面端 BRIA 质量。

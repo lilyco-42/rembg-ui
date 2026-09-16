@@ -13,6 +13,7 @@ import kotlin.math.min
 class BackgroundRemover(
     modelFile: File,
     private val spec: ModelSpec,
+    private val memoryClassMb: Int = 256,
 ) : AutoCloseable {
 
     private val env: OrtEnvironment = OrtEnvironment.getEnvironment()
@@ -23,7 +24,15 @@ class BackgroundRemover(
 
     init {
         val opts = OrtSession.SessionOptions().apply {
-            setIntraOpNumThreads(4)
+            // More threads do not help a single 320/1024px image on a phone,
+            // and can double native working-set size on low-memory devices.
+            setIntraOpNumThreads(
+                MemoryPolicy.ortThreads(
+                    memoryClassMb = memoryClassMb,
+                    availableProcessors = Runtime.getRuntime().availableProcessors(),
+                ),
+            )
+            setInterOpNumThreads(1)
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
         }
         session = env.createSession(modelFile.absolutePath, opts)

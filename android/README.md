@@ -1,0 +1,46 @@
+# Rembg Studio Android
+
+这是 Rembg Studio 的原生 Android 端侧入口。图片和模型在应用进程内处理，不依赖桌面服务；从系统相册选择图片、处理完成后点预览即可在原图与结果之间切换，结果保存到系统「下载」目录。
+
+## 支持范围
+
+- Android 10（API 29）及以上，target SDK 35。
+- `arm64-v8a`（主流手机）、`armeabi-v7a`（旧设备）和 `x86_64`（模拟器/部分 ChromeOS）。
+- 首次安装内置 `u2netp` 轻量模型；其他模型从模型面板按需下载到应用私有目录。
+- 图片解码在后台线程执行；按设备 memory class 将最长边限制为 1280 / 1536 / 2048，避免高像素相册图直接耗尽内存。
+- ONNX Runtime 单线程间调度、按设备内存上限限制算子线程；连续处理失败时不会覆盖上一张结果。
+
+## 本地构建
+
+在 `android/` 目录执行（需要 JDK 17 和 Android SDK 35）：
+
+```powershell
+./gradlew.bat :app:assembleDebug
+./gradlew.bat :app:assembleRelease :app:bundleRelease
+```
+
+没有注入签名属性时，release 会生成三个 ABI 拆分的 `*-release-unsigned.apk` 和一个 unsigned AAB。这样可以验证可复现构建，也不会把开发者 debug 证书误当成商业签名。
+
+## 商业发布签名
+
+签名只通过 Gradle 属性注入，不提交 keystore、密码或私钥。设置以下属性后，release 变体使用 `commercialRelease`：
+
+```text
+REMBG_RELEASE_STORE_FILE
+REMBG_RELEASE_STORE_PASSWORD
+REMBG_RELEASE_KEY_ALIAS
+REMBG_RELEASE_KEY_PASSWORD
+```
+
+GitHub Actions 使用加密 secret `REMBG_ANDROID_KEYSTORE_BASE64`（以及四个 `REMBG_RELEASE_*` secret）时会自动解码 keystore；未配置 secret 则保留 unsigned 产物并在构建日志标明。签名 key 的轮换和 Play App Signing 由发行方账户负责。
+
+## 发行产物
+
+`.github/workflows/build.yml` 的 `build-android` job 与 Windows/Linux/macOS 共享同一版本 tag，上传：
+
+- `Rembg-UI-android-arm64-v8a.apk`
+- `Rembg-UI-android-armeabi-v7a.apk`
+- `Rembg-UI-android-x86_64.apk`
+- `Rembg-UI-android.aab`
+
+直接安装时按设备 ABI 选择 APK；Google Play 使用 AAB。没有完成签名配置前，不把 unsigned 包标成面向终端用户的正式商业安装包。

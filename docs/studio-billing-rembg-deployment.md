@@ -5,6 +5,7 @@
 ## 已上线的入口
 
 - 购买页：`https://lain42.top/sub/buy.html`
+- 运营控制台：`https://lain42.top/sub/admin.html`（管理员密码换取 8 小时 Bearer 会话，页面 `noindex`，密码不写入前端）
 - 产品接口：`https://lain42.top/studio/api/products`
 - 健康检查：`https://lain42.top/studio/api/health`
 - Rembg 验证公钥：`https://lain42.top/studio/api/rembg/public-key`
@@ -43,6 +44,8 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 - `POST /studio/api/admin/points/grant`：管理员加分，JSON 为 `{ "username": "lilyco42", "points": 1000, "reason": "封闭测试额度", "reference": "admin-test-lilyco42-20260916-v1" }`，通过 `X-Admin-Token` 认证。
 - `GET /studio/api/admin/points/{username}`：管理员查看指定账号余额和流水。
 
+运营控制台使用 `POST /studio/api/admin/login` 换取 8 小时短期会话，之后以 `Authorization: Bearer <token>` 调用管理接口；旧的 `X-Admin-Token` 入口继续保留给脚本。控制台提供概览、精确账号查询、积分发放、用户密码重置、卡密生成、订单筛选、积分订单退款/授权撤销和审计查看。退款在服务端事务内完成，积分订单使用 `refund:<order_no>` 幂等引用补回积分并撤销匹配授权；积分充值订单不会由页面自动退款，必须人工核对链上入账后处理。
+
 账本表为 `points_accounts` 与 `points_ledger`；每笔记录保存变更量、变更后余额、原因、引用号和时间。USDT 充值、积分兑换和管理员加分都使用幂等引用，重复回调不会重复入账或重复签发。
 
 ## 密钥轮换与回滚
@@ -59,7 +62,9 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 - 五分钟保护范围与会话引用修正上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v6/`。
 - 页面错误态修正上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v7/`。
 - 已撤销权益隐藏失效令牌上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-points-exchange-v8/`。
+- 运营控制台与管理员会话上线前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260917-admin-v1/`，含 `app.py`、`points.py`、`.env` 和账本快照。
 - 当前线上 `app.py` SHA-256 为 `1ec933ee4cdaab57bf7ed07dee3a8919629056d8ac2f8afba893e90a7e086a0d`，购买页 SHA-256 为 `f1972d1b234d83fd2b200e73584bdf069abddd70ff09dd7d517a54b046e66692`，首页 SHA-256 为 `1447a997f5f231ebebb4be75d51996c57c7bae8d3459f79af0dfd4004351e479`。
+- 管理员会话版线上 `app.py` SHA-256 为 `b3059474c9f9a59b8cfa274702a87cb985b5222d66df38e228cb6948054799e5`，运营控制台 `admin.html` SHA-256 为 `db91efc6948c2b76215af7cfcf9329fe5d2d2393e97e6fba2b8b762f73b38037`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
@@ -67,3 +72,4 @@ watcher 已使用 `pending → processing → paid` 的原子事务：同一笔�
 - USDT/TRC20 是现有试验支付方式；支付宝/微信/Stripe、发票、退款回调和自动撤销账本尚未接入。
 - 420/1450 分沿用约 ¥29/¥99 的实验价格，积分兑换比例暂定为 1 USDT = 100 分；汇率、链上手续费与实际收款成本需要首批充值订单验证。
 - 服务资源有限（2 vCPU、约 1.6 GiB 内存），服务器只承载授权/支付，不在云端跑商品图推理；图片仍在本地桌面或 Pages/WASM 处理。
+- 运营控制台是单管理员短期会话面板；管理员密码哈希只存在服务器受限 `.env`，不会提交仓库。正式多人运营仍需增加角色权限、CSRF/审计留存策略和商家主体对应的退款流程。

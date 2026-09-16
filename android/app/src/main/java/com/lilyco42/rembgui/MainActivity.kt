@@ -1,5 +1,6 @@
 package com.lilyco42.rembgui
 
+import android.app.ActivityManager
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
@@ -42,6 +43,11 @@ class MainActivity : AppCompatActivity() {
     private var currentSpec: ModelSpec = ModelCatalog.all.first()
     private var downloadingId: String? = null
     private var modelList: LinearLayout? = null
+    private var loadGeneration = 0L
+    private var loadingImage = false
+    private val memoryClassMb: Int by lazy {
+        (getSystemService(ACTIVITY_SERVICE) as ActivityManager).memoryClass
+    }
 
     private val pickImage = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -117,41 +123,86 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        loadGeneration++
         io.shutdownNow()
         remover?.close()
+        source?.recycle()
+        result?.recycle()
         super.onDestroy()
     }
 
     private fun loadImage(uri: Uri) {
-        try {
-            val decoded = ImageDecoder.decodeBitmap(ImageDecoder.createSource(contentResolver, uri)) { decoder, info, _ ->
-                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                val maxSide = maxOf(info.size.width, info.size.height)
-                if (maxSide > 2048) {
-                    val scale = 2048f / maxSide
-                    decoder.setTargetSize(
-                        (info.size.width * scale).toInt().coerceAtLeast(1),
-                        (info.size.height * scale).toInt().coerceAtLeast(1)
-                    )
+        val request = ++loadGeneration
+        loadingImage = true
+        progress.visibility = View.VISIBLE
+        pickBtn.isEnabled = false
+        runBtn.isEnabled = false
+        saveBtn.isEnabled = false
+        io.execute {
+            try {
+                val argb = decodeImage(uri)
+                runOnUiThread {
+                    if (request != loadGeneration || isFinishing || isDestroyed) {
+                        argb.recycle()
+                        return@runOnUiThread
+                    }
+                    source?.recycle()
+                    result?.recycle()
+                    source = argb
+                    result = null
+                    showingResult = false
+                    preview.setImageBitmap(argb)
+                    emptyHint.visibility = View.GONE
+                    loadingImage = false
+                    progress.visibility = View.GONE
+                    pickBtn.isEnabled = true
+                    runBtn.isEnabled = true
+                    saveBtn.isEnabled = false
                 }
+            } catch (e: Exception) {
+                showLoadFailure(request, e.message ?: "")
+            } catch (e: OutOfMemoryError) {
+                showLoadFailure(request, getString(R.string.memory_limit))
             }
-            val argb = decoded.copy(Bitmap.Config.ARGB_8888, false)
-            if (argb !== decoded) decoded.recycle()
-            source?.recycle()
-            result?.recycle()
-            source = argb
-            result = null
-            showingResult = false
-            preview.setImageBitmap(argb)
-            emptyHint.visibility = View.GONE
-            runBtn.isEnabled = true
-            saveBtn.isEnabled = false
-        } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.load_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun decodeImage(uri: Uri): Bitmap {
+        val maxSideLimit = MemoryPolicy.decodeMaxSide(memoryClassMb)
+        val decoded = ImageDecoder.decodeBitmap(ImageDecoder.createSource(contentResolver, uri)) { decoder, info, _ ->
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            val maxSide = maxOf(info.size.width, info.size.height)
+            if (maxSide > maxSideLimit) {
+                val scale = maxSideLimit.toFloat() / maxSide
+                decoder.setTargetSize(
+                    (info.size.width * scale).toInt().coerceAtLeast(1),
+                    (info.size.height * scale).toInt().coerceAtLeast(1),
+                )
+            }
+        }
+        val argb = if (decoded.config == Bitmap.Config.ARGB_8888) {
+            decoded
+        } else {
+            decoded.copy(Bitmap.Config.ARGB_8888, false)
+        }
+        if (argb !== decoded) decoded.recycle()
+        return argb
+    }
+
+    private fun showLoadFailure(request: Long, message: String) {
+        runOnUiThread {
+            if (request != loadGeneration || isFinishing || isDestroyed) return@runOnUiThread
+            loadingImage = false
+            progress.visibility = View.GONE
+            pickBtn.isEnabled = true
+            runBtn.isEnabled = source != null
+            saveBtn.isEnabled = result != null
+            Toast.makeText(this, getString(R.string.load_failed, message), Toast.LENGTH_LONG).show()
         }
     }
 
     private fun runRemove() {
+        if (loadingImage) return
         val src = source ?: return
         val engine = remover
         if (engine == null) {
@@ -181,6 +232,13 @@ class MainActivity : AppCompatActivity() {
                     runBtn.isEnabled = true
                     pickBtn.isEnabled = true
                     Toast.makeText(this, getString(R.string.run_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                }
+            } catch (_: OutOfMemoryError) {
+                runOnUiThread {
+                    progress.visibility = View.GONE
+                    runBtn.isEnabled = true
+                    pickBtn.isEnabled = true
+                    Toast.makeText(this, R.string.memory_limit, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -317,7 +375,7 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences("rembg", MODE_PRIVATE).edit().putString(KEY_MODEL, spec.id).apply()
         io.execute {
             try {
-                val next = BackgroundRemover(store.file(spec), spec)
+                val next = BackgroundRemover(store.file(spec), spec, memoryClassMb)
                 val old = remover
                 remover = next
                 old?.close()

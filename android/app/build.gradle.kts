@@ -3,6 +3,30 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// The public source build is intentionally unsigned. A release keystore can be
+// injected by CI (or a local operator) through Gradle properties without ever
+// committing a password or a private key to the repository.
+val releaseStoreFile = providers.gradleProperty("REMBG_RELEASE_STORE_FILE").orNull
+    ?: System.getenv("REMBG_RELEASE_STORE_FILE")
+val releaseStorePassword = providers.gradleProperty("REMBG_RELEASE_STORE_PASSWORD").orNull
+    ?: System.getenv("REMBG_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = providers.gradleProperty("REMBG_RELEASE_KEY_ALIAS").orNull
+    ?: System.getenv("REMBG_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = providers.gradleProperty("REMBG_RELEASE_KEY_PASSWORD").orNull
+    ?: System.getenv("REMBG_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+val appVersionName = providers.gradleProperty("REMBG_VERSION_NAME").orNull
+    ?: System.getenv("REMBG_VERSION_NAME")
+    ?: "0.2.2"
+val appVersionCode = providers.gradleProperty("REMBG_VERSION_CODE").orNull?.toIntOrNull()
+    ?: System.getenv("REMBG_VERSION_CODE")?.toIntOrNull()
+    ?: 3
+
 android {
     namespace = "com.lilyco42.rembgui"
     compileSdk = 35
@@ -11,14 +35,56 @@ android {
         applicationId = "com.lilyco42.rembgui"
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.2"
+        versionCode = appVersionCode
+        versionName = appVersionName
+        vectorDrawables.useSupportLibrary = true
+    }
+
+    // Keep the download/install size predictable on phones. The universal APK
+    // is deliberately disabled; Play uses the AAB split and direct downloads
+    // receive one ABI-specific artifact.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
+    bundle {
+        abi {
+            enableSplit = true
+        }
+        language {
+            enableSplit = false
+        }
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("commercialRelease") {
+                storeFile = project.file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // R8 removes unused Android/support code while proguard-rules.pro
+            // keeps ONNX Runtime's reflective/native entry points.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("commercialRelease")
+            }
         }
     }
 
@@ -32,6 +98,17 @@ android {
 
     androidResources {
         noCompress += "onnx"
+    }
+
+    packaging {
+        jniLibs {
+            // Keep native ONNX libraries mmap-friendly and avoid a second copy
+            // during install on modern Android versions.
+            useLegacyPackaging = false
+        }
+        resources {
+            excludes += setOf("META-INF/NOTICE*", "META-INF/LICENSE*", "META-INF/DEPENDENCIES")
+        }
     }
 }
 

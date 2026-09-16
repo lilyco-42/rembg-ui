@@ -1,0 +1,19 @@
+{
+  "name": "Rembg Studio · 商品图工作台",
+  "short_name": "Rembg Studio",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f2",
+  "theme_color": "#23694e",
+  "description": "在设备本地完成商品图抠图、原图对比和 ZIP 交付。",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
