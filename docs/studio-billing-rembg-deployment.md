@@ -27,10 +27,13 @@
 3. 用户在“我的权益”点击“复制授权”，下载 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 的桌面版，把令牌粘贴到工作台。
 4. 换机或退款暂时由运营方重新签发/停用处理；离线文件在下一次在线校验前不能即时感知撤销，不能把当前版本描述成完整的自动退款系统。
 
+watcher 已使用 `pending → processing → paid` 的原子事务：同一笔交易再次轮询时不会重复签发；签名或写库失败会回滚到 `pending`，由下一轮重试。交易匹配仍按试验通道的金额窗口工作，正式经营前要改为订单唯一备注/回调并保留完整的幂等账本。
+
 ## 密钥轮换与回滚
 
 - 轮换时在服务器生成新密钥，设置新的 `REMBG_OFFLINE_KEY_ID`，把新公钥写入 `license_config.py` 后再构建发行包；旧发行包需要在过渡期继续接受旧 key id，因此生产代码应扩展为公钥集合后再切换。
 - 本次部署前备份位于 `/opt/studio-billing/backups/rembg-commercial-20260916-103830/`，含 `app.py`、`.env`、`billing.db`、购买页和 README。
+- 幂等修复前的线上代码另存为该目录下的 `app.py.before-idempotency`；当前线上 `app.py` SHA-256 为 `9b15cb9a62ccee47409576b57e642fa39a0dae813857b9c1eae1df9069f0435e`。
 - 回滚顺序：恢复备份的 `app.py` 与购买页，删除新模块/密钥（保留备份），`systemctl restart studio-billing.service`，再检查 `/studio/api/health` 和 `/studio/api/products`。
 
 ## 当前限制
