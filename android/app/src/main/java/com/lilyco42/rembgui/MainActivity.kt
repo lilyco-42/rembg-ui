@@ -61,11 +61,13 @@ class MainActivity : AppCompatActivity() {
     private var currentSpec: ModelSpec = ModelCatalog.all.first()
     private var downloadingId: String? = null
     private var modelList: LinearLayout? = null
+    @Volatile
     private var loadGeneration = 0L
     private var loadingImage = false
     private var modelLoading = false
     private var singleRunning = false
     private var batchRunning = false
+    @Volatile
     private var batchCancelRequested = false
     private var shareBusy = false
     private var saveBusy = false
@@ -944,7 +946,7 @@ private enum class BatchStatus {
 private data class BatchEntry(
     val uri: Uri,
     val name: String,
-    var status: BatchStatus = BatchStatus.PENDING,
-    var outputFile: File? = null,
-    var error: String? = null,
+    @Volatile var status: BatchStatus = BatchStatus.PENDING,
+    @Volatile var outputFile: File? = null,
+    @Volatile var error: String? = null,
 )
