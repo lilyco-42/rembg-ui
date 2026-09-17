@@ -9,6 +9,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.view.LayoutInflater
@@ -77,6 +78,8 @@ class MainActivity : AppCompatActivity() {
     private var batchCancelRequested = false
     private var shareBusy = false
     private var saveBusy = false
+    private var remoteSyncBusy = false
+    private var lastRemoteSyncAt = 0L
     private lateinit var batchOutputDir: File
     private val batch = mutableListOf<BatchEntry>()
     private val memoryClassMb: Int by lazy {
@@ -178,6 +181,7 @@ class MainActivity : AppCompatActivity() {
         handleIncoming(intent)
         updateLicenseUi()
         updateBatchUi()
+        syncRemoteLicenseIfNeeded(force = true)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -188,7 +192,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::licenseManager.isInitialized) updateLicenseUi()
+        if (::licenseManager.isInitialized) {
+            updateLicenseUi()
+            syncRemoteLicenseIfNeeded()
+        }
     }
 
     private fun handleIncoming(intent: Intent?) {
@@ -831,6 +838,26 @@ class MainActivity : AppCompatActivity() {
         licenseLabel.setTextColor(getColor(if (current.licensed) R.color.accent else R.color.text_dim))
     }
 
+    private fun syncRemoteLicenseIfNeeded(force: Boolean = false) {
+        if (!::licenseManager.isInitialized || licenseManager.token().isBlank()) return
+        val now = SystemClock.elapsedRealtime()
+        if (remoteSyncBusy || (!force && now - lastRemoteSyncAt < REMOTE_SYNC_INTERVAL_MS)) return
+        remoteSyncBusy = true
+        lastRemoteSyncAt = now
+        io.execute {
+            val result = licenseManager.syncRemote()
+            runOnUiThread {
+                remoteSyncBusy = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                updateLicenseUi()
+                updateBatchUi()
+                if (result.status == LicenseManager.RemoteSyncStatus.REVOKED) {
+                    Toast.makeText(this, R.string.license_revoked, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private fun showLicenseDialog() {
         if (modelLoading || singleRunning || batchRunning || loadingImage || saveBusy || shareBusy) {
             Toast.makeText(this, R.string.model_busy, Toast.LENGTH_SHORT).show()
@@ -871,6 +898,7 @@ class MainActivity : AppCompatActivity() {
                     updateBatchUi()
                     dialog.dismiss()
                     Toast.makeText(this, getString(R.string.license_enabled, next.label), Toast.LENGTH_SHORT).show()
+                    syncRemoteLicenseIfNeeded(force = true)
                 } catch (error: LicenseManager.LicenseException) {
                     Toast.makeText(this, getString(R.string.license_invalid, error.message ?: ""), Toast.LENGTH_LONG).show()
                 }
@@ -1041,6 +1069,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val KEY_MODEL = "model_id"
         private const val MAX_BATCH_SIZE = 10
+        private const val REMOTE_SYNC_INTERVAL_MS = 5 * 60 * 1000L
         private const val MAX_EXPORT_BYTES = 64L * 1024L * 1024L
         private const val ZIP_BUFFER_SIZE = 64 * 1024
         private const val PURCHASE_URL = "https://lain42.top/sub/buy.html"

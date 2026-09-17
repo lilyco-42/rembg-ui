@@ -875,10 +875,10 @@
                     <button id="commercialApply" class="btn" style="flex:1;background:var(--accent);color:#fff;border:0">验证授权</button>
                     <button id="commercialClear" class="btn" style="background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border)">清除</button>
                 </div>
-                <small id="commercialEntitlement" role="status" style="color:var(--text-dim)">未设置授权令牌，当前使用公开试用限制。令牌只保存在此设备。</small>
+                <small id="commercialEntitlement" role="status" style="color:var(--text-dim)">未设置授权令牌，当前使用公开试用限制。联网时会刷新撤销状态，令牌只保存在此设备。</small>
                 <small id="commercialUsage" role="status" style="color:var(--text-dim)">本期用量：加载中…</small>
             </div>
-            <small style="display:block;color:var(--text-dim);margin-top:10px;line-height:1.6">价格是第一轮假设，不是收款承诺。付款主体、退款规则和授权服务确认后才会接入支付；没有授权令牌时始终是受限试用。</small>
+            <small style="display:block;color:var(--text-dim);margin-top:10px;line-height:1.6">授权可通过购买页积分兑换；联网时刷新撤销状态，断网仍可使用已验证令牌。GitHub Pages 和本地工作台不处理支付，图片不会上传。</small>
         </section>
         <div class="section-label">商品图工作台</div>
         <details id="productSpecs"><summary id="productSpecsSummary" style="cursor:pointer;font-size:13px;padding:10px 0">交付规格 · 1200px / 纯白 / PNG</summary>
@@ -1060,6 +1060,7 @@
         }
 
         const COMMERCIAL_TOKEN_KEY = "rembg-commercial-license-token";
+        const HOSTED_LICENSE_VERIFY_URL = "https://lain42.top/studio/api/verify";
         let commercialToken = "";
         let commercialEntitlement = {status: "trial", plan_id: "trial", label: "公开试用", max_batch_images: 10, monthly_images: 30};
         let commercialUsage = {used: 0, limit: 30, remaining: 30, period: null};
@@ -1088,7 +1089,7 @@
             if (commercialEntitlement.status === "licensed") {
                 const expiry = commercialEntitlement.expires_at ? new Date(commercialEntitlement.expires_at * 1000).toLocaleDateString() : "未设置";
                 const limit = entitlementBatchLimit();
-                status.textContent = `已验证 ${commercialEntitlement.label} · 每批最多 ${limit} 张 · 本机按月计量 · 有效至 ${expiry}`;
+                status.textContent = `已验证 ${commercialEntitlement.label} · 每批最多 ${limit} 张 · 本机按月计量 · 联网刷新撤销 · 有效至 ${expiry}`;
             } else {
                 status.textContent = `公开试用限制：每批最多 ${entitlementBatchLimit()} 张 · 每期 ${commercialEntitlement.monthly_images} 张`;
             }
@@ -1139,6 +1140,25 @@
             return data;
         }
 
+        async function checkHostedLicense(token, planId) {
+            const product = planId === "creator" ? "rembg_creator" : planId === "studio" ? "rembg_studio" : "";
+            if (!token || !product) return null;
+            try {
+                const response = await fetch(HOSTED_LICENSE_VERIFY_URL, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json", "Accept": "application/json"},
+                    body: JSON.stringify({license_key: token, product}),
+                });
+                if (!response.ok) return null;
+                const data = await response.json();
+                return typeof data.active === "boolean" ? data.active : null;
+            } catch (_) {
+                // Offline use remains available; only an explicit server
+                // response of active=false clears a locally valid token.
+                return null;
+            }
+        }
+
         async function loadCommercialEntitlement() {
             const input = document.getElementById("commercialToken");
             commercialToken = storedCommercialToken();
@@ -1146,6 +1166,18 @@
             try {
                 const entitlement = await fetchCommercialEntitlement(commercialToken);
                 setCommercialEntitlement(entitlement);
+                if (commercialToken && entitlement.status === "licensed") {
+                    const hostedActive = await checkHostedLicense(commercialToken, entitlement.plan_id);
+                    if (hostedActive === false) {
+                        commercialToken = "";
+                        try { localStorage.removeItem(COMMERCIAL_TOKEN_KEY); } catch (_) { /* storage is optional */ }
+                        if (input) input.value = "";
+                        setCommercialEntitlement(null);
+                        await refreshCommercialUsage();
+                        document.getElementById("commercialStatus").textContent = "授权已被服务端撤销，当前使用公开试用限制";
+                        return;
+                    }
+                }
                 await refreshCommercialUsage();
                 if (!commercialToken) document.getElementById("commercialStatus").textContent = "当前运行在公开试用模式；价格仅用于验证支付意愿";
             } catch (_) {
@@ -1174,6 +1206,8 @@
             try {
                 const entitlement = await fetchCommercialEntitlement(token);
                 if (entitlement.status !== "licensed") throw new Error("令牌未授予付费方案");
+                const hostedActive = await checkHostedLicense(token, entitlement.plan_id);
+                if (hostedActive === false) throw new Error("授权已被服务端撤销");
                 commercialToken = token;
                 try { localStorage.setItem(COMMERCIAL_TOKEN_KEY, token); } catch (_) { /* token remains active for this page */ }
                 setCommercialEntitlement(entitlement);

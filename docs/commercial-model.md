@@ -38,7 +38,7 @@ python scripts/issue_offline_license.py `
   --output .\pilot-001.lic
 ```
 
-当前本机服务默认使用 `license_config.py` 中的生产公钥，也可用 `REMBG_LICENSE_PUBLIC_KEY` 覆盖；`REMBG_LICENSE_KEY_ID` 和请求头 `X-Rembg-Device-Hash` 用于轮换与设备绑定。lain42.top 的签发/购买流程记录在 `docs/studio-billing-rembg-deployment.md`。`REMBG_LICENSE_SECRET` 仍只服务于旧的 HMAC 试单，不应写入安装包。过期会在离线端立即生效；撤销、换机和退款需要下一次在线刷新或签发替换文件，尚未接入支付回调和撤销账本。
+当前本机服务默认使用 `license_config.py` 中的生产公钥，也可用 `REMBG_LICENSE_PUBLIC_KEY` 覆盖；`REMBG_LICENSE_KEY_ID` 和请求头 `X-Rembg-Device-Hash` 用于轮换与设备绑定。lain42.top 的签发/购买流程记录在 `docs/studio-billing-rembg-deployment.md`。`REMBG_LICENSE_SECRET` 仍只服务于旧的 HMAC 试单，不应写入安装包。过期会在离线端立即生效；Android 与桌面工作台联网时会调用托管验证接口发现退款/撤销，网络失败仍保持离线可用。跨设备额度、换机和自动退款回调仍需要下一阶段的托管授权账本。
 
 桌面工作台的月度账本位于 `REMBG_USAGE_DB`（未设置时为 `REMBG_DATA_DIR/usage.db` 或 `~/.rembg-studio/usage.db`），只保存主体、月份、数量和操作流水，不保存原图。成功推理提交一张用量；推理异常会回滚预占。`/api/commercial/usage` 返回当前周期的已用/剩余额度，额度耗尽返回 HTTP 402。它解决了本机多标签页和批处理的重复计量，但删除本地账本即可重置，跨设备汇总、退款即时撤销和自动续费仍属于下一阶段的托管授权服务；Android 原生端同样支持 `ol1` 公钥离线校验和本机额度，购买与授权签发仍由服务端完成。
 

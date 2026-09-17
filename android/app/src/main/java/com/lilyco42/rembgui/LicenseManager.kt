@@ -7,6 +7,10 @@ import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.json.JSONObject
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Calendar
@@ -116,6 +120,48 @@ class LicenseManager(context: Context) {
     }
 
     data class Usage(val period: String, val used: Int, val limit: Int, val remaining: Int)
+
+    enum class RemoteSyncStatus {
+        SKIPPED,
+        ACTIVE,
+        REVOKED,
+        UNAVAILABLE,
+    }
+
+    data class RemoteSyncResult(val status: RemoteSyncStatus, val state: State)
+
+    /**
+     * Check the hosted entitlement when connectivity is available. The token
+     * is sent without any image or device data; a network failure deliberately
+     * keeps the locally verified license usable for weak/offline networks.
+     */
+    fun syncRemote(): RemoteSyncResult {
+        val savedToken = token().trim()
+        if (savedToken.isEmpty()) {
+            return RemoteSyncResult(RemoteSyncStatus.SKIPPED, currentState())
+        }
+        val planId = currentState().planId
+        val product = remoteProductFor(planId)
+            ?: return RemoteSyncResult(RemoteSyncStatus.SKIPPED, currentState())
+        val active = remoteActive(savedToken, product)
+            ?: return RemoteSyncResult(RemoteSyncStatus.UNAVAILABLE, currentState())
+
+        return synchronized(lock) {
+            // Do not let a late network response overwrite a token the user
+            // replaced while the request was in flight.
+            if (prefs.getString(KEY_TOKEN, "")?.trim() != savedToken) {
+                return@synchronized RemoteSyncResult(RemoteSyncStatus.UNAVAILABLE, state)
+            }
+            if (!active) {
+                prefs.edit().remove(KEY_TOKEN).commit()
+                state = trialState()
+                RemoteSyncResult(RemoteSyncStatus.REVOKED, state)
+            } else {
+                state = refreshExpiry(state)
+                RemoteSyncResult(RemoteSyncStatus.ACTIVE, state)
+            }
+        }
+    }
 
     fun summary(): String {
         val current = currentState()
@@ -250,6 +296,38 @@ class LicenseManager(context: Context) {
 
     private fun nowSeconds(): Long = System.currentTimeMillis() / 1000L
 
+    private fun remoteActive(token: String, product: String): Boolean? {
+        var connection: HttpURLConnection? = null
+        return try {
+            val body = JSONObject()
+                .put("license_key", token)
+                .put("product", product)
+                .toString()
+                .toByteArray(StandardCharsets.UTF_8)
+            connection = (URL(REMOTE_VERIFY_URL).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = REMOTE_CONNECT_TIMEOUT_MS
+                readTimeout = REMOTE_READ_TIMEOUT_MS
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Accept", "application/json")
+                setFixedLengthStreamingMode(body.size)
+            }
+            OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { writer ->
+                writer.write(String(body, StandardCharsets.UTF_8))
+            }
+            if (connection.responseCode !in 200..299) return null
+            InputStreamReader(connection.inputStream, StandardCharsets.UTF_8).use { reader ->
+                val response = JSONObject(reader.readText())
+                if (!response.has("active")) null else response.optBoolean("active")
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
     class LicenseException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
     private data class Plan(val label: String, val maxBatchImages: Int, val monthlyImages: Int)
@@ -265,6 +343,9 @@ class LicenseManager(context: Context) {
         private const val MAX_TOKEN_LENGTH = 65_536
         private const val MAX_RESERVATION = 1_000
         private const val SIGNATURE_BYTES = 64
+        private const val REMOTE_VERIFY_URL = "https://lain42.top/studio/api/verify"
+        private const val REMOTE_CONNECT_TIMEOUT_MS = 3_000
+        private const val REMOTE_READ_TIMEOUT_MS = 5_000
         private val BASE64URL_PATTERN = Regex("[A-Za-z0-9_-]+")
         private val DEVICE_HASH_PATTERN = Regex("[0-9a-f]{64}")
         private val PUBLIC_KEY_BYTES = Base64.decode(
@@ -276,5 +357,11 @@ class LicenseManager(context: Context) {
             "creator" to Plan("创作者版", 50, 500),
             "studio" to Plan("小团队版", 200, 3_000),
         )
+
+        private fun remoteProductFor(planId: String): String? = when (planId) {
+            "creator" -> "rembg_creator"
+            "studio" -> "rembg_studio"
+            else -> null
+        }
     }
 }

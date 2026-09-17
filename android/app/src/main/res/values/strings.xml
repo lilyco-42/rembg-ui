@@ -15,6 +15,7 @@
     <string name="license_verify">验证并保存</string>
     <string name="license_enabled">已启用：%1$s</string>
     <string name="license_invalid">授权无效：%1$s</string>
+    <string name="license_revoked">授权已被服务端撤销，已切回公开试用</string>
     <string name="quota_exhausted">本期额度已用完，请升级授权或下个周期再试</string>
     <string name="batch_quota_exhausted">已完成 %1$d 张；额度已用完，剩余 %2$d 张可在升级后重试</string>
     <string name="batch_pick">批量选图</string>
