@@ -42,17 +42,31 @@ REMBG_RELEASE_KEY_ALIAS
 REMBG_RELEASE_KEY_PASSWORD
 ```
 
-GitHub Actions 使用加密 secret `REMBG_ANDROID_KEYSTORE_BASE64`（以及四个 `REMBG_RELEASE_*` secret）时会自动解码 keystore；未配置 secret 则保留 unsigned 产物并在构建日志标明。签名 key 的轮换和 Play App Signing 由发行方账户负责。
+GitHub Actions 使用加密 secret `REMBG_ANDROID_KEYSTORE_BASE64` 与三个 `REMBG_RELEASE_*` 密码/别名 secret 时会自动解码 keystore；keystore 文件路径由 workflow 注入。未配置 secret 则保留 unsigned 产物并在构建日志标明。签名 key 的轮换和 Play App Signing 由发行方账户负责。
 
 正式发行时从 `Build & Release` workflow 选择 `require_signed=true`；没有完整签名 secrets 时该任务会直接失败，不会生成可被误认作正式包的 Android 资产。
+
+首次配置可以在私有终端生成独立的 Rembg keystore（不要复用其他应用的 key，也不要把文件提交到 Git）：
+
+```powershell
+$keystore = "$env:USERPROFILE\rembg-studio-release.jks"
+keytool -genkeypair -v -keystore $keystore -alias rembg-studio -keyalg RSA -keysize 4096 -validity 10000
+$bytes = [IO.File]::ReadAllBytes($keystore)
+[Convert]::ToBase64String($bytes) | gh secret set REMBG_ANDROID_KEYSTORE_BASE64 --repo lilyco-42/rembg-ui
+gh secret set REMBG_RELEASE_STORE_PASSWORD --repo lilyco-42/rembg-ui
+gh secret set REMBG_RELEASE_KEY_ALIAS --body rembg-studio --repo lilyco-42/rembg-ui
+gh secret set REMBG_RELEASE_KEY_PASSWORD --repo lilyco-42/rembg-ui
+```
+
+密码命令会从标准输入读取；keystore 文件和密码应另外备份到发行方的密码管理器。配置后用 `require_signed=true` 运行发布工作流，并在下载前核对 Release 中不再出现 `unsigned` 后缀。
 
 ## 发行产物
 
 `.github/workflows/build.yml` 的 `build-android` job 与 Windows/Linux/macOS 共享同一版本 tag，上传：
 
-- `Rembg-UI-android-arm64-v8a.apk`
-- `Rembg-UI-android-armeabi-v7a.apk`
-- `Rembg-UI-android-x86_64.apk`
-- `Rembg-UI-android.aab`
+- `Rembg-UI-android-arm64-v8a.apk`（未签名构建会带 `-unsigned` 后缀）
+- `Rembg-UI-android-armeabi-v7a.apk`（未签名构建会带 `-unsigned` 后缀）
+- `Rembg-UI-android-x86_64.apk`（未签名构建会带 `-unsigned` 后缀）
+- `Rembg-UI-android.aab`（未签名构建为 `Rembg-UI-android-unsigned.aab`）
 
 直接安装时按设备 ABI 选择 APK；Google Play 使用 AAB。没有完成签名配置前，不把 unsigned 包标成面向终端用户的正式商业安装包。
