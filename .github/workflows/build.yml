@@ -424,8 +424,10 @@ jobs:
             printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/rembg-release.keystore"
             chmod 600 "$RUNNER_TEMP/rembg-release.keystore"
             echo "REMBG_RELEASE_STORE_FILE=$RUNNER_TEMP/rembg-release.keystore" >> "$GITHUB_ENV"
+            echo "REMBG_ANDROID_SIGNED=true" >> "$GITHUB_ENV"
             echo "Release signing: configured"
           else
+            echo "REMBG_ANDROID_SIGNED=false" >> "$GITHUB_ENV"
             echo "Release signing: no keystore secret; producing unsigned artifacts"
           fi
 
@@ -455,12 +457,20 @@ jobs:
             echo "Expected 3 ABI APKs, found ${#apks[@]}"
             exit 1
           fi
+          apk_suffix=""
+          if [ "${REMBG_ANDROID_SIGNED:-false}" != "true" ]; then
+            apk_suffix="-unsigned"
+          fi
           for apk in "${apks[@]}"; do
             name=$(basename "$apk")
             abi=$(printf '%s' "$name" | sed -E 's/^app-(.*)-release(-unsigned)?\.apk$/\1/')
-            cp "$apk" "dist/android/Rembg-UI-android-${abi}.apk"
+            cp "$apk" "dist/android/Rembg-UI-android-${abi}${apk_suffix}.apk"
           done
-          cp android/app/build/outputs/bundle/release/app-release.aab dist/android/Rembg-UI-android.aab
+          aab_suffix=""
+          if [ "${REMBG_ANDROID_SIGNED:-false}" != "true" ]; then
+            aab_suffix="-unsigned"
+          fi
+          cp android/app/build/outputs/bundle/release/app-release.aab "dist/android/Rembg-UI-android${aab_suffix}.aab"
           ls -lh dist/android
 
       - name: Upload Android artifacts
