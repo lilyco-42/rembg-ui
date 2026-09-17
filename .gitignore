@@ -16,6 +16,9 @@ nuitka-crash-report.xml
 # Runtime temp files
 temp/
 
+# Local release keys and secret backups; never commit signing material.
+.private/
+
 # SAM model weights (downloaded on demand)
 mobile_sam.pt
 
