@@ -422,6 +422,7 @@ jobs:
       - name: Prepare optional release signing
         shell: bash
         run: |
+          signed=false
           if [ -n "${ANDROID_KEYSTORE_B64:-}" ]; then
             if [ -z "${REMBG_RELEASE_STORE_PASSWORD:-}" ] || [ -z "${REMBG_RELEASE_KEY_ALIAS:-}" ] || [ -z "${REMBG_RELEASE_KEY_PASSWORD:-}" ]; then
               echo "::error::REMBG_ANDROID_KEYSTORE_BASE64 requires all REMBG_RELEASE_* signing secrets"
@@ -431,12 +432,15 @@ jobs:
             chmod 600 "$RUNNER_TEMP/rembg-release.keystore"
             echo "REMBG_RELEASE_STORE_FILE=$RUNNER_TEMP/rembg-release.keystore" >> "$GITHUB_ENV"
             echo "REMBG_ANDROID_SIGNED=true" >> "$GITHUB_ENV"
+            signed=true
             echo "Release signing: configured"
           else
             echo "REMBG_ANDROID_SIGNED=false" >> "$GITHUB_ENV"
             echo "Release signing: no keystore secret; producing unsigned artifacts"
           fi
-          if [ "${REMBG_REQUIRE_SIGNED:-false}" = "true" ] && [ "${REMBG_ANDROID_SIGNED:-false}" != "true" ]; then
+          # Values appended to GITHUB_ENV are available to later steps, not the
+          # current shell. Use the local flag for this step's gate.
+          if [ "${REMBG_REQUIRE_SIGNED:-false}" = "true" ] && [ "$signed" != "true" ]; then
             echo "::error::require_signed=true but Android signing secrets are not configured"
             exit 1
           fi
