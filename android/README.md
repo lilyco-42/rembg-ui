@@ -44,6 +44,8 @@ REMBG_RELEASE_KEY_PASSWORD
 
 GitHub Actions 使用加密 secret `REMBG_ANDROID_KEYSTORE_BASE64`（以及四个 `REMBG_RELEASE_*` secret）时会自动解码 keystore；未配置 secret 则保留 unsigned 产物并在构建日志标明。签名 key 的轮换和 Play App Signing 由发行方账户负责。
 
+正式发行时从 `Build & Release` workflow 选择 `require_signed=true`；没有完整签名 secrets 时该任务会直接失败，不会生成可被误认作正式包的 Android 资产。
+
 ## 发行产物
 
 `.github/workflows/build.yml` 的 `build-android` job 与 Windows/Linux/macOS 共享同一版本 tag，上传：
