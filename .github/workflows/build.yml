@@ -30,8 +30,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 发布闸门：先跑仓库内可离线复现的测试，任何一条失败就不进入产出 Release 的构建。
+  # Python 侧必须走 unittest —— 项目 venv 不装 pytest，pytest 会落到 runner 的系统
+  # 解释器上，依赖集合不同从而产生假故障。
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # tests/test_product_zip.py 会 shell 出 node 执行 product_workflow.test.cjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Python unit tests
+        run: uv run python -m unittest discover -s tests -t .
+
+      # web 测试只 import node 内建与仓库内 .mjs，无需 npm install
+      - name: Web unit tests
+        working-directory: web
+        run: node --test test/*.test.mjs
+
   build-windows:
     runs-on: windows-latest
+    needs: tests
     # 冷构建实测约 179 分钟（接近 180 上限），留足余量避免误触超时
     timeout-minutes: 240
     # 把最终版本号输出给 Linux/macOS job：它们必须沿用 Windows 算出的同一个 tag，
