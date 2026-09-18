@@ -63,6 +63,9 @@ class LicenseManager(context: Context) {
         state
     }
 
+    /** Images allowed in one batch for the active plan. */
+    fun batchLimit(): Int = BatchPolicy.limit(currentState().maxBatchImages)
+
     fun token(): String = prefs.getString(KEY_TOKEN, "") ?: ""
 
     /** Validate and persist a token. An empty token intentionally returns to trial. */

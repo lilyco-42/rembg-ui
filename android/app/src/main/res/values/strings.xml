@@ -22,13 +22,13 @@
     <string name="batch_run">处理批次</string>
     <string name="batch_export">导出 ZIP</string>
     <string name="batch_clear">清空批次</string>
-    <string name="batch_empty">批量模式：最多 10 张，结果会写入 ZIP</string>
+    <string name="batch_empty">批量模式：最多 %1$d 张，结果会写入 ZIP</string>
     <string name="batch_selected">已选择 %1$d 张 · 可开始处理</string>
     <string name="batch_status">批次：%1$d/%2$d 完成 · %3$d 失败 · %4$d 待处理</string>
     <string name="batch_processing">正在处理第 %1$d/%2$d 张…</string>
     <string name="batch_finished">批次完成：%1$d 张成功 · %2$d 张失败</string>
     <string name="batch_stopped">批次已停止：%1$d 张完成 · %2$d 张待处理</string>
-    <string name="batch_too_many">每批最多 10 张，已保留前 10 张</string>
+    <string name="batch_too_many">每批最多 %1$d 张，已保留前 %1$d 张</string>
     <string name="batch_no_done">还没有可导出的结果</string>
     <string name="batch_exported">已导出批次 ZIP：%1$s</string>
     <string name="batch_export_failed">批次导出失败：%1$s</string>

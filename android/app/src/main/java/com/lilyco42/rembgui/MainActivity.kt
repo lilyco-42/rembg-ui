@@ -438,7 +438,8 @@ class MainActivity : AppCompatActivity() {
         clearBatchOutputs()
         batch.clear()
         val distinct = uris.distinct()
-        distinct.take(MAX_BATCH_SIZE).forEach { uri ->
+        val limit = licenseManager.batchLimit()
+        distinct.take(limit).forEach { uri ->
             // OpenMultipleDocuments grants read access for the selected URI. A
             // persistable grant is best-effort because some document providers
             // do not expose one; the current batch still works in this process.
@@ -449,8 +450,8 @@ class MainActivity : AppCompatActivity() {
             }
             batch += BatchEntry(uri = uri, name = displayName(uri))
         }
-        batchStatus.text = if (distinct.size > MAX_BATCH_SIZE) {
-            getString(R.string.batch_too_many)
+        batchStatus.text = if (distinct.size > limit) {
+            getString(R.string.batch_too_many, limit)
         } else {
             getString(R.string.batch_selected, batch.size)
         }
@@ -480,7 +481,9 @@ class MainActivity : AppCompatActivity() {
         val raw = getSharedPreferences(BATCH_PREFS, MODE_PRIVATE).getString(BATCH_SESSION_KEY, null) ?: return
         try {
             val entries = JSONArray(raw)
-            for (index in 0 until entries.length().coerceAtMost(MAX_BATCH_SIZE)) {
+            // Restore against the ceiling, not the live plan limit: a batch queued
+            // on a paid plan must survive a token that lapses while queued.
+            for (index in 0 until entries.length().coerceAtMost(BatchPolicy.MAX_CEILING)) {
                 val item = entries.optJSONObject(index) ?: continue
                 val uriText = item.optString("uri").takeIf { it.isNotBlank() } ?: continue
                 val name = item.optString("name").takeIf { it.isNotBlank() } ?: "image"
@@ -542,7 +545,7 @@ class MainActivity : AppCompatActivity() {
         val failed = batch.count { it.status == BatchStatus.ERROR }
         val pending = total - done - failed
         if (total == 0) {
-            batchStatus.text = getString(R.string.batch_empty)
+            batchStatus.text = getString(R.string.batch_empty, licenseManager.batchLimit())
         } else if (!batchRunning && pending == 0) {
             batchStatus.text = getString(R.string.batch_finished, done, failed)
         } else {
@@ -1068,7 +1071,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val KEY_MODEL = "model_id"
-        private const val MAX_BATCH_SIZE = 10
         private const val REMOTE_SYNC_INTERVAL_MS = 5 * 60 * 1000L
         private const val MAX_EXPORT_BYTES = 64L * 1024L * 1024L
         private const val ZIP_BUFFER_SIZE = 64 * 1024
