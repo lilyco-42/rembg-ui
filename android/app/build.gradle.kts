@@ -22,7 +22,7 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 val appVersionName = providers.gradleProperty("REMBG_VERSION_NAME").orNull
     ?: System.getenv("REMBG_VERSION_NAME")
-    ?: "0.2.2"
+    ?: "0.2.6"
 val appVersionCode = providers.gradleProperty("REMBG_VERSION_CODE").orNull?.toIntOrNull()
     ?: System.getenv("REMBG_VERSION_CODE")?.toIntOrNull()
     ?: 3
