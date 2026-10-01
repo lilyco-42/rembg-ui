@@ -81,7 +81,7 @@ for (const width of [360, 390, 1280]) {
     await page.screenshot({ path: `screenshots/product-images-${width}-light.png`, fullPage: true, animations: 'disabled' });
     await page.screenshot({ path: `screenshots/product-images-${width}-cover.png`, animations: 'disabled' });
     if (width < 860) {
-      const menu = page.getByRole('button', { name: '打开导航', exact: true });
+      const menu = page.locator('.site-menu-button');
       await menu.click();
       await expect(page.locator('#site-sidebar a[href="/product-images/"]')).toBeVisible();
       await expect(menu).toHaveAttribute('aria-expanded', 'true');
