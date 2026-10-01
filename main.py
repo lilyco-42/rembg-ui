@@ -50,32 +50,86 @@ os.environ["ORT_CUDA_DEVICE_ID"] = "0"
 import numpy as np
 import uvicorn
 
+# 最小可加载 ONNX 模型（单个 Relu 节点），仅用于探测 CUDA Provider 能否真正建会话。
+# 不能用空模型 b""：那样 ORT 永远报 “No graph was found”，导致 CUDA 探测必然失败、
+# 永远回退 CPU；也不能只信 get_available_providers()（缺 cuDNN 时它仍会把 CUDA 列出来）。
+_MIN_ONNX = base64.b64decode(
+    "CA06OwoMCgF4EgF5IgRSZWx1EgFtWhMKAXgSDgoMCAESCAoCCAEKAggBYhMKAXkSDgoMCAESCAoCCAEKAggBQgQKABAN"
+)
+
+
+def _cuda_lib_dirs():
+    """返回需要加入 CUDA 运行库搜索路径的目录（Linux）：
+      - -cuda 打包产物：二进制同级的 nvidia-cuda/lib/
+      - 开发环境：pip 安装的 nvidia-* 包所在 site-packages/nvidia/<pkg>/lib/
+        （如 nvidia-cudnn-cu12 提供 libcudnn.so.9）。"""
+    dirs = []
+    # -cuda 打包产物
+    base = os.path.join(os.path.dirname(sys.executable), "nvidia-cuda", "lib")
+    if os.path.isdir(base):
+        dirs.append(base)
+    # 开发环境：site-packages/nvidia/*/lib
+    try:
+        import site
+
+        for sp in list(site.getsitepackages()) + [os.path.dirname(os.__file__)]:
+            ndir = os.path.join(sp, "nvidia")
+            if os.path.isdir(ndir):
+                for sub in os.listdir(ndir):
+                    lib = os.path.join(ndir, sub, "lib")
+                    if os.path.isdir(lib):
+                        dirs.append(lib)
+    except Exception:
+        pass
+    return dirs
+
+
+def _ensure_cuda_ldpath():
+    """Linux 上，若 nvidia 运行库目录未进入 LD_LIBRARY_PATH，就重启本进程并前置该路径。
+
+    onnxruntime-gpu 的 CUDA Provider 通过 dlopen 按 SONAME 查找 libcudnn.so.9 等库；
+    cuDNN 9 的子库之间（libcudnn.so.9 ↔ libcudnn_ops_infer.so.9）存在循环依赖，
+    仅靠 ctypes 逐个预加载无法解开，必须由动态链接器在进程启动时就从目录里解析。
+    因此在 import onnxruntime 之前，把库目录放进 LD_LIBRARY_PATH 并 os.execv 重启自身。"""
+    if not sys.platform.startswith("linux"):
+        return
+    dirs = _cuda_lib_dirs()
+    if not dirs:
+        return
+    existing = set(p for p in os.environ.get("LD_LIBRARY_PATH", "").split(os.pathsep) if p)
+    if all(d in existing for d in dirs):
+        return
+    new_path = os.pathsep.join(dirs + ([os.environ["LD_LIBRARY_PATH"]] if os.environ.get("LD_LIBRARY_PATH") else []))
+    os.environ["LD_LIBRARY_PATH"] = new_path
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
 
 def _preload_cuda_runtime():
-    """Linux -cuda 产物：onnxruntime-gpu 依赖的 CUDA 运行库不在系统路径，
-    打包时随产物落在二进制同级的 nvidia-cuda/lib/。CUDAExecutionProvider 以
-    dlopen 方式按 SONAME 查找这些库，需先用 ctypes 以绝对路径预加载（加载后
-    其 SONAME 常驻进程，可满足后续 DT_NEEDED 解析，机制同 torch 的 _preload_cuda_deps）。
-    Windows 无需此步：DLL 拷贝在 exe 同目录，其本身就在 DLL 搜索路径首位。
-    开发环境 / 非 -cuda 产物没有该目录，直接返回。"""
+    """Linux 兜底：以 RTLD_GLOBAL 预加载 nvidia 运行库（SONAME 常驻进程）。
+    主要解循环依赖靠 _ensure_cuda_ldpath()（启动期把目录放进 LD_LIBRARY_PATH）。
+    这里作为补充，覆盖无法修改环境变量的场景（如部分打包产物）。"""
     if not sys.platform.startswith("linux"):
         return
     import ctypes
     from glob import glob
 
-    base = os.path.join(os.path.dirname(sys.executable), "nvidia-cuda", "lib")
-    if not os.path.isdir(base):
+    dirs = _cuda_lib_dirs()
+    if not dirs:
         return
-    for pattern in (
-        "libcudart.so*", "libcublasLt.so*", "libcublas.so*", "libcudnn*.so*",
-        "libcufft.so*", "libcurand.so*", "libcusolver.so*", "libcusparse.so*",
-        "libnvJitLink.so*",
-    ):
-        for path in glob(os.path.join(base, pattern)):
+    remaining = []
+    for d in dirs:
+        remaining += glob(os.path.join(d, "*.so*"))
+    progress = True
+    while progress and remaining:
+        progress = False
+        still = []
+        for path in remaining:
             try:
-                ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+                ctypes.CDLL(path, mode=os.RTLD_GLOBAL)
+                progress = True
             except OSError:
-                pass  # 个别库加载失败不致命，探测失败时由下方逻辑回退 CPU
+                still.append(path)
+        remaining = still
 
 
 def _detect_providers():
@@ -91,17 +145,25 @@ def _detect_providers():
         _preload_cuda_runtime()
         if "CUDAExecutionProvider" not in available:
             return ["CPUExecutionProvider"]
-        # 尝试真正创建 CUDA session
+        # 用真实的最小模型真正创建 CUDA session，确认 Provider 能加载
+        # （get_available_providers 可能误报 CUDA：例如缺 cuDNN 时 ORT 仍把它列出来；
+        #  空模型 b"" 又会因 “No graph” 永远失败，所以必须用真实模型）
         import onnxruntime as ort
         so = ort.SessionOptions()
         so.log_severity_level = 3
         so.add_session_config_entry("session.use_env_allocators", "1")
-        ort.InferenceSession(b"", sess_options=so, providers=["CUDAExecutionProvider"])
+        try:
+            ort.InferenceSession(_MIN_ONNX, sess_options=so, providers=["CUDAExecutionProvider"])
+        except Exception:
+            return ["CPUExecutionProvider"]
         return ["CUDAExecutionProvider", "CPUExecutionProvider"]
     except Exception:
         return ["CPUExecutionProvider"]
 
 
+# 在 import onnxruntime（即 _detect_providers 内部）之前，确保 nvidia 运行库目录已进入
+# LD_LIBRARY_PATH；否则 cuDNN 9 的循环依赖会让 CUDA Provider 加载失败、回退 CPU。
+_ensure_cuda_ldpath()
 PROVIDERS = _detect_providers()
 print(f"[GPU] Provider: {PROVIDERS[0]}")
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -118,6 +180,23 @@ from usage import UsageError, UsageLimitError, release_usage, reserve_usage, usa
 
 app = FastAPI()
 app.include_router(sponsor_router)
+
+
+@app.middleware("http")
+async def _rewrite_preview_path(request: Request, call_next):
+    """云预览（Cloud Studio / CodeBuddy 预览）有时把本地地址拼进路径，
+    例如 GET /127.0.0.1:8042 —— 应用并没有这个路由，会 404 空白页。
+    把这类 `host:port` 形态的纯浏览路径重定向回首页，避免空白页。"""
+    import re
+
+    p = request.url.path
+    if request.method in ("GET", "HEAD") and re.fullmatch(
+        r"(\d{1,3}\.){3}\d{1,3}:\d+", p.lstrip("/")
+    ):
+        from starlette.responses import RedirectResponse
+
+        return RedirectResponse("/")
+    return await call_next(request)
 set_config(SponsorConfig(
     methods=[
         SponsorMethod(name="微信支付", icon="💚", qr_image="wechatpay.png"),

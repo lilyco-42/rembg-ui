@@ -12,7 +12,11 @@ dependencies = [
     "numpy<2",
     # macOS 无 onnxruntime-gpu 的 wheel：CPU 版 onnxruntime 即可跑 rembg；
     # Windows / Linux 用 GPU 版（无 GPU 时 _detect_providers 会自动回退 CPU）
-    "onnxruntime-gpu>=1.24.3; sys_platform == 'win32' or sys_platform == 'linux'",
+    # ⚠️ 必须 <1.27：1.27 起 GPU 版改用 CUDA 13（要 libcudart.so.13），
+    # 与本项目 -cuda 产物随包分发的 nvidia-*-cu12 运行库不匹配，
+    # 且 CUDA 13 要求驱动 ≥580，老机器上会直接 ImportError 起不来。
+    # 保持 CUDA 12 线（1.24~1.26）才能与 cuda extra / build_nuitka 的拷贝逻辑对齐。
+    "onnxruntime-gpu>=1.24.3,<1.27; sys_platform == 'win32' or sys_platform == 'linux'",
     "onnxruntime>=1.24.3; sys_platform == 'darwin'",
     "pillow>=12.3.0",
     "pymatting>=1.1.12",

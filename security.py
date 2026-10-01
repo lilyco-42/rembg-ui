@@ -20,6 +20,7 @@ DNS-rebinding and CSRF attacks from malicious websites, so it is protected by:
 from __future__ import annotations
 
 import ipaddress
+import os
 import secrets
 from urllib.parse import urlsplit
 
@@ -32,6 +33,29 @@ TOKEN_HEADER = "X-Rembg-Token"
 _STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 _LOOPBACK_NAMES = {"localhost", "127.0.0.1", "::1", "[::1]"}
+
+# 云预览（Cloud Studio / CodeBuddy 预览等）会把公网域名放进 Host 头，
+# 被上面的回环/私网校验挡掉（返回 403）。用 REMBG_TRUSTED_HOSTS 显式放行：
+#   - 精确域名：example.com
+#   - 通配后缀：*.cloudstudio.club（匹配其下任意子域）
+#   - 完全开放：*（仅调试用，勿上生产）
+_TRUSTED_EXTRA = [
+    h.strip().lower()
+    for h in os.environ.get("REMBG_TRUSTED_HOSTS", "").split(",")
+    if h.strip()
+]
+
+
+def _host_in_extra(name: str) -> bool:
+    for entry in _TRUSTED_EXTRA:
+        if entry == "*":
+            return True
+        if entry.startswith("*."):
+            if name.endswith(entry[1:]):  # 例：".cloudstudio.club"
+                return True
+        elif name == entry:
+            return True
+    return False
 
 
 def _strip_port(host: str) -> str:
@@ -52,6 +76,8 @@ def is_trusted_host(host: str | None) -> bool:
         return False
     name = _strip_port(host)
     if name in _LOOPBACK_NAMES:
+        return True
+    if _host_in_extra(name):
         return True
     try:
         ip = ipaddress.ip_address(name)
