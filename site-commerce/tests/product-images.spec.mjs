@@ -74,9 +74,20 @@ for (const width of [360, 390, 1280]) {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await mkdir('screenshots', { recursive: true });
-    await page.screenshot({ path: `screenshots/product-images-${width}-dark.png`, fullPage: true });
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.screenshot({ path: `screenshots/product-images-${width}-dark.png`, fullPage: true, animations: 'disabled' });
     await page.getByRole('button', { name: '切换深浅色', exact: true }).click();
-    await page.screenshot({ path: `screenshots/product-images-${width}-light.png`, fullPage: true });
+    await expect.poll(() => page.locator('a[href="#brief"]').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(32, 33, 35)');
+    await page.screenshot({ path: `screenshots/product-images-${width}-light.png`, fullPage: true, animations: 'disabled' });
+    await page.screenshot({ path: `screenshots/product-images-${width}-cover.png`, animations: 'disabled' });
+    if (width < 860) {
+      const menu = page.getByRole('button', { name: '打开导航', exact: true });
+      await menu.click();
+      await expect(page.locator('#site-sidebar a[href="/product-images/"]')).toBeVisible();
+      await expect(menu).toHaveAttribute('aria-expanded', 'true');
+      await page.keyboard.press('Escape');
+      await expect(menu).toHaveAttribute('aria-expanded', 'false');
+    }
   });
 }
 
