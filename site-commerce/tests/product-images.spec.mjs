@@ -95,10 +95,22 @@ test('homepage and purchase page expose the consultation without replacing exist
   await page.goto('/');
   await expect(page.locator('main a[href="/product-images/"]').first()).toBeVisible();
   await expect(page.locator('a[href="/compute/"]').first()).toBeVisible();
+  await expect(page.locator('.site-nav [aria-current="page"]')).toHaveCount(1);
   const response = await page.request.get('/sub/buy.html');
   expect(response.status()).toBe(200);
   const html = await response.text();
   expect(html).toContain('/product-images/');
   expect(html).toContain('points/purchase');
   expect(html).toContain('id="orderCard"');
+});
+
+test('public consultation stays usable when browser storage is blocked', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get: () => { throw new Error('blocked'); } }));
+  await page.goto('/product-images/');
+  await expect(page.getByRole('button', { name: '切换深浅色', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '切换深浅色', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByLabel('我拥有或已获授权').check();
+  await page.getByRole('button', { name: '生成需求单', exact: true }).click();
+  await expect(page.locator('#brief-result')).toBeVisible();
 });

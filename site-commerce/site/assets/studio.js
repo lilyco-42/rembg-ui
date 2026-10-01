@@ -1,11 +1,13 @@
 (function(){
   'use strict';
   var root=document.documentElement;
-  var stored=localStorage.getItem('yz-theme');
+  var stored='';
+  try{stored=localStorage.getItem('yz-theme')||''}catch(_){/* The public page also works when storage is disabled. */}
   if(stored==='dark'||stored==='light') root.setAttribute('data-theme',stored);
   function icon(path){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+path+'"/></svg>'}
   window.setStudioTheme=function(next){
-    root.setAttribute('data-theme',next);localStorage.setItem('yz-theme',next);
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem('yz-theme',next)}catch(_){/* Keep the current page theme without storing it. */}
     document.querySelectorAll('[data-theme-label]').forEach(function(el){el.textContent=next==='dark'?'切换浅色':'切换深色'});
     var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=next==='dark'?'#202123':'#ffffff';
   };
@@ -34,10 +36,14 @@
     var title=body.dataset.pageTitle||document.title.split('·')[0].trim();
     top.innerHTML='<button class="site-icon-button site-menu-button" type="button" aria-controls="site-sidebar" aria-expanded="false" aria-label="打开导航">'+icon('M4 7h16M4 12h16M4 17h16')+'</button><div class="site-topbar-title">'+title+'</div><div class="site-topbar-actions"><span class="status-pill">独立工作室</span><button class="site-icon-button" data-studio-theme type="button" aria-label="切换深浅色">'+icon('M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z')+'</button><a class="button secondary" href="/sub/buy.html">查看价格</a></div>';
     body.insertBefore(side,body.firstChild);body.insertBefore(top,side.nextSibling);
-    var menu=top.querySelector('.site-menu-button');menu.onclick=function(){var on=!body.classList.contains('studio-nav-open');body.classList.toggle('studio-nav-open',on);menu.setAttribute('aria-expanded',String(on))};
-    body.addEventListener('click',function(e){if(body.classList.contains('studio-nav-open')&&!side.contains(e.target)&&!menu.contains(e.target)){body.classList.remove('studio-nav-open');menu.setAttribute('aria-expanded','false')}});
+    var menu=top.querySelector('.site-menu-button');
+    function closeMenu(returnFocus){body.classList.remove('studio-nav-open');menu.setAttribute('aria-expanded','false');menu.setAttribute('aria-label','打开导航');if(returnFocus)menu.focus()}
+    menu.onclick=function(){var on=!body.classList.contains('studio-nav-open');body.classList.toggle('studio-nav-open',on);menu.setAttribute('aria-expanded',String(on));menu.setAttribute('aria-label',on?'关闭导航':'打开导航');if(on)side.querySelector('a').focus()};
+    body.addEventListener('click',function(e){if(body.classList.contains('studio-nav-open')&&!side.contains(e.target)&&!menu.contains(e.target))closeMenu(false)});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&body.classList.contains('studio-nav-open'))closeMenu(true)});
+    side.querySelectorAll('.site-nav a').forEach(function(a){a.addEventListener('click',function(){if(window.matchMedia('(max-width: 860px)').matches)closeMenu(false)})});
     top.querySelector('[data-studio-theme]').onclick=function(){setStudioTheme(root.getAttribute('data-theme')==='dark'?'light':'dark')};
-    var here=location.pathname;side.querySelectorAll('.site-nav a').forEach(function(a){var p=new URL(a.href,location.href).pathname;if((p==='/'&&here==='/')||(p!=='/'&&here.indexOf(p)===0))a.setAttribute('aria-current','page')});
+    var here=location.pathname,best=null,bestLength=-1;side.querySelectorAll('.site-nav a').forEach(function(a){var url=new URL(a.href,location.href),p=url.pathname;if(url.origin!==location.origin)return;var match=p==='/'?here==='/':here===p||here.indexOf(p)===0;if(match&&p.length>bestLength){best=a;bestLength=p.length}});if(best)best.setAttribute('aria-current','page');
   }
   document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('body[data-studio-shell]').forEach(buildShell)});
 })();
