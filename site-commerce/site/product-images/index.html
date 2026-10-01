@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>商品图整理与交付 · Rembg Studio · 云枢智创</title>
+  <meta name="description" content="用 Rembg Studio 自己处理商品图，或先确认样图再咨询人工整理。统一尺寸、白底与透明底交付，下载免费规格说明，生成需求单后通过微信或 QQ 联系工作室。">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="canonical" href="https://lain42.top/product-images/">
+  <link rel="stylesheet" href="/assets/studio.css">
+  <link rel="stylesheet" href="/product-images/product-images.css">
+  <script src="/assets/studio.js" defer></script>
+  <script type="module" src="/product-images/product-images.js"></script>
+</head>
+<body data-studio-shell data-page-title="商品图工作流">
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <main class="site-main" id="main">
+    <section class="product-hero" aria-labelledby="product-title">
+      <div class="eyebrow">Rembg Studio · 商品图工作流</div>
+      <h1 id="product-title">下一批商品图，<br><span>整齐地交到你手里。</span></h1>
+      <p class="product-lead">去掉杂乱背景，统一图片尺寸，保留透明底稿。自己用浏览器处理，或先发样图，让我们评估这一批能怎样交付。</p>
+      <div class="product-actions"><a class="button" href="#brief">整理我的需求</a><a class="button secondary" href="https://lilyco-42.github.io/rembg/">免费打开抠图工具</a></div>
+      <p class="quiet">整理需求无需登录。需求内容只在本页生成，复制或下载后，由你决定发给谁。</p>
+    </section>
+
+    <section class="product-section" aria-labelledby="choose-title">
+      <div class="section-title"><span class="eyebrow">选一种适合你的方式</span><h2 id="choose-title">自己做，或交给我们。</h2></div>
+      <div class="path-grid">
+        <article class="path-card"><span class="tag">浏览器自助</span><h3>用工具完成你的图片</h3><p>原图对比、修边、统一规格与批量交付。先免费试用，再决定是否需要软件授权。</p><ul><li>浏览器工具在本机处理图片</li><li>不上传到这个需求页面</li><li>软件套餐与人工整理分别计费</li></ul><div class="path-links"><a class="button secondary" href="https://lilyco-42.github.io/rembg/">免费体验</a><a class="text-link" href="/sub/buy.html">查看软件授权 →</a></div></article>
+        <article class="path-card accent"><span class="tag">人工整理咨询</span><h3>先看一张，再确认整批</h3><p class="reference-price">参考预算 <strong>¥99</strong> / 10 张</p><p>适合轮廓清楚、不透明的商品。样图评估后确认报价、数量、交期和一次返修的范围；本页不收款、不自动接单。</p><ul><li>一个统一尺寸的白底 PNG</li><li>透明底 PNG 与文件对应清单</li><li>ZIP 文件包，逐图检查</li></ul><a class="button" href="#brief">先准备需求单</a></article>
+      </div>
+    </section>
+
+    <section class="product-section" aria-labelledby="delivery-title">
+      <div class="section-title"><span class="eyebrow">确认后再开始</span><h2 id="delivery-title">交付怎么走。</h2></div>
+      <ol class="delivery-steps"><li><b>01 · 提供样图</b><p>通过微信或 QQ 发送有权使用的原图，说明数量与用途。</p></li><li><b>02 · 确认规格和报价</b><p>先评估样图，确认尺寸、背景、文件名、交期和返修边界。</p></li><li><b>03 · 检查并交付</b><p>按确认的规格整理，交付图片与清单，再核对是否漏图。</p></li></ol>
+      <p class="scope-note">玻璃、毛发、严重遮挡和白底白物等复杂情况需另评估。保留商品形状与颜色，不补造商品细节。交付规格与实际平台要求须单独核对。</p>
+    </section>
+
+    <section class="product-section" id="brief" aria-labelledby="brief-title">
+      <div class="section-title"><span class="eyebrow">只需两分钟</span><h2 id="brief-title">把这一批说清楚。</h2><p>生成的需求单可以复制到微信／QQ。它是询价资料，尚未发送，也不是订单。</p></div>
+      <div class="brief-layout">
+        <form id="brief-form" class="brief-form">
+          <label for="brief-name">这一批叫什么 <span class="optional">选填</span></label><input id="brief-name" name="project" maxlength="80" placeholder="例如：秋季上新 · 陶瓷摆件" autocomplete="off">
+          <div class="field-grid"><div><label for="brief-count">原图数量</label><input id="brief-count" name="quantity" type="number" min="1" max="100" step="1" value="10" required inputmode="numeric"></div><div><label for="brief-size">输出尺寸</label><select id="brief-size" name="size"><option value="1200">1200 × 1200 像素</option><option value="1600">1600 × 1600 像素</option></select></div></div>
+          <label for="brief-notes">还需要注意什么 <span class="optional">选填</span></label><textarea id="brief-notes" name="notes" maxlength="500" rows="4" placeholder="例如：保留商品原色，按 SKU 命名；我希望周五前拿到。"></textarea>
+          <label class="check-field"><input name="rights" type="checkbox" required>我拥有或已获授权使用准备提供的素材。</label>
+          <p class="quiet">不在此收集手机号、不保存到浏览器账号、不上传原图。离开页面后需求内容不会保留。</p>
+          <button class="button" type="submit">生成需求单</button>
+          <p id="brief-status" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+        <aside class="brief-preview" aria-label="规格与需求单预览">
+          <div class="dimension-preview" aria-hidden="true"><div class="dimension-frame"><span>白底图 + 透明底图</span><b id="dimension-label">1200 × 1200</b><small>输出尺寸示意</small></div></div>
+          <div id="brief-result" hidden><label for="brief-text">你的需求单</label><textarea id="brief-text" rows="14" readonly></textarea><div class="product-actions"><button class="button secondary" id="copy-brief" type="button">复制需求单</button><button class="button secondary" id="download-brief" type="button">下载需求单</button></div><p class="quiet">先联系工作室确认是否接单，再讨论付款。请勿按参考预算直接转账。</p></div>
+          <div class="contact-block"><h3>下一步，发给工作室</h3><p>微信 <strong>Lilyco42</strong> · QQ <strong>1957374829</strong></p><div class="product-actions"><button class="button quiet" type="button" id="copy-wechat">复制微信号</button><button class="button quiet" type="button" id="copy-qq">复制 QQ 号</button></div><p id="contact-status" class="form-status" role="status" aria-live="polite"></p><p class="quiet">在你常用的聊天软件里添加联系人，粘贴需求单并附一张样图。</p></div>
+        </aside>
+      </div>
+      <noscript><p>可以直接联系微信 Lilyco42 或 QQ 1957374829，说明图片数量、输出尺寸并附样图。生成需求单需要启用 JavaScript。</p></noscript>
+    </section>
+
+    <section class="product-section" aria-labelledby="guide-title"><div class="guide-row"><div><span class="eyebrow">免费规格说明</span><h2 id="guide-title">下次上新，也能接着用。</h2><p>常用尺寸、命名约定和交付检查表。下载后可以发给同事，或在 Rembg 中按说明手动设置。</p></div><a class="button secondary" href="/product-images/product-image-guide.md" download="商品图规格与交付检查表.md">下载规格说明</a></div></section>
+    <section class="product-section faq" aria-labelledby="faq-title"><h2 id="faq-title">开始前，你可能想知道</h2><details><summary>生成需求单，会上传或收费吗？</summary><p>不会。生成、复制和下载都在当前页面完成。只有你另行发给工作室后，对方才会看到；具体订单和费用另行确认。</p></details><details><summary>买软件授权，包含人工修图吗？</summary><p>不包含。软件授权供你自己操作工具；人工整理是按样图单独确认的服务。</p></details><details><summary>可以改成别的尺寸或处理复杂商品吗？</summary><p>可以先写进需求备注。特殊尺寸、复杂边缘、新素材和新设计需要评估，不按参考套餐自动承诺。</p></details><details><summary>图片能作为案例展示吗？</summary><p>需另取得你的明确许可；不会因为咨询或下单就默认公开你的素材。</p></details></section>
+  </main>
+  <footer class="site-footer"><div class="site-footer-row"><span>© 2026 云枢智创工作室</span><span class="site-footer-links"><a href="/">首页</a><a href="/sub/buy.html">软件授权与积分</a><a href="https://github.com/lilyco-42/rembg-ui">开源项目</a></span></div></footer>
+</body>
+</html>

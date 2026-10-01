@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>购买套餐 · lain42.top</title>
+<meta name="description" content="lain42.top 套餐购买，USDT TRC20 充值积分，Rembg Studio 积分兑换，卡密兑换与代理订阅">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234d6bfe'/%3E%3Cpath d='M9 21c3.5-14 9.5 4 14-10' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/studio.css"><link rel="stylesheet" href="/assets/commerce-entry.css">
+<link rel="stylesheet" href="/sub/assets/ui.css">
+<style>
+/* Purchase feedback follows the quiet, message-first rhythm of ChatGPT. */
+#toastRegion{position:fixed;top:68px;left:50%;z-index:100;transform:translateX(-50%);width:min(440px,calc(100vw - 32px));display:grid;gap:10px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg-elev);border:1px solid var(--line-strong);border-radius:14px;box-shadow:0 8px 28px rgba(13,13,13,.14);pointer-events:auto;animation:toastIn .2s ease-out}
+.toast .toast-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-size:13px;font-weight:700;flex:none}
+.toast.ok .toast-icon{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.toast.err .toast-icon{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
+.toast-copy{min-width:0;flex:1}.toast-copy b{display:block;font-size:13.5px;font-weight:600}.toast-copy span{display:block;margin-top:1px;color:var(--fg-soft);font-size:12.5px;line-height:1.45}
+.toast-close{border:0;background:transparent;color:var(--fg-mute);font-size:18px;line-height:20px;cursor:pointer;padding:0 2px}
+.chat-status{display:flex;align-items:flex-start;gap:11px;margin:-2px 0 16px;padding:13px 14px;background:var(--bg-soft);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.chat-status.pending{border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}.chat-status.ok{border-color:color-mix(in srgb,var(--ok) 42%,var(--line))}.chat-status.err{border-color:color-mix(in srgb,var(--err) 42%,var(--line))}
+.chat-avatar{width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg,#4d6bfe,#8b5cf6);color:#fff;display:grid;place-items:center;font-size:14px;flex:none}
+.chat-status .status-copy{flex:1;min-width:0}.chat-status .status-copy b{display:block;font-size:14px;font-weight:600}.chat-status .status-copy span{display:block;color:var(--fg-soft);font-size:13px;line-height:1.5;margin-top:2px}
+.chat-status .status-close{border:0;background:transparent;color:var(--fg-mute);font-size:18px;line-height:22px;cursor:pointer;padding:0 2px}
+.btn.is-busy{cursor:wait;opacity:.68}.btn.is-complete{background:var(--ok);border-color:var(--ok);color:#fff;cursor:default}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes toastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@media (max-width:520px){#toastRegion{top:62px}.chat-status{border-radius:13px}}
+</style>
+</head>
+<body data-studio-shell>
+
+<nav class="page-nav" aria-label="购买套餐导航">
+  <div class="nav">
+    <a class="logo" href="/"><span class="mk"></span>lain42.top</a>
+    <div class="nav-links">
+      <a href="/sub/" class="keep">订阅中心</a>
+      <a href="/sub/buy.html" class="on keep">购买套餐</a>
+      <a href="/panel/">代理面板</a>
+      <a href="/">返回主页</a>
+    </div>
+    <div class="nav-right">
+      <span class="who" id="who"></span>
+      <button class="icon-btn" id="logout" title="退出登录" style="display:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+      <button class="icon-btn" id="theme" title="切换主题"></button>
+    </div>
+  </div>
+</nav>
+
+<div id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+<main>
+  <div class="eyebrow">Pricing</div>
+  <h1>购买套餐</h1>
+  <p class="lead">USDT（TRC20）可充值积分，转账后 1–3 分钟自动到账；Rembg Studio 使用积分即时兑换，代理和其他套餐仍支持链上支付与卡密兑换。</p>
+
+<aside class="commerce-help" aria-label="商品图人工服务"><strong>需要我们帮你整理商品图？</strong><p>软件授权供你自己使用工具。人工整理先评估样图，单独确认报价与交期。</p><a class="button secondary" href="/product-images/">准备商品图需求单 →</a></aside>
+  <!-- 未登录 -->
+  <section class="card" id="loginCard">
+    <h2>先登录账号</h2>
+    <p class="muted">购买的权益会发放到当前登录账号；没有账号请先到主页注册。</p>
+    <div style="height:14px"></div>
+    <div id="loginBox"></div>
+    <div class="note">没有账号？<a href="/#founding">去主页注册（创始窗口四重礼）→</a></div>
+  </section>
+
+  <div id="app" style="display:none">
+
+    <div id="actionStatus" class="chat-status" role="status" aria-live="polite" hidden>
+      <div class="chat-avatar">✦</div>
+      <div class="status-copy"><b id="actionTitle"></b><span id="actionDetail"></span></div>
+      <button class="status-close" id="actionClose" type="button" aria-label="关闭提示">×</button>
+    </div>
+
+    <!-- 套餐 -->
+    <section class="card">
+      <h2>选择套餐 <span class="n" id="walletTip"></span></h2>
+      <div id="plans"></div>
+    </section>
+
+    <!-- 订单 -->
+    <section class="card" id="orderCard" style="display:none">
+      <h2><span class="status-dot live" id="orderDot"></span>订单 <span id="orderNo" class="n"></span></h2>
+      <div class="kv"><span>套餐</span><span id="oName"></span></div>
+      <div class="kv"><span>应付金额</span><span id="oAmount"></span></div>
+      <div class="kv"><span>网络</span><span id="oNet"></span></div>
+      <div class="kv"><span>订单状态</span><span id="oStatus"></span></div>
+      <div style="margin-top:12px">
+        <div class="muted" style="font-size:13px">向以下钱包地址转账<b>恰好</b>对应金额（含唯一尾数用于自动对账）：</div>
+        <div class="wallet-box"><code id="oWallet"></code>
+          <button class="btn btn-line btn-sm" id="cpWallet">复制</button>
+        </div>
+        <div class="note" id="oHint"></div>
+      </div>
+      <div class="row end" style="margin-top:14px">
+        <button class="btn btn-line" id="cancelOrder">关闭订单</button>
+        <a class="btn btn-solid" id="goSub" href="/sub/" style="display:none">前往订阅中心 →</a>
+      </div>
+    </section>
+
+    <!-- 卡密兑换 -->
+    <section class="card">
+      <h2>卡密兑换</h2>
+      <div class="row">
+        <input class="inp" id="cardCode" placeholder="输入卡密，如 PRXY-XXXX-XX" style="flex:1;min-width:220px;text-transform:uppercase">
+        <button class="btn btn-solid" id="redeemGo">兑换</button>
+      </div>
+      <div class="msg" id="redeemMsg"></div>
+    </section>
+
+    <!-- 我的权益 -->
+    <section class="card">
+      <h2>我的权益</h2>
+      <div id="pointsBox" class="note" style="margin-bottom:10px">积分余额：加载中…</div>
+      <div id="myEnts" class="muted">加载中…</div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  © 云枢智创工作室 · <a href="/">lain42.top</a> · 自动发货由链上对账驱动，人工支持见主页
+</footer>
+
+<script src="/assets/studio.js" defer></script>
+<script src="/sub/assets/ui.js"></script>
+<script>
+initThemeBtn('theme');
+var renderWho=navWho('who','logout',init);
+var lo=document.getElementById('logout');
+var pollTimer=null, WALLET='', POINTS_BALANCE=0, POINTS_RATE=100, pointsPurchaseBusy=false, pointsTopupBusy=false;
+var pointsTopupButton=null, activeOrder=null, orderNoticeShown=false;
+
+function entRow(name,status,exp,key){
+  var d=document.createElement('div');d.className='kv';
+  d.innerHTML='<span></span><span></span>';
+  var s=status==='active'?'生效中':(status==='revoked'?'已撤销':(status==='refunded'?'已退款':status));
+  d.querySelector('span:first-child').textContent=name;
+  var value=d.querySelector('span:last-child');
+  value.textContent=s+(exp?(' · 到期 '+fmtDate(exp)):(!key?'':''));
+  if(key&&status==='active'){
+    var code=document.createElement('code');
+    code.textContent=key;
+    code.style.cssText='display:block;max-width:560px;margin-top:5px;white-space:normal;word-break:break-all;font-size:11px;line-height:1.45';
+    value.appendChild(code);
+    if(key.indexOf('ol1.')===0){
+      var copy=document.createElement('button');copy.className='btn btn-line btn-sm';copy.textContent='复制授权';
+      copy.style.marginTop='6px';copy.onclick=function(){cp(key,'复制',copy)};
+      value.appendChild(copy);
+      var link=document.createElement('a');link.href='https://github.com/lilyco-42/rembg-ui/releases';link.target='_blank';link.rel='noopener';
+      link.textContent='下载 Rembg Studio 桌面版';link.style.cssText='display:block;margin-top:6px;font-size:12px';
+      value.appendChild(link);
+    }
+  }
+  return d;
+}
+var NAMES={susong_full:'《宿松》完整剧情激活卡',zombieraid_pass:'《Zombie Raid》赛季通行证',
+   congyu_beta:'《丛雨》悬浮窗内测资格',proxy_1m:'不限量不限速代理 · 月卡',
+   rembg_creator:'Rembg Studio 创作者版',rembg_studio:'Rembg Studio 小团队版'};
+
+function notify(kind,title,detail,ttl){
+  var region=document.getElementById('toastRegion');if(!region)return;
+  var toast=document.createElement('div');toast.className='toast '+(kind||'pending');
+  var icon=document.createElement('span');icon.className='toast-icon';icon.textContent=kind==='ok'?'✓':(kind==='err'?'!':'·');
+  var copy=document.createElement('div');copy.className='toast-copy';
+  var b=document.createElement('b');b.textContent=title||'';copy.appendChild(b);
+  if(detail){var s=document.createElement('span');s.textContent=detail;copy.appendChild(s)}
+  var close=document.createElement('button');close.className='toast-close';close.type='button';close.setAttribute('aria-label','关闭提示');close.textContent='×';
+  close.onclick=function(){toast.remove()};toast.appendChild(icon);toast.appendChild(copy);toast.appendChild(close);region.appendChild(toast);
+  setTimeout(function(){if(toast.parentNode)toast.remove()},ttl||6500);
+}
+function setAction(kind,title,detail){
+  var box=document.getElementById('actionStatus');if(!box)return;
+  box.hidden=false;box.className='chat-status '+(kind||'pending');
+  document.getElementById('actionTitle').textContent=title||'';
+  document.getElementById('actionDetail').textContent=detail||'';
+}
+function setButtonBusy(button,label){
+  if(!button)return;
+  if(!button.dataset.originalLabel)button.dataset.originalLabel=button.textContent;
+  button.disabled=true;button.classList.add('is-busy');button.innerHTML='<span class="spinner" aria-hidden="true"></span>'+label;
+}
+function restoreButton(button,label){
+  if(!button)return;
+  var original=label||button.dataset.originalLabel;
+  button.disabled=false;button.classList.remove('is-busy');
+  if(original)button.textContent=original;
+}
+function stablePurchaseReference(product){
+  var key='rembg-purchase-ref:'+product,ref='',now=Date.now();
+  try{
+    var raw=sessionStorage.getItem(key)||'',parts=raw.split('|');
+    if(parts.length===2&&now-Number(parts[1])<10*60*1000)ref=parts[0];
+  }catch(e){}
+  if(!ref){ref='ui-'+product+'-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,10);try{sessionStorage.setItem(key,ref+'|'+now)}catch(e){}}
+  return ref;
+}
+function actionError(title,detail,button,label){
+  setAction('err',title,detail);notify('err',title,detail);restoreButton(button,label);
+}
+
+function loadMeThen(render){
+  api('/me').then(function(o){
+    if(o.code!==200){clearTok();init();return}
+    var points=o.j.points||{balance:0};
+    POINTS_BALANCE=Number.isInteger(points.balance)?points.balance:0;
+    var pointsBox=document.getElementById('pointsBox');
+    pointsBox.innerHTML='';
+    var pointsText=document.createElement('span');
+    pointsText.textContent='积分余额：'+POINTS_BALANCE+' · 兑换比例 1 USDT = '+POINTS_RATE+' 分';
+    pointsBox.appendChild(pointsText);
+    var topup=document.createElement('button');
+    topup.className='btn btn-line btn-sm';topup.style.marginLeft='10px';topup.textContent='USDT 兑换积分';
+    pointsTopupButton=topup;topup.onclick=function(){startPointsTopup(topup)};pointsBox.appendChild(topup);
+    var box=document.getElementById('myEnts');box.innerHTML='';
+    var es=o.j.entitlements||[];
+    es.sort(function(a,b){return (a.status==='active'?0:1)-(b.status==='active'?0:1)});
+    if(!es.length)box.textContent='暂无权益，购买后会显示在这里。';
+    es.forEach(function(e){box.appendChild(entRow(NAMES[e.product]||e.product,e.status,e.expires_at,e.license_key))});
+    render&&render(es);
+  });
+}
+
+function loadPlans(){
+  api('/products').then(function(o){
+    if(o.code!==200)return;
+    WALLET=o.j.wallet||'';
+    var exchange=o.j.points_exchange||{};
+    POINTS_RATE=Number(exchange.points_per_usdt)||100;
+    document.getElementById('walletTip').textContent='USDT 充值积分 / 其他套餐自动发货';
+    var box=document.getElementById('plans');box.innerHTML='';
+    (o.j.products||[]).forEach(function(p){
+      var feat=p.code==='proxy_1m';
+      var d=document.createElement('div');d.className='plan'+(feat?' feat':'');
+      d.innerHTML=(feat?'<span class="pill">推荐</span>':'')+
+        '<div class="pt"><b></b></div><div class="price"></div><p class="muted desc"></p>'+
+        '<ul></ul><button class="btn '+(feat?'btn-solid':'btn-line')+' btn-block buy">立即购买</button>';
+      d.querySelector('.pt b').textContent=p.name;
+      var isRembg=p.code.indexOf('rembg_')===0;
+      d.querySelector('.price').innerHTML=isRembg
+        ?(p.points_price+' <small>积分</small>'+(p.price_cny?' <small>≈ ¥'+p.price_cny+'</small>':''))
+        :(p.price_usdt+' <small>USDT · TRC20</small>'+(p.price_cny?' <small>≈ ¥'+p.price_cny+'</small>':''));
+      d.querySelector('.desc').textContent=p.desc;
+      var ul=d.querySelector('ul');
+      var tips=p.code==='proxy_1m'
+        ?['30 天有效期，不限流量、不限速','VLESS-Reality + VMess 双节点','ghboost / Clash / sing-box 通用','支付后自动开通并生成订阅']
+        :p.code.indexOf('rembg_')===0
+        ?['30 天桌面授权，弱网可用','批量抠图、修边、原图对比','输出规格与 ZIP 交付','使用积分即时兑换并发放离线授权']
+        :['支付后自动发放到当前账号','凭激活信息在线验证 / 下载','支持卡密兑换与人工补发'];
+      tips.forEach(function(t){var li=document.createElement('li');li.textContent=t;ul.appendChild(li)});
+      var buyButton=d.querySelector('.buy');
+      buyButton.textContent=isRembg?'用积分兑换':'立即购买';
+      buyButton.onclick=function(){buy(p,buyButton)};
+      box.appendChild(d);
+    });
+  });
+}
+
+function buy(p,button){
+  if(p.code.indexOf('rembg_')===0){buyWithPoints(p,button);return}
+  buyUsdt(p,button);
+}
+
+function showUsdtOrder(od,product,button){
+    activeOrder={orderNo:od.order_no,product:product,button:button,pointsCredit:Number(od.points_credit)||0};
+    orderNoticeShown=false;
+    document.getElementById('orderCard').style.display='';
+    document.getElementById('orderNo').textContent=od.order_no;
+    document.getElementById('oName').textContent=od.product_name;
+    document.getElementById('oAmount').textContent=od.amount_usdt+' USDT';
+    document.getElementById('oNet').textContent=od.network||'TRC20 (Tron)';
+    document.getElementById('oStatus').textContent='等待支付…';
+    document.getElementById('oWallet').textContent=od.wallet;
+    document.getElementById('oHint').textContent=od.hint||'';
+    document.getElementById('goSub').style.display='none';
+    document.getElementById('orderDot').className='status-dot live';
+    setAction('pending','订单已创建',product==='points_topup'
+      ?'请按下方金额转账，确认后积分会自动到账。'
+      :'请按下方金额完成支付，系统会自动发放权益。');
+    notify('pending','订单已创建','订单 '+od.order_no+' 已显示在下方，继续按照金额支付。');
+    document.getElementById('orderCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+    if(pollTimer)clearInterval(pollTimer);
+    pollTimer=setInterval(function(){pollOrder(od.order_no,product)},8000);
+    pollOrder(od.order_no,product);
+}
+
+function buyUsdt(p,button){
+  if(button&&button.disabled)return;
+  setButtonBusy(button,'创建订单…');
+  setAction('pending','正在创建订单',p.name+' · 请稍候');
+  notify('pending','正在处理','正在为 '+p.name+' 创建订单…',4000);
+  api('/orders',{method:'POST',body:JSON.stringify({product:p.code})}).then(function(o){
+    if(o.code!==200||!o.j.ok){actionError('订单创建失败',(o.j&&o.j.detail)||'请稍后重试',button);return}
+    showUsdtOrder(o.j,p.code,button);
+  }).catch(function(){actionError('网络错误','订单状态未知，请刷新后查看，避免重复提交',button)});
+}
+
+function buyWithPoints(p,button){
+  var cost=Number(p.points_price)||0, m=document.getElementById('redeemMsg');
+  if(pointsPurchaseBusy){notify('pending','已有兑换在处理','请等待上一笔结果，不要重复点击');return}
+  if(!cost){actionError('暂不能兑换','该 Rembg 套餐暂未配置积分价格',button);return}
+  if(POINTS_BALANCE<cost){actionError('积分不足','需要 '+cost+' 分，请先点击“USDT 兑换积分”充值',button);return}
+  pointsPurchaseBusy=true;m.className='msg';m.textContent='兑换中…';
+  setButtonBusy(button,'兑换中…');
+  setAction('pending','正在兑换 '+p.name,'正在校验积分并签发离线授权，请不要重复点击。');
+  notify('pending','正在兑换','正在校验积分并签发授权…',5000);
+  api('/points/purchase',{method:'POST',body:JSON.stringify({product:p.code,reference:stablePurchaseReference(p.code)})}).then(function(o){
+    if(o.code!==200||!o.j.ok){m.className='msg err';m.textContent=(o.j&&o.j.detail)||'积分兑换失败';actionError('兑换失败',(o.j&&o.j.detail)||'请稍后重试',button);return}
+    var balance=o.j.points&&Number.isInteger(o.j.points.balance)?o.j.points.balance:Math.max(0,POINTS_BALANCE-cost);
+    POINTS_BALANCE=balance;
+    m.className='msg ok';m.textContent='兑换成功：已扣除 '+cost+' 分，离线授权已发放';
+    setAction('ok',o.j.idempotent?'兑换请求已确认':'兑换成功','已扣除 '+cost+' 分，当前余额 '+balance+' 分；授权已发放到“我的权益”。');
+    notify('ok',o.j.idempotent?'兑换请求已确认':'兑换成功','已扣除 '+cost+' 分，授权已发放。');
+    if(button){button.disabled=true;button.classList.remove('is-busy');button.classList.add('is-complete');button.textContent='已兑换 · 查看权益'}
+    loadMeThen();
+  }).catch(function(){m.className='msg err';m.textContent='网络错误，稍后重试';actionError('网络错误','请求状态未知，请刷新后查看，避免重复提交',button)}).then(function(){pointsPurchaseBusy=false});
+}
+
+function startPointsTopup(button){
+  var m=document.getElementById('redeemMsg');
+  if(pointsTopupBusy){notify('pending','已有充值在处理','请等待订单结果，不要重复点击');return}
+  var value=window.prompt('充值多少 USDT？\n兑换比例：1 USDT = '+POINTS_RATE+' 分，单次 1–1000 USDT');
+  if(value===null)return;
+  value=String(value).trim();if(!value){m.className='msg err';m.textContent='请输入充值金额';return}
+  pointsTopupBusy=true;m.className='msg';m.textContent='正在创建积分充值订单…';
+  setButtonBusy(button,'创建充值订单…');
+  setAction('pending','正在创建积分充值订单','正在生成唯一金额，请稍候。');
+  notify('pending','正在创建充值订单','正在生成唯一金额…',5000);
+  api('/points/topup',{method:'POST',body:JSON.stringify({usdt:value})}).then(function(o){
+    if(o.code!==200||!o.j.ok){m.className='msg err';m.textContent=(o.j&&o.j.detail)||'充值订单创建失败';actionError('充值订单失败',(o.j&&o.j.detail)||'请稍后重试',button);return}
+    m.className='msg ok';m.textContent='充值订单已创建，请按订单金额转账；到账后积分自动增加';
+    showUsdtOrder(o.j,'points_topup',button);
+  }).catch(function(){m.className='msg err';m.textContent='网络错误，稍后重试';actionError('网络错误','充值订单状态未知，请刷新后查看，避免重复提交',button)}).then(function(){pointsTopupBusy=false});
+}
+
+function pollOrder(no,product){
+  api('/orders/'+no).then(function(o){
+    if(o.code!==200)return;
+    var st=o.j.order.status;
+    var map={pending:'等待支付…',paid:'已支付 · 权益已发放',expired:'已超时关闭',refunded:'已退款 · 重复兑换已补回'};
+    document.getElementById('oStatus').textContent=map[st]||st;
+    if(st==='paid'){
+      clearInterval(pollTimer);
+      document.getElementById('orderDot').className='status-dot done';
+      document.getElementById('goSub').style.display=product==='proxy_1m'?'':'none';
+      if(product==='proxy_1m')document.getElementById('goSub').style.display='';
+      if(activeOrder&&activeOrder.button)restoreButton(activeOrder.button);
+      if(!orderNoticeShown){
+        orderNoticeShown=true;
+        if(product==='points_topup'){
+          var credit=Number(o.j.order.points_delta)||activeOrder&&activeOrder.pointsCredit||0;
+          setAction('ok','积分充值已到账','本次增加 '+credit+' 分；余额正在刷新。');
+          notify('ok','积分已到账','本次增加 '+credit+' 分，余额已刷新。');
+        }else{
+          setAction('ok','订单已完成','支付已确认，权益已发放到“我的权益”。');
+          notify('ok','支付已确认','权益已发放到你的账号。');
+        }
+      }
+      loadMeThen();
+    }
+    if(st==='expired'&&!orderNoticeShown){
+      orderNoticeShown=true;document.getElementById('orderDot').className='status-dot';
+      setAction('err','订单已关闭','没有检测到有效支付，请重新创建订单。');notify('err','订单已关闭','没有检测到有效支付。');
+      if(activeOrder&&activeOrder.button)restoreButton(activeOrder.button);
+    }
+  });
+}
+document.getElementById('cpWallet').onclick=function(){cp(WALLET,'复制',this)};
+document.getElementById('cancelOrder').onclick=function(){
+  if(pollTimer)clearInterval(pollTimer);
+  if(activeOrder&&activeOrder.button)restoreButton(activeOrder.button);
+  activeOrder=null;orderNoticeShown=false;
+  setAction('pending','订单已隐藏','需要继续支付时，可以重新打开充值或套餐订单。');
+  document.getElementById('orderCard').style.display='none';
+};
+document.getElementById('actionClose').onclick=function(){
+  document.getElementById('actionStatus').hidden=true;
+};
+document.getElementById('redeemGo').onclick=function(){
+  var code=document.getElementById('cardCode').value.trim(),m=document.getElementById('redeemMsg');
+  if(!code){m.className='msg err';m.textContent='请输入卡密';return}
+  m.className='msg';m.textContent='兑换中…';
+  api('/redeem',{method:'POST',body:JSON.stringify({code:code})}).then(function(o){
+    if(o.code!==200){m.className='msg err';m.textContent=(o.j&&o.j.detail)||'兑换失败';return}
+    m.className='msg ok';m.textContent='兑换成功：'+(NAMES[o.j.product]||o.j.product)+'，激活码 '+o.j.license_key;
+    loadMeThen();
+  });
+};
+
+function init(){
+  renderWho();lo.style.display=tok()?'':'none';
+  if(!tok()){
+    document.getElementById('loginCard').style.display='';
+    document.getElementById('app').style.display='none';
+    mountLogin({id:'loginBox',onDone:init});
+    return;
+  }
+  document.getElementById('loginCard').style.display='none';
+  document.getElementById('app').style.display='';
+  loadPlans();loadMeThen();
+}
+init();
+</script>
+</body>
+</html>

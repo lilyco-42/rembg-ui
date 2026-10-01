@@ -1,0 +1,39 @@
+name: Validate Lain42 commercial website
+on:
+  workflow_dispatch:
+  push:
+    paths: ['site-commerce/**', '.github/workflows/site-commerce.yml']
+  pull_request:
+    paths: ['site-commerce/**', '.github/workflows/site-commerce.yml']
+permissions:
+  contents: read
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site-commerce
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - run: python -m unittest discover -s tests -p 'test_*.py'
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Package verified static files
+        run: tar -czf lain42-commercial-site.tar.gz -C site .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lain42-commercial-site
+          path: site-commerce/lain42-commercial-site.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lain42-commercial-browser-evidence
+          path: |
+            site-commerce/screenshots/
+            site-commerce/playwright-report/
+            site-commerce/test-results/
