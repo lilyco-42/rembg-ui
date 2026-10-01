@@ -6,5 +6,5 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://127.0.0.1:8765', screenshot: 'only-on-failure', trace: 'retain-on-failure' },
-  webServer: { command: 'npm run serve', url: 'http://127.0.0.1:8765/product-images/', reuseExistingServer: false },
+  webServer: { command: 'npm run serve', url: 'http://127.0.0.1:8765/product-images/index.html', reuseExistingServer: false },
 });

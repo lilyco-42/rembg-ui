@@ -39,6 +39,6 @@
 
 浏览器工具：https://lilyco-42.github.io/rembg/
 
-需求页面：https://lain42.top/product-images/
+需求页面：https://lain42.top/product-images/index.html
 
 微信：Lilyco42；QQ：1957374829。

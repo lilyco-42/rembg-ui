@@ -22,7 +22,7 @@
     side.innerHTML='<a class="site-brand" href="/"><span class="site-mark">42</span><span>云枢智创 · lain42</span></a>'+
       '<nav class="site-nav" aria-label="主导航">'+
       '<a href="/">'+icon('M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z')+'首页</a>'+
-      '<a href="/product-images/">'+icon('M4 4h16v16H4Z M8 8h8M8 12h8')+'商品图工作流</a>'+
+      '<a href="/product-images/index.html">'+icon('M4 4h16v16H4Z M8 8h8M8 12h8')+'商品图工作流</a>'+
       '<a href="/sub/buy.html">'+icon('M6 2h9l3 3v17H6Z M9 10h6M9 14h6')+'产品与价格</a>'+
       '<a href="/compute/">'+icon('M4 5h16v11H4Z M8 20h8M12 16v4')+'算力市场</a>'+
       '<a href="https://api.lain42.top/">'+icon('M12 3v3M12 18v3M3 12h3M18 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M17.7 6.3l-2.1 2.1M8.4 15.6l-2.1 2.1')+'AI 网关</a>'+
