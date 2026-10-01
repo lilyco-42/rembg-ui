@@ -1,0 +1,147 @@
+name: CUDA build check
+
+# 自动验证 Linux/Windows 的 CUDA（-cuda）构建：
+#   1) onnxruntime 必须是 GPU 构建，且版本 <1.27（CUDA 12 线，避免 1.27 的 CUDA 13 崩溃）；
+#   2) -cuda extra 必须把 nvidia-cudnn 等运行库装进 venv，且能被本项目的探测逻辑找到；
+#   3) 整体 import main 不崩（LD_LIBRARY_PATH 重启 / 预加载路径正常）；
+#   4) 在 -cuda 环境下跑通仓库既有 unittest 套件。
+# 说明：GitHub 官方托管 runner 没有 GPU/驱动，只能验证“构建正确性”，无法验证 GPU 实际推理；
+#       真正的端到端 CUDA 推理见 cuda-gpu-e2e job（默认关闭，需带 GPU 的自托管 runner）。
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "main.py"
+      - "security.py"
+      - ".github/workflows/cuda-ci.yml"
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: cuda-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cuda-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Sync with CUDA extra
+        run: uv sync --extra cuda
+
+      - name: Show resolved onnxruntime-gpu
+        run: uv pip show onnxruntime-gpu || true
+
+      - name: Verify CUDA build
+        run: |
+          uv run python - <<'PY'
+          import onnxruntime as ort, site, os, glob
+
+          # 必须是 CUDA 编译进来的 GPU 构建
+          assert ort.get_device() == "GPU", f"onnxruntime 不是 GPU 构建: {ort.get_device()}"
+          v = [int(x) for x in ort.__version__.split(".")[:2]]
+          assert v < [1, 27], f"onnxruntime-gpu 需 <1.27 (CUDA 12 线)，实际 {ort.__version__}"
+          provs = ort.get_available_providers()
+          assert "CUDAExecutionProvider" in provs, f"CUDA EP 未编译进 wheel: {provs}"
+
+          # -cuda extra 必须把 cuDNN 运行库装进 venv
+          cudnn = None
+          for sp in site.getsitepackages():
+              lib = os.path.join(sp, "nvidia", "cudnn", "lib")
+              if os.path.isdir(lib) and glob.glob(os.path.join(lib, "libcudnn.so*")):
+                  cudnn = lib
+                  break
+          assert cudnn, "未找到 nvidia-cudnn-cu12（-cuda extra 未生效或 cuDNN 缺失）"
+          print(f"[cuda-build] onnxruntime {ort.__version__} device={ort.get_device()} cudnn={cudnn}")
+          PY
+
+      - name: Preload nvidia libs into LD_LIBRARY_PATH
+        run: |
+          NVDIR=$(uv run python - <<'PY'
+          import os, site
+          dirs = set()
+          for sp in site.getsitepackages():
+              nd = os.path.join(sp, "nvidia")
+              if not os.path.isdir(nd):
+                  continue
+              for sub in os.listdir(nd):
+                  lib = os.path.join(nd, sub, "lib")
+                  if os.path.isdir(lib):
+                      dirs.add(lib)
+          print(os.pathsep.join(sorted(dirs)))
+          PY
+          )
+          echo "NVDIR=$NVDIR"
+          echo "LD_LIBRARY_PATH=${NVDIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+
+      - name: Smoke import main (no crash)
+        run: uv run python -c "import main; print('[cuda-build] main.PROVIDERS =', main.PROVIDERS)"
+
+      - name: Run test suite under CUDA build
+        run: uv run python -m unittest discover -s tests -t .
+
+  cuda-gpu-e2e:
+    # 默认不跑：需要一个带 NVIDIA 驱动 + GPU 的自托管 runner（标签 self-hosted,gpu）。
+    # 开启：仓库 Settings → Secrets and variables → Actions → Variables 加 ENABLE_CUDA_E2E=true。
+    if: ${{ vars.ENABLE_CUDA_E2E == 'true' }}
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Check NVIDIA driver
+        run: nvidia-smi || (echo "runner 缺少 NVIDIA 驱动" && exit 1)
+
+      - name: Sync with CUDA extra
+        run: uv sync --extra cuda
+
+      - name: Preload nvidia libs into LD_LIBRARY_PATH
+        run: |
+          NVDIR=$(uv run python - <<'PY'
+          import os, site
+          dirs = set()
+          for sp in site.getsitepackages():
+              nd = os.path.join(sp, "nvidia")
+              if not os.path.isdir(nd):
+                  continue
+              for sub in os.listdir(nd):
+                  lib = os.path.join(nd, sub, "lib")
+                  if os.path.isdir(lib):
+                      dirs.add(lib)
+          print(os.pathsep.join(sorted(dirs)))
+          PY
+          )
+          echo "LD_LIBRARY_PATH=${NVDIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+
+      - name: Real CUDA inference (rembg)
+        run: |
+          uv run python - <<'PY'
+          import numpy as np
+          from rembg import new_session, remove
+          sess = new_session(providers=["CUDAExecutionProvider"])
+          out = remove(np.zeros((64, 64, 3), dtype=np.uint8), session=sess)
+          assert out.shape[2] == 4, out.shape
+          print("[cuda-e2e] CUDA 推理成功，输出形状", out.shape)
+          PY
