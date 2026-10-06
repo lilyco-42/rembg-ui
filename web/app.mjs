@@ -1,11 +1,12 @@
-import {validateImageFile} from './image-limits.mjs?v=editor-2';
-import {editCutout} from './editor.mjs?v=editor-2';
-import {replaceOutput,setReviewed,isReviewed} from './revisions.mjs?v=editor-2';
-import {exportProjectArchive,importProjectArchive} from './project-archive.mjs?v=editor-2';
-import {createZip} from './zip.mjs?v=editor-2';
-import {outputName,deliveryManifest} from './delivery.mjs?v=editor-2';
-import {openProjectStore,PROJECT_SCHEMA_VERSION} from './project-store.mjs?v=editor-2';
-import {PRESETS} from './presets.mjs?v=editor-2';
+import {validateImageFile} from './image-limits.mjs?v=region-1';
+import {editCutout} from './editor.mjs?v=region-1';
+import {selectRegion} from './region-editor.mjs?v=region-1';
+import {replaceOutput,setReviewed,isReviewed} from './revisions.mjs?v=region-1';
+import {exportProjectArchive,importProjectArchive} from './project-archive.mjs?v=region-1';
+import {createZip} from './zip.mjs?v=region-1';
+import {outputName,deliveryManifest} from './delivery.mjs?v=region-1';
+import {openProjectStore,PROJECT_SCHEMA_VERSION} from './project-store.mjs?v=region-1';
+import {PRESETS} from './presets.mjs?v=region-1';
 const $=id=>document.getElementById(id);
 const files=$('files'),run=$('run'),status=$('status'),results=$('results');
 const exportBatch=$('exportBatch'),reviewedOnly=$('reviewedOnly'),deliveryStatus=$('deliveryStatus');
@@ -83,6 +84,23 @@ function imagePreview(blob,label,filename){
  image.loading='lazy';image.decoding='async';caption.textContent=label;image.alt=`${filename} · ${label}`;
  image.src=URL.createObjectURL(blob);urls.push(image.src);figure.append(caption,image);return figure;
 }
+function regionButton(item){
+ const button=document.createElement('button');button.textContent='局部抠图';
+ button.onclick=async()=>{
+  if(busy||exporting||restoring||conflict)return;busy=true;updateControls();
+  try{
+   const choice=await selectRegion(item);if(!choice)return;
+   await validateImageFile(item.file);
+   const bitmap=await createImageBitmap(item.file);
+   if(bitmap.width*bitmap.height>16e6){bitmap.close();throw Error('图片超过 1600 万像素，请先缩小');}
+   const output=await infer(bitmap,{region:choice.region,mode:choice.mode,base:choice.mode==='add'?item.output.transparent:undefined});
+   replaceOutput(item,output);render();await save();
+   status.textContent='局部抠图已应用，请检查边缘后确认交付；可再用“修边”精修。';
+  }catch(error){status.textContent=`局部抠图失败：${error.message}`;}
+  finally{busy=false;render();}
+ };
+ return button;
+}
 function render(){
  for(const url of urls)URL.revokeObjectURL(url);urls.length=0;results.replaceChildren();
  for(const [i,item]of batch.entries()){
@@ -98,25 +116,26 @@ function render(){
     if(busy||exporting||restoring||conflict)return;busy=true;updateControls();
     try{const output=await editCutout(item,batchSize);if(output){replaceOutput(item,output);render();await save();status.textContent='修边已应用，请重新检查并确认交付。';}}
     catch(error){status.textContent=`修边失败：${error.message}`;}finally{busy=false;render();}
-   };row.append(edit);
+   };row.append(edit);if(!item.invalidSource)row.append(regionButton(item));
    const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=isReviewed(item);check.setAttribute('aria-label',`确认图片 ${item.source}`);
    check.onchange=()=>{setReviewed(item,check.checked);updateControls();void save();};label.append(check,document.createTextNode('已检查边缘，可以交付'));row.append(document.createElement('br'),label);
   }else{
    const p=document.createElement('p');p.textContent=item.status==='error'?`失败：${item.error}`:item.status==='processing'?'正在处理…':'待处理';comparison.append(p);
+   if(!item.invalidSource&&item.status!=='processing')comparison.append(regionButton(item));
   }
   results.append(row);
  }
  updateControls();
 }
-function infer(bitmap){
+function infer(bitmap,options={}){
  return new Promise((resolve,reject)=>{
-  try{worker??=new Worker(new URL('./worker.mjs?v=editor-2',import.meta.url),{type:'module'});}catch(error){bitmap.close();reject(error);return;}
+  try{worker??=new Worker(new URL('./worker.mjs?v=region-1',import.meta.url),{type:'module'});}catch(error){bitmap.close();reject(error);return;}
   const id=++request;
   const fail=message=>{clearTimeout(timer);worker?.terminate();worker=null;reject(Error(message));};
   const timer=setTimeout(()=>fail('处理超过 3 分钟，请缩小图片或换设备重试'),180000);
   worker.onmessage=({data})=>{if(data.id!==id)return;if(data.status){status.textContent=data.status;return;}clearTimeout(timer);data.error?reject(Error(data.error)):resolve({product:data.product,transparent:data.transparent});};
   worker.onerror=()=>fail('WASM 加载失败，请检查网络或使用新版浏览器后重试');
-  try{worker.postMessage({id,bitmap,size:batchSize},[bitmap]);}catch(error){bitmap.close();fail(error.message);}
+  try{worker.postMessage({id,bitmap,size:batchSize,...options},[bitmap]);}catch(error){bitmap.close();fail(error.message);}
  });
 }
 files.onchange=async()=>{

@@ -1,5 +1,5 @@
-import {validateImageFile} from './image-limits.mjs?v=editor-2';
-import {composeProduct} from './composition.mjs?v=editor-2';
+import {validateImageFile} from './image-limits.mjs?v=region-1';
+import {composeProduct} from './composition.mjs?v=region-1';
 
 // History stores brush coordinates, never full-size image snapshots.
 export async function editCutout(item,size){
