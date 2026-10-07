@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="https://raw.githubusercontent.com/lilyco-42/rembg-ui/master/docs/logo.png" alt="rembg-ui" width="200">
 </p>
 
@@ -8,198 +8,198 @@
 
 # Rembg Studio
 
-基于 AI 的图像背景去除 + 智能抠图工具。**纯后端架构**：FastAPI 只提供服务，UI 由浏览器加载，一套前端同时适配桌面与手机。
+鍩轰簬 AI 鐨勫浘鍍忚儗鏅幓闄?+ 鏅鸿兘鎶犲浘宸ュ叿銆?*绾悗绔灦鏋?*锛欶astAPI 鍙彁渚涙湇鍔★紝UI 鐢辨祻瑙堝櫒鍔犺浇锛屼竴濂楀墠绔悓鏃堕€傞厤妗岄潰涓庢墜鏈恒€?
 
-## 功能
+## 鍔熻兘
 
-### 商品图工作台（本地开发版）
+### 鍟嗗搧鍥惧伐浣滃彴锛堟湰鍦板紑鍙戠増锛?
 
-批量添加照片 → 选择交付规格 → 开始处理 → 下载一个交付 ZIP。
+鎵归噺娣诲姞鐓х墖 鈫?閫夋嫨浜や粯瑙勬牸 鈫?寮€濮嬪鐞?鈫?涓嬭浇涓€涓氦浠?ZIP銆?
 
-- 800 / 1200 / 1600 / 2000 像素正方形画布，按透明主体边界居中，最小留白可选。
-- 纯白、浅灰或透明背景；PNG / JPEG / WebP。透明背景不支持 JPEG。
-- SKU 前缀加唯一序号命名；未填写前缀时保留原文件名主体。ZIP 支持中文名。
-- 首次处理锁定整批规格和模型参数，暂停后从剩余图片继续，失败项可重试。
-- 下载只包含已完成项；可逐图确认并选择仅导出已确认项。ZIP 附带 `delivery-manifest.json`，列出全部任务及导出状态。每批最多 50 张，每张最多 25 MB。
-- 自动保存当前批次的原图、结果、复核状态和交付设置，刷新后可恢复，中断项回到待处理。请等待“批次已保存”后关闭页面。
-- 保存范围是同一浏览器、同一访问地址（包含端口）；更换浏览器/地址、清除站点数据或浏览器回收存储后无法保证恢复。存储失败会提示，请下载结果留档。
-- 多页面修改冲突时停止自动保存并提示，不覆盖另一页面的批次。清空队列会同时清空当前浏览器保存的批次。
-- 关闭“统一商品图”可保留原尺寸透明 PNG。
+- 800 / 1200 / 1600 / 2000 鍍忕礌姝ｆ柟褰㈢敾甯冿紝鎸夐€忔槑涓讳綋杈圭晫灞呬腑锛屾渶灏忕暀鐧藉彲閫夈€?
+- 绾櫧銆佹祬鐏版垨閫忔槑鑳屾櫙锛汸NG / JPEG / WebP銆傞€忔槑鑳屾櫙涓嶆敮鎸?JPEG銆?
+- SKU 鍓嶇紑鍔犲敮涓€搴忓彿鍛藉悕锛涙湭濉啓鍓嶇紑鏃朵繚鐣欏師鏂囦欢鍚嶄富浣撱€俍IP 鏀寔涓枃鍚嶃€?
+- 棣栨澶勭悊閿佸畾鏁存壒瑙勬牸鍜屾ā鍨嬪弬鏁帮紝鏆傚仠鍚庝粠鍓╀綑鍥剧墖缁х画锛屽け璐ラ」鍙噸璇曘€?
+- 涓嬭浇鍙寘鍚凡瀹屾垚椤癸紱鍙€愬浘纭骞堕€夋嫨浠呭鍑哄凡纭椤广€俍IP 闄勫甫 `delivery-manifest.json`锛屽垪鍑哄叏閮ㄤ换鍔″強瀵煎嚭鐘舵€併€傛瘡鎵规渶澶?50 寮狅紝姣忓紶鏈€澶?25 MB銆?
+- 鑷姩淇濆瓨褰撳墠鎵规鐨勫師鍥俱€佺粨鏋溿€佸鏍哥姸鎬佸拰浜や粯璁剧疆锛屽埛鏂板悗鍙仮澶嶏紝涓柇椤瑰洖鍒板緟澶勭悊銆傝绛夊緟鈥滄壒娆″凡淇濆瓨鈥濆悗鍏抽棴椤甸潰銆?
+- 淇濆瓨鑼冨洿鏄悓涓€娴忚鍣ㄣ€佸悓涓€璁块棶鍦板潃锛堝寘鍚鍙ｏ級锛涙洿鎹㈡祻瑙堝櫒/鍦板潃銆佹竻闄ょ珯鐐规暟鎹垨娴忚鍣ㄥ洖鏀跺瓨鍌ㄥ悗鏃犳硶淇濊瘉鎭㈠銆傚瓨鍌ㄥけ璐ヤ細鎻愮ず锛岃涓嬭浇缁撴灉鐣欐。銆?
+- 澶氶〉闈慨鏀瑰啿绐佹椂鍋滄鑷姩淇濆瓨骞舵彁绀猴紝涓嶈鐩栧彟涓€椤甸潰鐨勬壒娆°€傛竻绌洪槦鍒椾細鍚屾椂娓呯┖褰撳墠娴忚鍣ㄤ繚瀛樼殑鎵规銆?
+- 鍏抽棴鈥滅粺涓€鍟嗗搧鍥锯€濆彲淇濈暀鍘熷昂瀵搁€忔槑 PNG銆?
 
-首次模型下载需要网络；推理和商品图合成在本机执行。当前修图结果仍使用原有单图保存入口，尚未自动回写批量队列。
+棣栨妯″瀷涓嬭浇闇€瑕佺綉缁滐紱鎺ㄧ悊鍜屽晢鍝佸浘鍚堟垚鍦ㄦ湰鏈烘墽琛屻€傚綋鍓嶄慨鍥剧粨鏋滀粛浣跨敤鍘熸湁鍗曞浘淇濆瓨鍏ュ彛锛屽皻鏈嚜鍔ㄥ洖鍐欐壒閲忛槦鍒椼€?
 
-验证：`python -m unittest tests.test_product_export tests.test_product_zip -v`（ZIP / 工作流测试需要 Node.js）。
+楠岃瘉锛歚python -m unittest tests.test_product_export tests.test_product_zip -v`锛圸IP / 宸ヤ綔娴佹祴璇曢渶瑕?Node.js锛夈€?
 
-| 功能 | 说明 |
+| 鍔熻兘 | 璇存槑 |
 |------|------|
-| **Rembg 去背景** | 一键去除图片背景，支持多种模型 |
-| **SAM 智能抠图** | MobileSAM 点选分割，正点/负点精确控制 |
-| **自动检测** | 一键识别图中所有物体，选中最需要的遮罩 |
-| **剔除优化** | 结果图上直接点击多余区域，自动加负点重跑 |
-| **裁剪旋转** | 预处理工具：拖拽裁剪、90° 旋转、任意角度 |
-| **批量抠图** | 多图排队处理，一次下载全部结果 |
-| **手机访问** | 同一 WiFi 扫码即用，触屏可直接框选/点选/涂画 |
+| **Rembg 鍘昏儗鏅?* | 涓€閿幓闄ゅ浘鐗囪儗鏅紝鏀寔澶氱妯″瀷 |
+| **SAM 鏅鸿兘鎶犲浘** | MobileSAM 鐐归€夊垎鍓诧紝姝ｇ偣/璐熺偣绮剧‘鎺у埗 |
+| **鑷姩妫€娴?* | 涓€閿瘑鍒浘涓墍鏈夌墿浣擄紝閫変腑鏈€闇€瑕佺殑閬僵 |
+| **鍓旈櫎浼樺寲** | 缁撴灉鍥句笂鐩存帴鐐瑰嚮澶氫綑鍖哄煙锛岃嚜鍔ㄥ姞璐熺偣閲嶈窇 |
+| **瑁佸壀鏃嬭浆** | 棰勫鐞嗗伐鍏凤細鎷栨嫿瑁佸壀銆?0掳 鏃嬭浆銆佷换鎰忚搴?|
+| **鎵归噺鎶犲浘** | 澶氬浘鎺掗槦澶勭悊锛屼竴娆′笅杞藉叏閮ㄧ粨鏋?|
+| **鎵嬫満璁块棶** | 鍚屼竴 WiFi 鎵爜鍗崇敤锛岃Е灞忓彲鐩存帴妗嗛€?鐐归€?娑傜敾 |
 
-## 架构
+## 鏋舵瀯
 
 ```
-┌─────────────── 后端（FastAPI，仅提供服务）──────────────┐
-│  rembg / MobileSAM 抠图 API       前端静态资源（单文件）│
-└──────────────────────────┬───────────────────────────────┘
-                           │  http://127.0.0.1:8042
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
-   桌面浏览器          手机浏览器          远程设备
-  （自动打开）      （同一 WiFi 扫码）   （tailscale/frp 等）
+鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鍚庣锛團astAPI锛屼粎鎻愪緵鏈嶅姟锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
+鈹? rembg / MobileSAM 鎶犲浘 API       鍓嶇闈欐€佽祫婧愶紙鍗曟枃浠讹級鈹?
+鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
+                           鈹? http://127.0.0.1:8042
+        鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
+        鈻?                 鈻?                 鈻?
+   妗岄潰娴忚鍣?         鎵嬫満娴忚鍣?         杩滅▼璁惧
+  锛堣嚜鍔ㄦ墦寮€锛?     锛堝悓涓€ WiFi 鎵爜锛?  锛坱ailscale/frp 绛夛級
 ```
 
-- **后端**：Python + FastAPI + Uvicorn，无任何原生窗口 / pywebview 依赖
-- **前端**：单文件 HTML（原生 CSS/JS），移动端响应式 + 触屏交互
-- 后端启动后自动打开本机浏览器；手机/远程设备通过浏览器访问
+- **鍚庣**锛歅ython + FastAPI + Uvicorn锛屾棤浠讳綍鍘熺敓绐楀彛 / pywebview 渚濊禆
+- **鍓嶇**锛氬崟鏂囦欢 HTML锛堝師鐢?CSS/JS锛夛紝绉诲姩绔搷搴斿紡 + 瑙﹀睆浜や簰
+- 鍚庣鍚姩鍚庤嚜鍔ㄦ墦寮€鏈満娴忚鍣紱鎵嬫満/杩滅▼璁惧閫氳繃娴忚鍣ㄨ闂?
 
-## 使用方式
+## 浣跨敤鏂瑰紡
 
-### 从源码运行
+### 浠庢簮鐮佽繍琛?
 
 ```bash
-# 需要 Python 3.10+，推荐用 uv
+# 闇€瑕?Python 3.10+锛屾帹鑽愮敤 uv
 uv sync
 uv run python main.py
 ```
 
-启动后自动打开浏览器 `http://127.0.0.1:8042`。首次运行会自动下载模型，请保持网络连接。
+鍚姩鍚庤嚜鍔ㄦ墦寮€娴忚鍣?`http://127.0.0.1:8042`銆傞娆¤繍琛屼細鑷姩涓嬭浇妯″瀷锛岃淇濇寔缃戠粶杩炴帴銆?
 
-### 手机 / 局域网访问
+### 鎵嬫満 / 灞€鍩熺綉璁块棶
 
-默认只监听 `127.0.0.1`（仅本机）。想让手机（iOS/Android）访问，二选一：
+榛樿鍙洃鍚?`127.0.0.1`锛堜粎鏈満锛夈€傛兂璁╂墜鏈猴紙iOS/Android锛夎闂紝浜岄€変竴锛?
 
 ```bash
-uv run python main.py --lan            # 一键开启局域网访问
-# 或
+uv run python main.py --lan            # 涓€閿紑鍚眬鍩熺綉璁块棶
+# 鎴?
 REMBG_HOST=0.0.0.0 uv run python main.py
 ```
 
-开启后：
+寮€鍚悗锛?
 
-1. 桌面浏览器里点左下角 **「📱 手机连接」**，会弹出二维码
-2. 手机浏览器扫码，或直接输入二维码下方的地址（如 `http://192.168.1.23:8042`）
-3. 手机端界面自动适配，SAM 框选 / 点选 / 画笔均支持触屏操作
+1. 妗岄潰娴忚鍣ㄩ噷鐐瑰乏涓嬭 **銆岎煋?鎵嬫満杩炴帴銆?*锛屼細寮瑰嚭浜岀淮鐮?
+2. 鎵嬫満娴忚鍣ㄦ壂鐮侊紝鎴栫洿鎺ヨ緭鍏ヤ簩缁寸爜涓嬫柟鐨勫湴鍧€锛堝 `http://192.168.1.23:8042`锛?
+3. 鎵嬫満绔晫闈㈣嚜鍔ㄩ€傞厤锛孲AM 妗嗛€?/ 鐐归€?/ 鐢荤瑪鍧囨敮鎸佽Е灞忔搷浣?
 
-> ⚠️ 监听 `0.0.0.0` 表示同一局域网内任何设备都能调用本工具，请仅在可信网络中使用。
+> 鈿狅笍 鐩戝惉 `0.0.0.0` 琛ㄧず鍚屼竴灞€鍩熺綉鍐呬换浣曡澶囬兘鑳借皟鐢ㄦ湰宸ュ叿锛岃浠呭湪鍙俊缃戠粶涓娇鐢ㄣ€?
 
-### 公网访问（可选）
+### 鍏綉璁块棶锛堝彲閫夛級
 
-局域网之外（如出差时从手机连家里的电脑），需配合内网穿透，任选其一：
+灞€鍩熺綉涔嬪锛堝鍑哄樊鏃朵粠鎵嬫満杩炲閲岀殑鐢佃剳锛夛紝闇€閰嶅悎鍐呯綉绌块€忥紝浠婚€夊叾涓€锛?
 
-- **Tailscale**：两端装客户端，登录后手机浏览器访问 `http://<tailscale-ip>:8042`
-- **frp / ngrok**：把本地 `8042` 端口暴露到公网域名，手机浏览器访问该域名
+- **Tailscale**锛氫袱绔瀹㈡埛绔紝鐧诲綍鍚庢墜鏈烘祻瑙堝櫒璁块棶 `http://<tailscale-ip>:8042`
+- **frp / ngrok**锛氭妸鏈湴 `8042` 绔彛鏆撮湶鍒板叕缃戝煙鍚嶏紝鎵嬫満娴忚鍣ㄨ闂鍩熷悕
 
-这些工具只做「隧道」，后端本身无需改动；建议绑定 `0.0.0.0` 后配合穿透使用。
+杩欎簺宸ュ叿鍙仛銆岄毀閬撱€嶏紝鍚庣鏈韩鏃犻渶鏀瑰姩锛涘缓璁粦瀹?`0.0.0.0` 鍚庨厤鍚堢┛閫忎娇鐢ㄣ€?
 
-### 直接下载
+### 鐩存帴涓嬭浇
 
-- **Windows**：从 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 下载 `Rembg-UI-windows.zip`，解压运行 `rembg-ui.exe`
-- **Linux**：下载 `Rembg-UI-linux.tar.gz`，解压后运行 `./rembg-ui.bin`
-- **macOS**：下载 `Rembg-UI-macOS.zip`，解压后将 `Rembg Studio.app` 拖入「应用程序」运行
+- **Windows**锛氫粠 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 涓嬭浇 `Rembg-UI-windows.zip`锛岃В鍘嬭繍琛?`rembg-ui.exe`
+- **Linux**锛氫笅杞?`Rembg-UI-linux.tar.gz`锛岃В鍘嬪悗杩愯 `./rembg-ui.bin`
+- **macOS**锛氫笅杞?`Rembg-UI-macOS.zip`锛岃В鍘嬪悗灏?`Rembg Studio.app` 鎷栧叆銆屽簲鐢ㄧ▼搴忋€嶈繍琛?
 
-> macOS 未签名应用首次打开如提示「无法验证开发者」，右键 → 打开 即可；或用 `xattr -dr com.apple.quarantine "Rembg Studio.app"` 解除隔离。
+> macOS 鏈鍚嶅簲鐢ㄩ娆℃墦寮€濡傛彁绀恒€屾棤娉曢獙璇佸紑鍙戣€呫€嶏紝鍙抽敭 鈫?鎵撳紑 鍗冲彲锛涙垨鐢?`xattr -dr com.apple.quarantine "Rembg Studio.app"` 瑙ｉ櫎闅旂銆?
 
-## 商业试用状态
+## 鍟嗕笟璇曠敤鐘舵€?
 
-浏览器版是免费的本地处理演示；当前建议用创作者版 ¥29/月、小团队版 ¥99/月做第一轮支付意愿实验，价格仍标记为实验假设。Rembg Studio 购买页使用积分兑换（创作者版 420 分、小团队版 1450 分；1 USDT = 100 分），USDT 只用于充值积分。桌面端已包含套餐目录、有效期、HMAC 手工试单和 Ed25519 离线授权验证核心；lain42.top 已部署 USDT/TRC20 充值积分、Rembg 积分兑换、`ol1` 自动签发和独立积分账本接口。没有授权令牌时始终回落到受限试用。支付宝/微信/Stripe、正式商家主体、退款回调、自动撤销与换机流程尚未冻结，不能把 GitHub Pages 的前端状态当作商业授权。
+娴忚鍣ㄧ増鏄厤璐圭殑鏈湴澶勭悊婕旂ず锛涘綋鍓嶅缓璁敤鍒涗綔鑰呯増 楼29/鏈堛€佸皬鍥㈤槦鐗?楼99/鏈堝仛绗竴杞敮浠樻剰鎰垮疄楠岋紝浠锋牸浠嶆爣璁颁负瀹為獙鍋囪銆俁embg Studio 璐拱椤典娇鐢ㄧН鍒嗗厬鎹紙鍒涗綔鑰呯増 420 鍒嗐€佸皬鍥㈤槦鐗?1450 鍒嗭紱1 USDT = 100 鍒嗭級锛孶SDT 鍙敤浜庡厖鍊肩Н鍒嗐€傛闈㈢宸插寘鍚椁愮洰褰曘€佹湁鏁堟湡銆丠MAC 鎵嬪伐璇曞崟鍜?Ed25519 绂荤嚎鎺堟潈楠岃瘉鏍稿績锛沴ain42.top 宸查儴缃?USDT/TRC20 鍏呭€肩Н鍒嗐€丷embg 绉垎鍏戞崲銆乣ol1` 鑷姩绛惧彂鍜岀嫭绔嬬Н鍒嗚处鏈帴鍙ｃ€傛病鏈夋巿鏉冧护鐗屾椂濮嬬粓鍥炶惤鍒板彈闄愯瘯鐢ㄣ€傛敮浠樺疂/寰俊/Stripe銆佹寮忓晢瀹朵富浣撱€侀€€娆惧洖璋冦€佽嚜鍔ㄦ挙閿€涓庢崲鏈烘祦绋嬪皻鏈喕缁擄紝涓嶈兘鎶?GitHub Pages 鐨勫墠绔姸鎬佸綋浣滃晢涓氭巿鏉冦€?
 
-商业放行需要先完成有授权商品样本、目标设备压力测试和真实付费试单，记录直接交付率、返修/支持时间、退款与实际成本。详见 [商业模型](docs/commercial-model.md)、[商业化进度](docs/commercial-progress.md) 和 [仓库商业评估](docs/repo-roi-2026-09-16.md)。
+鍟嗕笟鏀捐闇€瑕佸厛瀹屾垚鏈夋巿鏉冨晢鍝佹牱鏈€佺洰鏍囪澶囧帇鍔涙祴璇曞拰鐪熷疄浠樿垂璇曞崟锛岃褰曠洿鎺ヤ氦浠樼巼銆佽繑淇?鏀寔鏃堕棿銆侀€€娆句笌瀹為檯鎴愭湰銆傝瑙?[鍟嗕笟妯″瀷](docs/commercial-model.md)銆乕鍟嗕笟鍖栬繘搴(docs/commercial-progress.md) 鍜?[浠撳簱鍟嗕笟璇勪及](docs/repo-roi-2026-09-16.md)銆?
 
-## 工作流
+## 宸ヤ綔娴?
 
-### 一键去背景
-
-```
-拖入图片 → 选择模型 → 点击「开始抠图」→ 保存
-```
-
-### SAM 精准抠图（抠衣服、物体）
+### 涓€閿幓鑳屾櫙
 
 ```
-① 拖入图片 → 切换到「SAM 抠图」模式
-② 点「载入到 SAM」
-③ 选工具：▭ 框选 / ✏ 画笔 / ◉ 点选
-④ 应用 → 浏览候选遮罩，选中结果
-⑤ 结果图上点多余区域自动剔除
-⑥ 满意后保存
+鎷栧叆鍥剧墖 鈫?閫夋嫨妯″瀷 鈫?鐐瑰嚮銆屽紑濮嬫姞鍥俱€嶁啋 淇濆瓨
 ```
 
-> 桌面端：框选用**右键拖拽**；移动端：直接用手指在图上框选 / 涂画 / 点选。双击可缩放，缩放后可单指拖动平移。
-
-### 先裁剪再处理
+### SAM 绮惧噯鎶犲浘锛堟姞琛ｆ湇銆佺墿浣擄級
 
 ```
-拖入图片 → 工具栏点「裁剪」→ 拖拽选区 → Enter 确认 → 再执行去背景或 SAM 抠图
+鈶?鎷栧叆鍥剧墖 鈫?鍒囨崲鍒般€孲AM 鎶犲浘銆嶆ā寮?
+鈶?鐐广€岃浇鍏ュ埌 SAM銆?
+鈶?閫夊伐鍏凤細鈻?妗嗛€?/ 鉁?鐢荤瑪 / 鈼?鐐归€?
+鈶?搴旂敤 鈫?娴忚鍊欓€夐伄缃╋紝閫変腑缁撴灉
+鈶?缁撴灉鍥句笂鐐瑰浣欏尯鍩熻嚜鍔ㄥ墧闄?
+鈶?婊℃剰鍚庝繚瀛?
 ```
 
-## SAM 模式说明
+> 妗岄潰绔細妗嗛€夌敤**鍙抽敭鎷栨嫿**锛涚Щ鍔ㄧ锛氱洿鎺ョ敤鎵嬫寚鍦ㄥ浘涓婃閫?/ 娑傜敾 / 鐐归€夈€傚弻鍑诲彲缂╂斁锛岀缉鏀惧悗鍙崟鎸囨嫋鍔ㄥ钩绉汇€?
 
-SAM（Segment Anything Model）是 Meta 开源的分割模型，本工具使用 **MobileSAM** 轻量版本，CPU 即可运行。
+### 鍏堣鍓啀澶勭悊
 
-- 首次使用自动下载模型 `mobile_sam.pt`（~40MB）
-- 支持正点（前景）和负点（背景）组合
-- 自动检测模式下最多输出 26 个候选遮罩
-- 结果图点击自动转换为负点，即时优化
+```
+鎷栧叆鍥剧墖 鈫?宸ュ叿鏍忕偣銆岃鍓€嶁啋 鎷栨嫿閫夊尯 鈫?Enter 纭 鈫?鍐嶆墽琛屽幓鑳屾櫙鎴?SAM 鎶犲浘
+```
 
-## 技术栈
+## SAM 妯″紡璇存槑
 
-- **后端**: Python + FastAPI + Uvicorn
-- **前端**: 原生 HTML/CSS/JS（无框架依赖，响应式 + 触屏）
-- **去背景**: rembg (BRIA-RMBG / BiRefNet / U²-Net)
-- **分割**: MobileSAM (via ultralytics)
-- **打包**: Nuitka（Windows / Linux / macOS）、原生 Android（ABI 拆包）、WASM/PWA
+SAM锛圫egment Anything Model锛夋槸 Meta 寮€婧愮殑鍒嗗壊妯″瀷锛屾湰宸ュ叿浣跨敤 **MobileSAM** 杞婚噺鐗堟湰锛孋PU 鍗冲彲杩愯銆?
 
-## 打包与多平台发行
+- 棣栨浣跨敤鑷姩涓嬭浇妯″瀷 `mobile_sam.pt`锛垀40MB锛?
+- 鏀寔姝ｇ偣锛堝墠鏅級鍜岃礋鐐癸紙鑳屾櫙锛夌粍鍚?
+- 鑷姩妫€娴嬫ā寮忎笅鏈€澶氳緭鍑?26 涓€欓€夐伄缃?
+- 缁撴灉鍥剧偣鍑昏嚜鍔ㄨ浆鎹负璐熺偣锛屽嵆鏃朵紭鍖?
 
-桌面端由 `build_nuitka.py` 按系统生成对应应用格式（Windows `rembg-ui.exe` / Linux `rembg-ui.bin` / macOS `rembg-ui.app`，CI 压缩为 `.app.zip`）。Android 使用独立原生端侧实现，按 ABI 拆分 APK 并同时生成 AAB；原生端支持单图、最多 10 张顺序批处理、重启恢复、系统分享和 ZIP 清单导出，并可在本机验证 `ol1` 授权、显示和扣减月度额度，联网时刷新托管撤销状态。浏览器版构建为可安装的 WASM PWA。
+## 鎶€鏈爤
+
+- **鍚庣**: Python + FastAPI + Uvicorn
+- **鍓嶇**: 鍘熺敓 HTML/CSS/JS锛堟棤妗嗘灦渚濊禆锛屽搷搴斿紡 + 瑙﹀睆锛?
+- **鍘昏儗鏅?*: rembg (BRIA-RMBG / BiRefNet / U虏-Net)
+- **鍒嗗壊**: MobileSAM (via ultralytics)
+- **鎵撳寘**: Nuitka锛圵indows / Linux / macOS锛夈€佸師鐢?Android锛圓BI 鎷嗗寘锛夈€乄ASM/PWA
+
+## 鎵撳寘涓庡骞冲彴鍙戣
+
+妗岄潰绔敱 `build_nuitka.py` 鎸夌郴缁熺敓鎴愬搴斿簲鐢ㄦ牸寮忥紙Windows `rembg-ui.exe` / Linux `rembg-ui.bin` / macOS `rembg-ui.app`锛孋I 鍘嬬缉涓?`.app.zip`锛夈€侫ndroid 浣跨敤鐙珛鍘熺敓绔晶瀹炵幇锛屾寜 ABI 鎷嗗垎 APK 骞跺悓鏃剁敓鎴?AAB锛涘師鐢熺鏀寔鍗曞浘銆佹渶澶?10 寮犻『搴忔壒澶勭悊銆侀噸鍚仮澶嶃€佺郴缁熷垎浜拰 ZIP 娓呭崟瀵煎嚭锛屽苟鍙湪鏈満楠岃瘉 `ol1` 鎺堟潈銆佹樉绀哄拰鎵ｅ噺鏈堝害棰濆害锛岃仈缃戞椂鍒锋柊鎵樼鎾ら攢鐘舵€併€傛祻瑙堝櫒鐗堟瀯寤轰负鍙畨瑁呯殑 WASM PWA銆?
 
 ```powershell
-# Windows - Nuitka（产物 dist/rembg-ui.dist/rembg-ui.exe）
+# Windows - Nuitka锛堜骇鐗?dist/rembg-ui.dist/rembg-ui.exe锛?
 .\nuitka.ps1
-# Windows - PyInstaller（备用）
+# Windows - PyInstaller锛堝鐢級
 .\pyinstaller.ps1
 ```
 
 ```bash
-# Linux - Nuitka（产物 dist/Rembg-UI-linux.tar.gz）
+# Linux - Nuitka锛堜骇鐗?dist/Rembg-UI-linux.tar.gz锛?
 ./build_nuitka_linux.sh
 ```
 
 ```bash
-# macOS - Nuitka（产物 dist/rembg-ui.app，需在 macOS 上执行）
+# macOS - Nuitka锛堜骇鐗?dist/rembg-ui.app锛岄渶鍦?macOS 涓婃墽琛岋級
 uv run python build_nuitka.py release
 ```
 
 ```powershell
-# Android - ABI 拆分 APK + AAB（JDK 17、Android SDK 35）
+# Android - ABI 鎷嗗垎 APK + AAB锛圝DK 17銆丄ndroid SDK 35锛?
 cd android
 ./gradlew.bat :app:assembleRelease :app:bundleRelease
 ```
 
-CI 会在同一版本 tag 下构建 Windows / Linux / macOS / Android 产物并发布到同一 Release；WASM PWA 由 `web` workflow 构建，Pages 站点同步 `web/dist`（见 `.github/workflows/build.yml`、`.github/workflows/web.yml`）。Android 的签名密钥只从 Actions secrets 注入，未配置时会明确产出 unsigned 包，详见 [`android/README.md`](android/README.md)。CUDA 桌面包体积很大，只有手动运行 `Build & Release` 并勾选 `include_cuda` 才会构建，不会阻塞默认 CPU / Android 发布。完整边界见 [`docs/platform-matrix.md`](docs/platform-matrix.md)。
+CI 浼氬湪鍚屼竴鐗堟湰 tag 涓嬫瀯寤?Windows / Linux / macOS / Android 浜х墿骞跺彂甯冨埌鍚屼竴 Release锛沇ASM PWA 鐢?`web` workflow 鏋勫缓锛孭ages 绔欑偣鍚屾 `web/dist`锛堣 `.github/workflows/build.yml`銆乣.github/workflows/web.yml`锛夈€侫ndroid 鐨勭鍚嶅瘑閽ュ彧浠?Actions secrets 娉ㄥ叆锛屾湭閰嶇疆鏃朵細鏄庣‘浜у嚭 unsigned 鍖咃紝璇﹁ [`android/README.md`](android/README.md)銆侰UDA 妗岄潰鍖呬綋绉緢澶э紝鍙湁鎵嬪姩杩愯 `Build & Release` 骞跺嬀閫?`include_cuda` 鎵嶄細鏋勫缓锛屼笉浼氶樆濉為粯璁?CPU / Android 鍙戝竷銆傚畬鏁磋竟鐣岃 [`docs/platform-matrix.md`](docs/platform-matrix.md)銆?
 
-## 项目结构
+## 椤圭洰缁撴瀯
 
 ```
 rembg-ui/
-├── main.py                  # 应用入口 + API 路由（启动、浏览器、模型、抠图、SAM、网络）
-├── sponsor/                 # 赞助与教程模块（FastAPI Router + 前端注入）
-├── processors/              # 处理器模块
-│   ├── sam_processor.py     # MobileSAM 分割
-│   ├── fastsam.py           # FastSAM（备用）
-│   └── cloth_seg.py         # 服装解析（备用）
-├── frontend/                # 前端静态资源
-│   └── index.html           # 单文件 UI（响应式 + 触屏 + 内嵌离线二维码）
-├── build_nuitka.py          # Nuitka 跨平台构建脚本（按平台生成参数）
-├── build_nuitka_linux.sh    # Linux Nuitka 打包 + 压缩
-├── nuitka.ps1               # Windows Nuitka 打包脚本
-├── pyinstaller.ps1          # Windows PyInstaller 打包脚本
-├── android/                 # 原生 Android 端（ONNX Runtime，ABI 拆包）
-├── web/                     # WASM/PWA 浏览器端
-└── pyproject.toml           # 项目配置（uv）
+鈹溾攢鈹€ main.py                  # 搴旂敤鍏ュ彛 + API 璺敱锛堝惎鍔ㄣ€佹祻瑙堝櫒銆佹ā鍨嬨€佹姞鍥俱€丼AM銆佺綉缁滐級
+鈹溾攢鈹€ sponsor/                 # 璧炲姪涓庢暀绋嬫ā鍧楋紙FastAPI Router + 鍓嶇娉ㄥ叆锛?
+鈹溾攢鈹€ processors/              # 澶勭悊鍣ㄦā鍧?
+鈹?  鈹溾攢鈹€ sam_processor.py     # MobileSAM 鍒嗗壊
+鈹?  鈹溾攢鈹€ fastsam.py           # FastSAM锛堝鐢級
+鈹?  鈹斺攢鈹€ cloth_seg.py         # 鏈嶈瑙ｆ瀽锛堝鐢級
+鈹溾攢鈹€ frontend/                # 鍓嶇闈欐€佽祫婧?
+鈹?  鈹斺攢鈹€ index.html           # 鍗曟枃浠?UI锛堝搷搴斿紡 + 瑙﹀睆 + 鍐呭祵绂荤嚎浜岀淮鐮侊級
+鈹溾攢鈹€ build_nuitka.py          # Nuitka 璺ㄥ钩鍙版瀯寤鸿剼鏈紙鎸夊钩鍙扮敓鎴愬弬鏁帮級
+鈹溾攢鈹€ build_nuitka_linux.sh    # Linux Nuitka 鎵撳寘 + 鍘嬬缉
+鈹溾攢鈹€ nuitka.ps1               # Windows Nuitka 鎵撳寘鑴氭湰
+鈹溾攢鈹€ pyinstaller.ps1          # Windows PyInstaller 鎵撳寘鑴氭湰
+鈹溾攢鈹€ android/                 # 鍘熺敓 Android 绔紙ONNX Runtime锛孉BI 鎷嗗寘锛?
+鈹溾攢鈹€ web/                     # WASM/PWA 娴忚鍣ㄧ
+鈹斺攢鈹€ pyproject.toml           # 椤圭洰閰嶇疆锛坲v锛?
 ```
