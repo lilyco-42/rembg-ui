@@ -76,7 +76,7 @@ try{
  const desktop=await setup();page=desktop.current;
  const original=await page.getByAltText('sample.webp · 原图').evaluate(async img=>{await img.decode();return {width:img.naturalWidth,height:img.naturalHeight};});
  await page.getByRole('button',{name:'局部抠图',exact:true}).click();
- assert.equal(await page.locator('option[value="add"]').isDisabled(),true);
+ assert.equal(await page.locator('option[value="add"]').evaluate(option=>option.disabled),true);
  await fillRegion(page,{x:0,y:0,w:15,h:20});
  assert.equal(await page.getByRole('button',{name:'在框内抠图',exact:true}).isDisabled(),true);
  await fillRegion(page,{x:original.width-10,y:0,w:30,h:30});
