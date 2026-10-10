@@ -69,7 +69,7 @@ async function cutoutStats(current,region){
 }
 async function applySelection(current){
  await current.getByRole('button',{name:'在框内抠图',exact:true}).click();
- await current.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('局部抠图已应用'),{},{timeout:180000});
+ await current.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('局部抠图已应用')&&!document.querySelector('#files').disabled,{},{timeout:180000});
 }
 
 try{
@@ -95,6 +95,8 @@ try{
  const first=await cutoutStats(page,box);
  assert.equal(first.width,original.width);assert.equal(first.height,original.height);
  assert.equal(first.outside,0);assert.ok(first.inside>100,'Real model must retain foreground in the chosen region');
+ // Lazy images in a closed details element are not loaded until it is opened.
+ await page.getByText('查看交付商品图',{exact:true}).click();
  const product=await page.getByAltText('sample.webp · 交付商品图').evaluate(async img=>{await img.decode();return {width:img.naturalWidth,height:img.naturalHeight};});
  assert.deepEqual(product,{width:1200,height:1200});
  const review=page.getByRole('checkbox',{name:'确认图片 sample.webp'});
@@ -187,7 +189,7 @@ try{
  assert.equal(await page.getByRole('button',{name:'在框内抠图',exact:true}).isDisabled(),true);
  await fillRegion(page,box);await page.locator('[data-coordinate="h"]').focus();
  await page.keyboard.press('Enter');
- await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('局部抠图已应用'),{},{timeout:180000});
+ await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('局部抠图已应用')&&!document.querySelector('#files').disabled,{},{timeout:180000});
  assert.equal((await snapshot(page)).items[0].imageRevision,2);
  checks.keyboard_original_coordinates=true;
  const boundaryError=await page.evaluate(()=>new Promise((resolve,reject)=>{
