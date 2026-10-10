@@ -197,7 +197,8 @@ try{
  checks.keyboard_original_coordinates=true;
  const boundaryError=await page.evaluate(()=>new Promise((resolve,reject)=>{
   const worker=new Worker(new URL('./worker.mjs?v=region-2',location.href),{type:'module'});
-  const bitmap=new OffscreenCanvas(32,32).transferToImageBitmap();
+  const canvas=new OffscreenCanvas(32,32);canvas.getContext('2d');
+  const bitmap=canvas.transferToImageBitmap();
   const timer=setTimeout(()=>{worker.terminate();reject(Error('Worker validation timed out'));},20000);
   worker.onmessage=({data})=>{clearTimeout(timer);worker.terminate();resolve(data.error);};
   worker.onerror=()=>{clearTimeout(timer);worker.terminate();reject(Error('Worker failed to load'));};
