@@ -1,7 +1,7 @@
 // Bump this when the static shell changes. Model and runtime files are cached
 // only after a successful same-origin request, so the first visit still works
 // on a normal network and later visits can run in airplane mode.
-const CACHE_NAME = 'rembg-wasm-shell-v1';
+const CACHE_NAME = 'rembg-wasm-shell-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());

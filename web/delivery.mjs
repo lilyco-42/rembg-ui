@@ -1,4 +1,4 @@
-import {revisionState} from './revisions.mjs?v=editor-2';
+import {revisionState} from './revisions.mjs?v=region-2';
 
 export function outputName(source, index, type) {
  const stem=source.replace(/\.[^.]+$/, '').replace(/[\x00-\x1f\\/:*?"<>|]/g,'_').slice(0,80)||'image';
