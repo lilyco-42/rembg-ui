@@ -11,6 +11,7 @@ const $=id=>document.getElementById(id);
 const files=$('files'),run=$('run'),status=$('status'),results=$('results');
 const exportBatch=$('exportBatch'),reviewedOnly=$('reviewedOnly'),deliveryStatus=$('deliveryStatus');
 const size=$('size'),saveStatus=$('saveStatus'),clearBatch=$('clearBatch');
+const clearHistory=$('clearHistory'),collapseHistory=$('collapseHistory'),historyCount=$('historyCount');
 let projectExport,projectImport,projectInput;
 size.replaceChildren(...PRESETS.filter(preset=>preset.background==='white').map(preset=>{
  const option=document.createElement('option');option.value=String(preset.width);option.textContent=`${preset.label}，${preset.marginPercent}% 留白`;return option;
@@ -18,6 +19,7 @@ size.replaceChildren(...PRESETS.filter(preset=>preset.background==='white').map(
 const originalSize=document.createElement('option');originalSize.value='0';originalSize.textContent='原尺寸透明 PNG';size.append(originalSize);
 let batch=[],batchSize=1200,exporting=false,busy=false,restoring=true,conflict=false,store=null;
 let worker,request=0,saveRequest=0;
+let expandedId;
 const urls=[];
 const supported='Worker' in window&&'OffscreenCanvas' in window&&'createImageBitmap' in window;
 function addCommercialNotice(){
@@ -57,6 +59,9 @@ function updateControls(){
  files.disabled=locked||conflict||!supported;
  size.disabled=locked||batch.length>0;
  clearBatch.disabled=locked||conflict||!batch.length;
+ clearHistory.disabled=clearBatch.disabled;
+ collapseHistory.disabled=locked||!batch.length||expandedId===null;
+ historyCount.textContent=`${batch.length} 张`;
  if(projectExport)projectExport.disabled=locked||conflict||!batch.length;
  if(projectImport){const importLocked=locked||conflict;projectImport.setAttribute('aria-disabled',String(importLocked));projectInput.disabled=importLocked;projectImport.style.opacity=importLocked?'.5':'1';}
  reviewedOnly.disabled=locked||conflict;
@@ -101,29 +106,50 @@ function regionButton(item){
  };
  return button;
 }
+async function removeItem(item){
+ if(busy||exporting||restoring||conflict||!batch.includes(item))return;
+ const previous=batch,previousExpanded=expandedId;
+ busy=true;batch=batch.filter(entry=>entry!==item);render();
+ const removed=await save();
+ if(!removed){batch=previous;expandedId=previousExpanded;}
+ busy=false;render();
+ status.textContent=removed?`已删除 ${item.source}，剩余 ${batch.length} 张记录。`:'删除未能保存，记录已保留。请先下载结果，再检查浏览器存储。';
+}
 function render(){
  for(const url of urls)URL.revokeObjectURL(url);urls.length=0;results.replaceChildren();
+ if(expandedId!==null&&!batch.some(item=>item.id===expandedId))expandedId=batch[0]?.id??null;
+ if(!batch.length){const empty=document.createElement('p');empty.className='empty-history';empty.textContent='还没有图片记录。选择图片即可开始。';results.append(empty);}
  for(const [i,item]of batch.entries()){
-  const row=document.createElement('section'),title=document.createElement('h2');title.textContent=item.source;row.append(title);
-  const comparison=document.createElement('div');comparison.className='comparison';if(!item.invalidSource)comparison.append(imagePreview(item.file,'原图',item.source));row.append(comparison);
+  const row=document.createElement('section');row.className='result-card';row.dataset.itemId=item.id;
+  const header=document.createElement('div');header.className='result-header';
+  const toggle=document.createElement('button');toggle.className='result-toggle';toggle.type='button';
+  toggle.setAttribute('aria-expanded',String(expandedId===item.id));toggle.setAttribute('aria-controls',`result-${item.id}`);
+  const title=document.createElement('span');title.className='result-name';title.textContent=item.source;
+  const state=document.createElement('span');state.className='result-state';state.textContent=item.status==='done'?(isReviewed(item)?'已确认':'待确认'):item.status==='error'?'处理失败':item.status==='processing'?'处理中':'待处理';
+  toggle.append(document.createTextNode(expandedId===item.id?'▾ ':'▸ '),title,state);
+  toggle.onclick=()=>{expandedId=expandedId===item.id?null:item.id;render();};
+  const remove=document.createElement('button');remove.className='remove-image';remove.type='button';remove.textContent='删除';remove.setAttribute('aria-label',`删除图片 ${item.source}`);remove.onclick=()=>void removeItem(item);
+  header.append(toggle,remove);row.append(header);results.append(row);
+  const body=document.createElement('div');body.className='result-body';body.id=`result-${item.id}`;row.append(body);
+  if(expandedId!==item.id){body.hidden=true;continue;}
+  const comparison=document.createElement('div');comparison.className='comparison';if(!item.invalidSource)comparison.append(imagePreview(item.file,'原图',item.source));body.append(comparison);
   if(item.status==='done'){
    comparison.append(imagePreview(item.output.transparent,'抠图结果 · 透明底稿',item.source));
-   const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='查看交付商品图';details.append(summary,imagePreview(item.output.product,'交付商品图',item.source));row.append(details);
+   const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='查看交付商品图';details.append(summary,imagePreview(item.output.product,'交付商品图',item.source));body.append(details);
    for(const [label,blob,type]of [['下载商品图',item.output.product,'product'],['下载透明底稿',item.output.transparent,'cutout']]){
-    const a=document.createElement('a');a.className='download';a.textContent=label;a.href=URL.createObjectURL(blob);urls.push(a.href);a.download=outputName(item.source,i,type);row.append(a);
+    const a=document.createElement('a');a.className='download';a.textContent=label;a.href=URL.createObjectURL(blob);urls.push(a.href);a.download=outputName(item.source,i,type);body.append(a);
    }
    const edit=document.createElement('button');edit.textContent='修边';edit.onclick=async()=>{
     if(busy||exporting||restoring||conflict)return;busy=true;updateControls();
     try{const output=await editCutout(item,batchSize);if(output){replaceOutput(item,output);render();await save();status.textContent='修边已应用，请重新检查并确认交付。';}}
     catch(error){status.textContent=`修边失败：${error.message}`;}finally{busy=false;render();}
-   };row.append(edit);if(!item.invalidSource)row.append(regionButton(item));
+   };body.append(edit);if(!item.invalidSource)body.append(regionButton(item));
    const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=isReviewed(item);check.setAttribute('aria-label',`确认图片 ${item.source}`);
-   check.onchange=()=>{setReviewed(item,check.checked);updateControls();void save();};label.append(check,document.createTextNode('已检查边缘，可以交付'));row.append(document.createElement('br'),label);
+   check.onchange=()=>{setReviewed(item,check.checked);state.textContent=isReviewed(item)?'已确认':'待确认';updateControls();void save();};label.className='review-image';label.append(check,document.createTextNode('已检查边缘，可以交付'));body.append(document.createElement('br'),label);
   }else{
    const p=document.createElement('p');p.textContent=item.status==='error'?`失败：${item.error}`:item.status==='processing'?'正在处理…':'待处理';comparison.append(p);
    if(!item.invalidSource&&item.status!=='processing')comparison.append(regionButton(item));
   }
-  results.append(row);
  }
  updateControls();
 }
@@ -151,14 +177,17 @@ files.onchange=async()=>{
  finally{busy=false;updateControls();}
  if(!batch.length)batchSize=Number(size.value);
  for(const file of added)batch.push({id:crypto.randomUUID(),source:file.name,file,status:'pending',reviewed:false});
+ expandedId=batch[batch.length-added.length]?.id??null;
  render();await save();
 };
 reviewedOnly.onchange=()=>{updateControls();void save();};
+collapseHistory.onclick=()=>{expandedId=null;render();};
+clearHistory.onclick=()=>clearBatch.click();
 clearBatch.onclick=async()=>{
  if(busy||exporting||restoring||conflict)return;
- const previous=batch;busy=true;batch=[];render();
+ const previous=batch,previousExpanded=expandedId;busy=true;batch=[];render();
  const cleared=await save();
- if(!cleared)batch=previous;
+ if(!cleared){batch=previous;expandedId=previousExpanded;}
  busy=false;render();
  status.textContent=cleared?'批次已清空，可以选择新的交付规格和图片。':'未能清空保存内容，已保留当前批次，请先下载结果。';
 };
@@ -168,6 +197,7 @@ run.onclick=async()=>{
  try{
   for(const item of batch){
    if(item.status==='done')continue;
+   expandedId=item.id;
    item.status='processing';item.reviewed=false;delete item.error;render();await save();
    if(conflict){item.status='pending';break;}
    try{
