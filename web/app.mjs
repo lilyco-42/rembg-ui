@@ -1,12 +1,12 @@
-import {validateImageFile} from './image-limits.mjs?v=region-1';
-import {editCutout} from './editor.mjs?v=region-1';
-import {selectRegion} from './region-editor.mjs?v=region-1';
-import {replaceOutput,setReviewed,isReviewed} from './revisions.mjs?v=region-1';
-import {exportProjectArchive,importProjectArchive} from './project-archive.mjs?v=region-1';
-import {createZip} from './zip.mjs?v=region-1';
-import {outputName,deliveryManifest} from './delivery.mjs?v=region-1';
-import {openProjectStore,PROJECT_SCHEMA_VERSION} from './project-store.mjs?v=region-1';
-import {PRESETS} from './presets.mjs?v=region-1';
+import {validateImageFile} from './image-limits.mjs?v=region-2';
+import {editCutout} from './editor.mjs?v=region-2';
+import {selectRegion} from './region-editor.mjs?v=region-2';
+import {replaceOutput,setReviewed,isReviewed} from './revisions.mjs?v=region-2';
+import {exportProjectArchive,importProjectArchive} from './project-archive.mjs?v=region-2';
+import {createZip} from './zip.mjs?v=region-2';
+import {outputName,deliveryManifest} from './delivery.mjs?v=region-2';
+import {openProjectStore,PROJECT_SCHEMA_VERSION} from './project-store.mjs?v=region-2';
+import {PRESETS} from './presets.mjs?v=region-2';
 const $=id=>document.getElementById(id);
 const files=$('files'),run=$('run'),status=$('status'),results=$('results');
 const exportBatch=$('exportBatch'),reviewedOnly=$('reviewedOnly'),deliveryStatus=$('deliveryStatus');
@@ -129,7 +129,7 @@ function render(){
 }
 function infer(bitmap,options={}){
  return new Promise((resolve,reject)=>{
-  try{worker??=new Worker(new URL('./worker.mjs?v=region-1',import.meta.url),{type:'module'});}catch(error){bitmap.close();reject(error);return;}
+  try{worker??=new Worker(new URL('./worker.mjs?v=region-2',import.meta.url),{type:'module'});}catch(error){bitmap.close();reject(error);return;}
   const id=++request;
   const fail=message=>{clearTimeout(timer);worker?.terminate();worker=null;reject(Error(message));};
   const timer=setTimeout(()=>fail('处理超过 3 分钟，请缩小图片或换设备重试'),180000);

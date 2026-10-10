@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MIN_REGION,normalizeBox} from '../region.mjs';
+import {MIN_REGION,normalizeBox,validateRegion} from '../region.mjs';
 
 test('normalizes a forward drag',()=>{
  assert.equal(MIN_REGION,16);
@@ -29,4 +29,19 @@ test('accepts a box exactly 16 by 16 pixels',()=>{
 
 test('returns null for a zero-size click',()=>{
  assert.equal(normalizeBox({x:10,y:10},{x:10,y:10},100,100),null);
+});
+
+test('rejects malformed dimensions and non-finite pointer coordinates',()=>{
+ for(const width of [0,-1,100.5,Infinity,NaN])assert.equal(normalizeBox({x:0,y:0},{x:40,y:40},width,100),null);
+ assert.equal(normalizeBox({x:NaN,y:0},{x:40,y:40},100,100),null);
+});
+
+test('worker region validation permits the exact image boundary',()=>{
+ assert.deepEqual(validateRegion({x:84,y:84,w:16,h:16},100,100),{x:84,y:84,w:16,h:16});
+});
+
+test('worker region validation rejects out-of-bounds, fractional and small regions',()=>{
+ for(const region of [null,{}, {x:-1,y:0,w:20,h:20},{x:0,y:0,w:15,h:20},
+  {x:0.5,y:0,w:20,h:20},{x:90,y:0,w:20,h:20},{x:0,y:90,w:20,h:20},
+  {x:0,y:0,w:Infinity,h:20}])assert.throws(()=>validateRegion(region,100,100),/选区/);
 });

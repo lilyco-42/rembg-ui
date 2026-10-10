@@ -1,4 +1,4 @@
-import {revisionState} from './revisions.mjs?v=region-1';
+import {revisionState} from './revisions.mjs?v=region-2';
 
 export const PROJECT_SCHEMA_VERSION = 1;
 const STORE = 'projects';

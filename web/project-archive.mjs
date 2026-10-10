@@ -1,5 +1,5 @@
-import {createZip} from './zip.mjs?v=region-1';
-import {validateProject} from './project-store.mjs?v=region-1';
+import {createZip} from './zip.mjs?v=region-2';
+import {validateProject} from './project-store.mjs?v=region-2';
 
 export const PROJECT_ARCHIVE_VERSION = 1;
 export const MAX_PROJECT_ARCHIVE_BYTES = 64 * 1024 * 1024 + 512 * 1024;

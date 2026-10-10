@@ -1,6 +1,7 @@
-import {composeProduct} from './composition.mjs?v=region-1';
+import {composeProduct} from './composition.mjs?v=region-2';
 import * as ort from './vendor/ort.wasm.min.mjs';
-import {normalize,maskPixels} from './pixels.mjs?v=region-1';
+import {normalize,maskPixels} from './pixels.mjs?v=region-2';
+import {validateRegion} from './region.mjs?v=region-2';
 ort.env.wasm.numThreads=1;
 ort.env.wasm.wasmPaths=new URL('./vendor/',import.meta.url).href;
 let session;
@@ -8,6 +9,9 @@ self.onmessage=async ({data})=>{
  const {id,bitmap,size,region,mode='replace',base}=data;
  let input, outputs,small,crop,cutout,baseBitmap;
  try {
+  if(region)validateRegion(region,bitmap.width,bitmap.height);
+  if(!['replace','add'].includes(mode))throw Error('无效的局部抠图方式');
+  if(mode==='add'&&(!region||!(base instanceof Blob)))throw Error('添加局部需要已有透明底稿');
   self.postMessage({id,status:session?'正在抠图…':'首次加载 WASM 与模型，请稍候…'});
   session ??= await ort.InferenceSession.create(new URL('./models/u2netp.onnx',import.meta.url).href,{executionProviders:['wasm']});
   small=new OffscreenCanvas(320,320);const ctx=small.getContext('2d');
