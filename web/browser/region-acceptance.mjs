@@ -106,7 +106,10 @@ try{
 
  // Cancel never starts inference or invalidates an already reviewed result.
  await page.getByRole('button',{name:'局部抠图',exact:true}).click();
+ await page.locator('.region-editor').waitFor({state:'visible'});
  await page.keyboard.press('Escape');
+ await page.locator('.region-editor').waitFor({state:'hidden'});
+ await page.waitForFunction(()=>!document.querySelector('#files').disabled);
  assert.equal(await review.isChecked(),true);
  assert.equal((await snapshot(page)).items[0].imageRevision,1);
  checks.cancel_preserves_review=true;
