@@ -1,209 +1,87 @@
-## WebGPU 推理实测与国内下载加速
-
-[简体中文：安装引导、镜像与 CPU/GPU 实测图表](docs/WEBGPU_GUIDE.zh-CN.md)（实验功能，非商用版）
-
-﻿<p align="center">
-  <img src="https://raw.githubusercontent.com/lilyco-42/rembg-ui/master/docs/logo.png" alt="rembg-ui" width="200">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/lilyco-42/rembg-ui/master/docs/logo.png" alt="Rembg Studio logo" width="170">
 </p>
 
 <div align="center">
-  <img src="docs/banner.svg" width="720" alt="banner">
+  <img src="docs/banner.svg" width="720" alt="Rembg Studio">
 </div>
 
 # Rembg Studio
 
-鍩轰簬 AI 鐨勫浘鍍忚儗鏅幓闄?+ 鏅鸿兘鎶犲浘宸ュ叿銆?*绾悗绔灦鏋?*锛欶astAPI 鍙彁渚涙湇鍔★紝UI 鐢辨祻瑙堝櫒鍔犺浇锛屼竴濂楀墠绔悓鏃堕€傞厤妗岄潰涓庢墜鏈恒€?
+**Rembg Studio** 是一款面向桌面和移动设备的 AI 图像去背景、抠图与图片处理工作台。桌面程序使用 Python / FastAPI 提供本地服务，前端通过浏览器打开；项目也提供 Android 与 Web 版本。
 
-## 鍔熻兘
+> **发布状态**：正式安装包与 WebGPU 实验分支相互独立。WebGPU U2Netp 已在 AMD RDNA 3 上完成实机推理测试；BRIA 大模型的 WebGPU 执行仍在调试，不能将其标为已支持的正式功能。
 
-### 鍟嗗搧鍥惧伐浣滃彴锛堟湰鍦板紑鍙戠増锛?
+## 功能
 
-鎵归噺娣诲姞鐓х墖 鈫?閫夋嫨浜や粯瑙勬牸 鈫?寮€濮嬪鐞?鈫?涓嬭浇涓€涓氦浠?ZIP銆?
+- **一键去背景**：导入 PNG、JPEG、WebP 图片，通过多种 ONNX 模型获得透明背景结果。
+- **商品图工作台**：批量导入、设置商品画布规格与留白、选择背景，导出成品及 ZIP 交付包。
+- **SAM 辅助抠图**：使用点选或框选方式选择需要保留的对象，改善复杂场景的分割体验。
+- **局部修正**：裁剪、旋转，以及针对抠图结果的区域恢复与编辑功能（具体以当前版本 UI 为准）。
+- **本地模型管理**：查看模型是否安装，按需下载；部分模型需另行遵守商用授权要求。
+- **手机访问**：可在局域网内通过浏览器访问桌面工作台；Android 另有 APK 发行产物。
 
-- 800 / 1200 / 1600 / 2000 鍍忕礌姝ｆ柟褰㈢敾甯冿紝鎸夐€忔槑涓讳綋杈圭晫灞呬腑锛屾渶灏忕暀鐧藉彲閫夈€?
-- 绾櫧銆佹祬鐏版垨閫忔槑鑳屾櫙锛汸NG / JPEG / WebP銆傞€忔槑鑳屾櫙涓嶆敮鎸?JPEG銆?
-- SKU 鍓嶇紑鍔犲敮涓€搴忓彿鍛藉悕锛涙湭濉啓鍓嶇紑鏃朵繚鐣欏師鏂囦欢鍚嶄富浣撱€俍IP 鏀寔涓枃鍚嶃€?
-- 棣栨澶勭悊閿佸畾鏁存壒瑙勬牸鍜屾ā鍨嬪弬鏁帮紝鏆傚仠鍚庝粠鍓╀綑鍥剧墖缁х画锛屽け璐ラ」鍙噸璇曘€?
-- 涓嬭浇鍙寘鍚凡瀹屾垚椤癸紱鍙€愬浘纭骞堕€夋嫨浠呭鍑哄凡纭椤广€俍IP 闄勫甫 `delivery-manifest.json`锛屽垪鍑哄叏閮ㄤ换鍔″強瀵煎嚭鐘舵€併€傛瘡鎵规渶澶?50 寮狅紝姣忓紶鏈€澶?25 MB銆?
-- 鑷姩淇濆瓨褰撳墠鎵规鐨勫師鍥俱€佺粨鏋溿€佸鏍哥姸鎬佸拰浜や粯璁剧疆锛屽埛鏂板悗鍙仮澶嶏紝涓柇椤瑰洖鍒板緟澶勭悊銆傝绛夊緟鈥滄壒娆″凡淇濆瓨鈥濆悗鍏抽棴椤甸潰銆?
-- 淇濆瓨鑼冨洿鏄悓涓€娴忚鍣ㄣ€佸悓涓€璁块棶鍦板潃锛堝寘鍚鍙ｏ級锛涙洿鎹㈡祻瑙堝櫒/鍦板潃銆佹竻闄ょ珯鐐规暟鎹垨娴忚鍣ㄥ洖鏀跺瓨鍌ㄥ悗鏃犳硶淇濊瘉鎭㈠銆傚瓨鍌ㄥけ璐ヤ細鎻愮ず锛岃涓嬭浇缁撴灉鐣欐。銆?
-- 澶氶〉闈慨鏀瑰啿绐佹椂鍋滄鑷姩淇濆瓨骞舵彁绀猴紝涓嶈鐩栧彟涓€椤甸潰鐨勬壒娆°€傛竻绌洪槦鍒椾細鍚屾椂娓呯┖褰撳墠娴忚鍣ㄤ繚瀛樼殑鎵规銆?
-- 鍏抽棴鈥滅粺涓€鍟嗗搧鍥锯€濆彲淇濈暀鍘熷昂瀵搁€忔槑 PNG銆?
+## 下载与安装
 
-棣栨妯″瀷涓嬭浇闇€瑕佺綉缁滐紱鎺ㄧ悊鍜屽晢鍝佸浘鍚堟垚鍦ㄦ湰鏈烘墽琛屻€傚綋鍓嶄慨鍥剧粨鏋滀粛浣跨敤鍘熸湁鍗曞浘淇濆瓨鍏ュ彛锛屽皻鏈嚜鍔ㄥ洖鍐欐壒閲忛槦鍒椼€?
+- [GitHub Releases：正式版本与安装包](https://github.com/lilyco-42/rembg-ui/releases)
+- [LYCO 多平台下载页面](https://lain42.top/downloads/rembg-ui/index.html)
+- [Windows、Linux、macOS、Android、iOS 下载说明](docs/RELEASE-DOWNLOADS.zh-CN.md)
 
-楠岃瘉锛歚python -m unittest tests.test_product_export tests.test_product_zip -v`锛圸IP / 宸ヤ綔娴佹祴璇曢渶瑕?Node.js锛夈€?
+| 平台 | 发布形式 |
+| --- | --- |
+| Windows | ZIP 桌面发行包 |
+| Linux | tar.gz 桌面发行包 |
+| macOS | ZIP 应用发行包，注意系统安全与签名限制 |
+| Android | 按 ABI 提供 APK，商店发行可使用 AAB |
+| iOS / iPadOS | 可使用 Web/PWA；尚无已验证签名的原生 IPA |
 
-| 鍔熻兘 | 璇存槑 |
-|------|------|
-| **Rembg 鍘昏儗鏅?* | 涓€閿幓闄ゅ浘鐗囪儗鏅紝鏀寔澶氱妯″瀷 |
-| **SAM 鏅鸿兘鎶犲浘** | MobileSAM 鐐归€夊垎鍓诧紝姝ｇ偣/璐熺偣绮剧‘鎺у埗 |
-| **鑷姩妫€娴?* | 涓€閿瘑鍒浘涓墍鏈夌墿浣擄紝閫変腑鏈€闇€瑕佺殑閬僵 |
-| **鍓旈櫎浼樺寲** | 缁撴灉鍥句笂鐩存帴鐐瑰嚮澶氫綑鍖哄煙锛岃嚜鍔ㄥ姞璐熺偣閲嶈窇 |
-| **瑁佸壀鏃嬭浆** | 棰勫鐞嗗伐鍏凤細鎷栨嫿瑁佸壀銆?0掳 鏃嬭浆銆佷换鎰忚搴?|
-| **鎵归噺鎶犲浘** | 澶氬浘鎺掗槦澶勭悊锛屼竴娆′笅杞藉叏閮ㄧ粨鏋?|
-| **鎵嬫満璁块棶** | 鍚屼竴 WiFi 鎵爜鍗崇敤锛岃Е灞忓彲鐩存帴妗嗛€?鐐归€?娑傜敾 |
+**Linux 提示**：下载后的完整目录需要一起解压并运行，不要仅复制 `rembg-ui` 单个可执行文件。如果启动时报错，请保留终端日志排查动态库或打包兼容性。
 
-## 鏋舵瀯
+## 源码运行
 
-```
-鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鍚庣锛團astAPI锛屼粎鎻愪緵鏈嶅姟锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
-鈹? rembg / MobileSAM 鎶犲浘 API       鍓嶇闈欐€佽祫婧愶紙鍗曟枃浠讹級鈹?
-鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
-                           鈹? http://127.0.0.1:8042
-        鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?
-        鈻?                 鈻?                 鈻?
-   妗岄潰娴忚鍣?         鎵嬫満娴忚鍣?         杩滅▼璁惧
-  锛堣嚜鍔ㄦ墦寮€锛?     锛堝悓涓€ WiFi 鎵爜锛?  锛坱ailscale/frp 绛夛級
-```
-
-- **鍚庣**锛歅ython + FastAPI + Uvicorn锛屾棤浠讳綍鍘熺敓绐楀彛 / pywebview 渚濊禆
-- **鍓嶇**锛氬崟鏂囦欢 HTML锛堝師鐢?CSS/JS锛夛紝绉诲姩绔搷搴斿紡 + 瑙﹀睆浜や簰
-- 鍚庣鍚姩鍚庤嚜鍔ㄦ墦寮€鏈満娴忚鍣紱鎵嬫満/杩滅▼璁惧閫氳繃娴忚鍣ㄨ闂?
-
-## 浣跨敤鏂瑰紡
-
-### 浠庢簮鐮佽繍琛?
+建议先安装 Python、[uv](https://docs.astral.sh/uv/) 和 Git。
 
 ```bash
-# 闇€瑕?Python 3.10+锛屾帹鑽愮敤 uv
+git clone https://github.com/lilyco-42/rembg-ui.git
+cd rembg-ui
 uv sync
 uv run python main.py
 ```
 
-鍚姩鍚庤嚜鍔ㄦ墦寮€娴忚鍣?`http://127.0.0.1:8042`銆傞娆¤繍琛屼細鑷姩涓嬭浇妯″瀷锛岃淇濇寔缃戠粶杩炴帴銆?
-
-### 鎵嬫満 / 灞€鍩熺綉璁块棶
-
-榛樿鍙洃鍚?`127.0.0.1`锛堜粎鏈満锛夈€傛兂璁╂墜鏈猴紙iOS/Android锛夎闂紝浜岄€変竴锛?
+启动后打开终端提示的本地地址。默认仅监听 `127.0.0.1`；需要同一 Wi-Fi 下的手机访问时，可以使用：
 
 ```bash
-uv run python main.py --lan            # 涓€閿紑鍚眬鍩熺綉璁块棶
-# 鎴?
-REMBG_HOST=0.0.0.0 uv run python main.py
+uv run python main.py --lan
 ```
 
-寮€鍚悗锛?
+**注意**：局域网模式会向同一网络开放服务，请仅在可信网络中使用，不要直接暴露至公网。公网部署必须另行配置鉴权、代理与安全策略。
 
-1. 妗岄潰娴忚鍣ㄩ噷鐐瑰乏涓嬭 **銆岎煋?鎵嬫満杩炴帴銆?*锛屼細寮瑰嚭浜岀淮鐮?
-2. 鎵嬫満娴忚鍣ㄦ壂鐮侊紝鎴栫洿鎺ヨ緭鍏ヤ簩缁寸爜涓嬫柟鐨勫湴鍧€锛堝 `http://192.168.1.23:8042`锛?
-3. 鎵嬫満绔晫闈㈣嚜鍔ㄩ€傞厤锛孲AM 妗嗛€?/ 鐐归€?/ 鐢荤瑪鍧囨敮鎸佽Е灞忔搷浣?
+## WebGPU AI 加速（技术预览）
 
-> 鈿狅笍 鐩戝惉 `0.0.0.0` 琛ㄧず鍚屼竴灞€鍩熺綉鍐呬换浣曡澶囬兘鑳借皟鐢ㄦ湰宸ュ叿锛岃浠呭湪鍙俊缃戠粶涓娇鐢ㄣ€?
+实验分支：[`feat/desktop-webgpu-inference-20261028`](https://github.com/lilyco-42/rembg-ui/tree/feat/desktop-webgpu-inference-20261028)
 
-### 鍏綉璁块棶锛堝彲閫夛級
+- [WebGPU 中文使用教程、国内模型镜像、CPU/GPU 基准测试](docs/WEBGPU_GUIDE.zh-CN.md)
+- [本机 AMD RDNA 3 性能对比图](docs/benchmarks/cpu-vs-webgpu-rdna3.svg)
+- [原始测试数据](docs/benchmarks/amd-rdna3-2026-10-28.json)
+- [技术预览 PR #11](https://github.com/lilyco-42/rembg-ui/pull/11)
 
-灞€鍩熺綉涔嬪锛堝鍑哄樊鏃朵粠鎵嬫満杩炲閲岀殑鐢佃剳锛夛紝闇€閰嶅悎鍐呯綉绌块€忥紝浠婚€夊叾涓€锛?
+该实验使用浏览器 WebGPU 执行 U2Netp ONNX 推理。模型通过国内镜像优先下载、断点续传并校验 SHA-256，ONNX Runtime Web 运行时可离线打包。**商用额度计费尚未与客户端 GPU 执行路径统一，因此实验模式默认禁用，不应直接作为付费正式版销售。**
 
-- **Tailscale**锛氫袱绔瀹㈡埛绔紝鐧诲綍鍚庢墜鏈烘祻瑙堝櫒璁块棶 `http://<tailscale-ip>:8042`
-- **frp / ngrok**锛氭妸鏈湴 `8042` 绔彛鏆撮湶鍒板叕缃戝煙鍚嶏紝鎵嬫満娴忚鍣ㄨ闂鍩熷悕
+## 技术与目录
 
-杩欎簺宸ュ叿鍙仛銆岄毀閬撱€嶏紝鍚庣鏈韩鏃犻渶鏀瑰姩锛涘缓璁粦瀹?`0.0.0.0` 鍚庨厤鍚堢┛閫忎娇鐢ㄣ€?
+- 后端：Python、FastAPI、rembg、ONNX Runtime。
+- 前端：HTML / JavaScript，桌面本地 Web UI。
+- 构建：Nuitka 桌面分发、Android 构建流程、Web/PWA。
+- `main.py`：本地服务及 API。
+- `frontend/`：桌面 Web UI 与 WebGPU Worker。
+- `web/`：Web/PWA 项目。
+- `android/`：Android 项目。
+- `scripts/`：构建、模型与性能测试工具。
+- `docs/`：教程、部署说明及测试记录。
+- `.github/workflows/`：CI 和发行工作流。
 
-### 鐩存帴涓嬭浇
+## 许可与反馈
 
-- **Windows**锛氫粠 [Releases](https://github.com/lilyco-42/rembg-ui/releases) 涓嬭浇 `Rembg-UI-windows.zip`锛岃В鍘嬭繍琛?`rembg-ui.exe`
-- **Linux**锛氫笅杞?`Rembg-UI-linux.tar.gz`锛岃В鍘嬪悗杩愯 `./rembg-ui.bin`
-- **macOS**锛氫笅杞?`Rembg-UI-macOS.zip`锛岃В鍘嬪悗灏?`Rembg Studio.app` 鎷栧叆銆屽簲鐢ㄧ▼搴忋€嶈繍琛?
+请查阅仓库 [LICENSE](LICENSE) 以及各个模型自己的许可证。特别注意 **BRIA RMBG** 等模型可能需要额外的商业授权；项目代码的许可不自动授予模型商业使用权。
 
-> macOS 鏈鍚嶅簲鐢ㄩ娆℃墦寮€濡傛彁绀恒€屾棤娉曢獙璇佸紑鍙戣€呫€嶏紝鍙抽敭 鈫?鎵撳紑 鍗冲彲锛涙垨鐢?`xattr -dr com.apple.quarantine "Rembg Studio.app"` 瑙ｉ櫎闅旂銆?
-
-## 鍟嗕笟璇曠敤鐘舵€?
-
-娴忚鍣ㄧ増鏄厤璐圭殑鏈湴澶勭悊婕旂ず锛涘綋鍓嶅缓璁敤鍒涗綔鑰呯増 楼29/鏈堛€佸皬鍥㈤槦鐗?楼99/鏈堝仛绗竴杞敮浠樻剰鎰垮疄楠岋紝浠锋牸浠嶆爣璁颁负瀹為獙鍋囪銆俁embg Studio 璐拱椤典娇鐢ㄧН鍒嗗厬鎹紙鍒涗綔鑰呯増 420 鍒嗐€佸皬鍥㈤槦鐗?1450 鍒嗭紱1 USDT = 100 鍒嗭級锛孶SDT 鍙敤浜庡厖鍊肩Н鍒嗐€傛闈㈢宸插寘鍚椁愮洰褰曘€佹湁鏁堟湡銆丠MAC 鎵嬪伐璇曞崟鍜?Ed25519 绂荤嚎鎺堟潈楠岃瘉鏍稿績锛沴ain42.top 宸查儴缃?USDT/TRC20 鍏呭€肩Н鍒嗐€丷embg 绉垎鍏戞崲銆乣ol1` 鑷姩绛惧彂鍜岀嫭绔嬬Н鍒嗚处鏈帴鍙ｃ€傛病鏈夋巿鏉冧护鐗屾椂濮嬬粓鍥炶惤鍒板彈闄愯瘯鐢ㄣ€傛敮浠樺疂/寰俊/Stripe銆佹寮忓晢瀹朵富浣撱€侀€€娆惧洖璋冦€佽嚜鍔ㄦ挙閿€涓庢崲鏈烘祦绋嬪皻鏈喕缁擄紝涓嶈兘鎶?GitHub Pages 鐨勫墠绔姸鎬佸綋浣滃晢涓氭巿鏉冦€?
-
-鍟嗕笟鏀捐闇€瑕佸厛瀹屾垚鏈夋巿鏉冨晢鍝佹牱鏈€佺洰鏍囪澶囧帇鍔涙祴璇曞拰鐪熷疄浠樿垂璇曞崟锛岃褰曠洿鎺ヤ氦浠樼巼銆佽繑淇?鏀寔鏃堕棿銆侀€€娆句笌瀹為檯鎴愭湰銆傝瑙?[鍟嗕笟妯″瀷](docs/commercial-model.md)銆乕鍟嗕笟鍖栬繘搴(docs/commercial-progress.md) 鍜?[浠撳簱鍟嗕笟璇勪及](docs/repo-roi-2026-09-16.md)銆?
-
-## 宸ヤ綔娴?
-
-### 涓€閿幓鑳屾櫙
-
-```
-鎷栧叆鍥剧墖 鈫?閫夋嫨妯″瀷 鈫?鐐瑰嚮銆屽紑濮嬫姞鍥俱€嶁啋 淇濆瓨
-```
-
-### SAM 绮惧噯鎶犲浘锛堟姞琛ｆ湇銆佺墿浣擄級
-
-```
-鈶?鎷栧叆鍥剧墖 鈫?鍒囨崲鍒般€孲AM 鎶犲浘銆嶆ā寮?
-鈶?鐐广€岃浇鍏ュ埌 SAM銆?
-鈶?閫夊伐鍏凤細鈻?妗嗛€?/ 鉁?鐢荤瑪 / 鈼?鐐归€?
-鈶?搴旂敤 鈫?娴忚鍊欓€夐伄缃╋紝閫変腑缁撴灉
-鈶?缁撴灉鍥句笂鐐瑰浣欏尯鍩熻嚜鍔ㄥ墧闄?
-鈶?婊℃剰鍚庝繚瀛?
-```
-
-> 妗岄潰绔細妗嗛€夌敤**鍙抽敭鎷栨嫿**锛涚Щ鍔ㄧ锛氱洿鎺ョ敤鎵嬫寚鍦ㄥ浘涓婃閫?/ 娑傜敾 / 鐐归€夈€傚弻鍑诲彲缂╂斁锛岀缉鏀惧悗鍙崟鎸囨嫋鍔ㄥ钩绉汇€?
-
-### 鍏堣鍓啀澶勭悊
-
-```
-鎷栧叆鍥剧墖 鈫?宸ュ叿鏍忕偣銆岃鍓€嶁啋 鎷栨嫿閫夊尯 鈫?Enter 纭 鈫?鍐嶆墽琛屽幓鑳屾櫙鎴?SAM 鎶犲浘
-```
-
-## SAM 妯″紡璇存槑
-
-SAM锛圫egment Anything Model锛夋槸 Meta 寮€婧愮殑鍒嗗壊妯″瀷锛屾湰宸ュ叿浣跨敤 **MobileSAM** 杞婚噺鐗堟湰锛孋PU 鍗冲彲杩愯銆?
-
-- 棣栨浣跨敤鑷姩涓嬭浇妯″瀷 `mobile_sam.pt`锛垀40MB锛?
-- 鏀寔姝ｇ偣锛堝墠鏅級鍜岃礋鐐癸紙鑳屾櫙锛夌粍鍚?
-- 鑷姩妫€娴嬫ā寮忎笅鏈€澶氳緭鍑?26 涓€欓€夐伄缃?
-- 缁撴灉鍥剧偣鍑昏嚜鍔ㄨ浆鎹负璐熺偣锛屽嵆鏃朵紭鍖?
-
-## 鎶€鏈爤
-
-- **鍚庣**: Python + FastAPI + Uvicorn
-- **鍓嶇**: 鍘熺敓 HTML/CSS/JS锛堟棤妗嗘灦渚濊禆锛屽搷搴斿紡 + 瑙﹀睆锛?
-- **鍘昏儗鏅?*: rembg (BRIA-RMBG / BiRefNet / U虏-Net)
-- **鍒嗗壊**: MobileSAM (via ultralytics)
-- **鎵撳寘**: Nuitka锛圵indows / Linux / macOS锛夈€佸師鐢?Android锛圓BI 鎷嗗寘锛夈€乄ASM/PWA
-
-## 鎵撳寘涓庡骞冲彴鍙戣
-
-妗岄潰绔敱 `build_nuitka.py` 鎸夌郴缁熺敓鎴愬搴斿簲鐢ㄦ牸寮忥紙Windows `rembg-ui.exe` / Linux `rembg-ui.bin` / macOS `rembg-ui.app`锛孋I 鍘嬬缉涓?`.app.zip`锛夈€侫ndroid 浣跨敤鐙珛鍘熺敓绔晶瀹炵幇锛屾寜 ABI 鎷嗗垎 APK 骞跺悓鏃剁敓鎴?AAB锛涘師鐢熺鏀寔鍗曞浘銆佹渶澶?10 寮犻『搴忔壒澶勭悊銆侀噸鍚仮澶嶃€佺郴缁熷垎浜拰 ZIP 娓呭崟瀵煎嚭锛屽苟鍙湪鏈満楠岃瘉 `ol1` 鎺堟潈銆佹樉绀哄拰鎵ｅ噺鏈堝害棰濆害锛岃仈缃戞椂鍒锋柊鎵樼鎾ら攢鐘舵€併€傛祻瑙堝櫒鐗堟瀯寤轰负鍙畨瑁呯殑 WASM PWA銆?
-
-```powershell
-# Windows - Nuitka锛堜骇鐗?dist/rembg-ui.dist/rembg-ui.exe锛?
-.\nuitka.ps1
-# Windows - PyInstaller锛堝鐢級
-.\pyinstaller.ps1
-```
-
-```bash
-# Linux - Nuitka锛堜骇鐗?dist/Rembg-UI-linux.tar.gz锛?
-./build_nuitka_linux.sh
-```
-
-```bash
-# macOS - Nuitka锛堜骇鐗?dist/rembg-ui.app锛岄渶鍦?macOS 涓婃墽琛岋級
-uv run python build_nuitka.py release
-```
-
-```powershell
-# Android - ABI 鎷嗗垎 APK + AAB锛圝DK 17銆丄ndroid SDK 35锛?
-cd android
-./gradlew.bat :app:assembleRelease :app:bundleRelease
-```
-
-CI 浼氬湪鍚屼竴鐗堟湰 tag 涓嬫瀯寤?Windows / Linux / macOS / Android 浜х墿骞跺彂甯冨埌鍚屼竴 Release锛沇ASM PWA 鐢?`web` workflow 鏋勫缓锛孭ages 绔欑偣鍚屾 `web/dist`锛堣 `.github/workflows/build.yml`銆乣.github/workflows/web.yml`锛夈€侫ndroid 鐨勭鍚嶅瘑閽ュ彧浠?Actions secrets 娉ㄥ叆锛屾湭閰嶇疆鏃朵細鏄庣‘浜у嚭 unsigned 鍖咃紝璇﹁ [`android/README.md`](android/README.md)銆侰UDA 妗岄潰鍖呬綋绉緢澶э紝鍙湁鎵嬪姩杩愯 `Build & Release` 骞跺嬀閫?`include_cuda` 鎵嶄細鏋勫缓锛屼笉浼氶樆濉為粯璁?CPU / Android 鍙戝竷銆傚畬鏁磋竟鐣岃 [`docs/platform-matrix.md`](docs/platform-matrix.md)銆?
-
-## 椤圭洰缁撴瀯
-
-```
-rembg-ui/
-鈹溾攢鈹€ main.py                  # 搴旂敤鍏ュ彛 + API 璺敱锛堝惎鍔ㄣ€佹祻瑙堝櫒銆佹ā鍨嬨€佹姞鍥俱€丼AM銆佺綉缁滐級
-鈹溾攢鈹€ sponsor/                 # 璧炲姪涓庢暀绋嬫ā鍧楋紙FastAPI Router + 鍓嶇娉ㄥ叆锛?
-鈹溾攢鈹€ processors/              # 澶勭悊鍣ㄦā鍧?
-鈹?  鈹溾攢鈹€ sam_processor.py     # MobileSAM 鍒嗗壊
-鈹?  鈹溾攢鈹€ fastsam.py           # FastSAM锛堝鐢級
-鈹?  鈹斺攢鈹€ cloth_seg.py         # 鏈嶈瑙ｆ瀽锛堝鐢級
-鈹溾攢鈹€ frontend/                # 鍓嶇闈欐€佽祫婧?
-鈹?  鈹斺攢鈹€ index.html           # 鍗曟枃浠?UI锛堝搷搴斿紡 + 瑙﹀睆 + 鍐呭祵绂荤嚎浜岀淮鐮侊級
-鈹溾攢鈹€ build_nuitka.py          # Nuitka 璺ㄥ钩鍙版瀯寤鸿剼鏈紙鎸夊钩鍙扮敓鎴愬弬鏁帮級
-鈹溾攢鈹€ build_nuitka_linux.sh    # Linux Nuitka 鎵撳寘 + 鍘嬬缉
-鈹溾攢鈹€ nuitka.ps1               # Windows Nuitka 鎵撳寘鑴氭湰
-鈹溾攢鈹€ pyinstaller.ps1          # Windows PyInstaller 鎵撳寘鑴氭湰
-鈹溾攢鈹€ android/                 # 鍘熺敓 Android 绔紙ONNX Runtime锛孉BI 鎷嗗寘锛?
-鈹溾攢鈹€ web/                     # WASM/PWA 娴忚鍣ㄧ
-鈹斺攢鈹€ pyproject.toml           # 椤圭洰閰嶇疆锛坲v锛?
-```
+遇到问题请在 [GitHub Issues](https://github.com/lilyco-42/rembg-ui/issues) 提交系统版本、安装包版本与终端错误日志。
