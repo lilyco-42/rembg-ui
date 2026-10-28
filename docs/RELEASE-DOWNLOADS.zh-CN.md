@@ -15,7 +15,7 @@
 | Android ARM32 | `Rembg-UI-android-armeabi-v7a.apk` | 适用于支持 armeabi-v7a 的旧设备。 |
 | Android x86_64 | `Rembg-UI-android-x86_64.apk` | 通常用于兼容的模拟器或 x86_64 设备。 |
 | Android 商店渠道 | `Rembg-UI-android.aab` | AAB 不是用户可直接安装的 APK，需 Play 分发及签名。 |
-| iOS / iPadOS | [Web/PWA 版](https://lilyco-42.github.io/rembg-ui/) | Safari 访问后“分享 → 添加到主屏幕”。**目前没有已构建、签名并发布的 iOS IPA**；PWA 不是原生 IPA。 |
+| iOS / iPadOS | [Web/PWA 版](https://lain42.top/downloads/rembg-ui/app/index.html) | Safari 访问后“分享 → 添加到主屏幕”。**目前没有已构建、签名并发布的 iOS IPA**；PWA 不是原生 IPA。 |
 
 ## 国内下载与 WebGPU 说明
 
