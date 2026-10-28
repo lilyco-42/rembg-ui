@@ -942,6 +942,7 @@
         <button id="runBtn" class="btn btn-primary" onclick="processImage()" disabled>
             ⚡ 开始抠图
         </button>
+        <button class="btn" style="background:#304b74;color:#fff;margin-top:6px" onclick="openLocalRepair()" id="localRepairBtn" title="局部恢复误删细节，或擦除残留背景">🖌 局部恢复 / 擦除</button>
         <button id="downloadBtn" class="btn btn-success" onclick="downloadResult()" disabled>
             💾 保存结果
         </button>
@@ -2526,6 +2527,119 @@
             const x = Math.round((e.clientX - rect.left) * scaleX);
             const y = Math.round((e.clientY - rect.top) * scaleY);
             addSamPoint(x, y);
+        }
+
+
+        // Edit the alpha mask directly; preserve the original RGB where restored.
+        // This is distinct from SAM re-segmentation: no model call or GPU is needed.
+        async function openLocalRepair() {
+            const original = document.getElementById("origImg");
+            const result = document.getElementById("resultImg");
+            if (!resultBase64 || !original.complete || !original.naturalWidth) {
+                document.getElementById("statusText").textContent = "请先载入原图并完成抠图，再局部修复";
+                return;
+            }
+            let src, mask;
+            try {
+                [src, mask] = await Promise.all([createImageBitmap(original), fetch(resultBase64).then(r => r.blob()).then(createImageBitmap)]);
+            } catch (e) {
+                document.getElementById("statusText").textContent = "修复编辑器无法读取图片：" + e.message;
+                return;
+            }
+            if (src.width !== mask.width || src.height !== mask.height) {
+                src.close(); mask.close();
+                document.getElementById("statusText").textContent = "原图与结果尺寸不同，请先重新处理相同尺寸的图片";
+                return;
+            }
+            const dialog = document.createElement("dialog");
+            dialog.setAttribute("aria-label", "局部修复编辑器");
+            dialog.style.cssText = "max-width:min(1100px,96vw);width:100%;max-height:94vh;border:1px solid #456;border-radius:12px;background:#19243b;color:white;padding:16px";
+            dialog.innerHTML = `
+                <h3 style="margin:0 0 8px">🖌 局部修复 · 画笔恢复右手或擦除背景</h3>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+                  <label>工具 <select id="repairMode"><option value="restore">恢复原图（右手、头发等）</option><option value="erase">擦除背景残留</option></select></label>
+                  <label>笔刷 <input id="repairSize" type="range" min="2" max="180" value="36"><output id="repairSizeText">36 px</output></label>
+                  <button type="button" id="repairUndo">↶ 撤销</button>
+                  <button type="button" id="repairRedo">↷ 重做</button>
+                  <button type="button" id="repairCancel">取消</button>
+                  <button type="button" id="repairSave" style="background:#28a76b;color:white">保存修复</button>
+                </div>
+                <p style="font-size:12px;margin:0 0 8px;color:#bbc">在画布上涂抹要恢复的右手，或选择擦除清理多余背景。仅改动笔刷覆盖区域；Ctrl+Z 撤销，Ctrl+Shift+Z 重做。</p>
+                <div style="overflow:auto;max-height:65vh;text-align:center;background:repeating-conic-gradient(#303c58 0 25%,#26314b 0 50%) 0/20px 20px">
+                  <canvas id="repairCanvas" style="max-width:100%;height:auto;touch-action:none;cursor:crosshair;display:block;margin:auto"></canvas>
+                </div>`;
+            document.body.append(dialog);
+            const canvas = dialog.querySelector("#repairCanvas");
+            canvas.width = mask.width; canvas.height = mask.height;
+            const ctx = canvas.getContext("2d", {willReadFrequently:true});
+            ctx.drawImage(mask, 0, 0);
+            const history = [ctx.getImageData(0, 0, canvas.width, canvas.height)];
+            let index = 0, drawing = false, last = null, closed = false;
+            const mode = dialog.querySelector("#repairMode");
+            const size = dialog.querySelector("#repairSize");
+            const undo = dialog.querySelector("#repairUndo"), redo = dialog.querySelector("#repairRedo");
+            function buttons(){undo.disabled = index === 0;redo.disabled = index === history.length-1;}
+            function snapshot(){
+                history.splice(index+1);
+                history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+                if(history.length>12) history.shift();
+                index=history.length-1; buttons();
+            }
+            function applyHistory(delta){
+                const next=index+delta;
+                if(next<0||next>=history.length)return;
+                index=next;ctx.putImageData(history[index],0,0);buttons();
+            }
+            const pos = e => {
+                const r=canvas.getBoundingClientRect();
+                return {x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height};
+            };
+            function dab(a,b) {
+                const radius=Number(size.value)/2;
+                ctx.save();
+                ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+                ctx.lineWidth=Math.max(1,radius*2);ctx.lineCap="round";ctx.lineJoin="round";
+                if(mode.value==="erase"){
+                    ctx.globalCompositeOperation="destination-out";ctx.strokeStyle="#000";ctx.stroke();
+                    ctx.beginPath();ctx.arc(b.x,b.y,radius,0,Math.PI*2);ctx.fillStyle="#000";ctx.fill();
+                }else{
+                    ctx.clip();
+                    ctx.globalCompositeOperation="source-over";
+                    ctx.drawImage(src,0,0);
+                    ctx.restore();
+                    ctx.save();
+                    ctx.beginPath();ctx.arc(b.x,b.y,radius,0,Math.PI*2);ctx.clip();
+                    ctx.drawImage(src,0,0);
+                }
+                ctx.restore();
+            }
+            canvas.addEventListener("pointerdown",e=>{
+                if(e.button!==0&&e.pointerType==="mouse")return;
+                drawing=true;last=pos(e);canvas.setPointerCapture(e.pointerId);dab(last,last);
+            });
+            canvas.addEventListener("pointermove",e=>{if(!drawing)return;const p=pos(e);dab(last,p);last=p;});
+            function finish(){if(drawing){drawing=false;last=null;snapshot();}}
+            canvas.addEventListener("pointerup",finish);
+            canvas.addEventListener("pointercancel",finish);
+            undo.onclick=()=>applyHistory(-1);redo.onclick=()=>applyHistory(1);
+            size.oninput=()=>dialog.querySelector("#repairSizeText").textContent=size.value+" px";
+            const key=e=>{
+                if(!(e.ctrlKey||e.metaKey)||e.key.toLowerCase()!=="z")return;
+                e.preventDefault();applyHistory(e.shiftKey?1:-1);
+            };
+            dialog.addEventListener("keydown",key);
+            function dispose(){if(closed)return;closed=true;src.close();mask.close();dialog.remove();}
+            dialog.querySelector("#repairCancel").onclick=()=>dialog.close();
+            dialog.addEventListener("close",dispose,{once:true});
+            dialog.querySelector("#repairSave").onclick=()=>{
+                finish();
+                resultBase64=canvas.toDataURL("image/png");
+                result.src=resultBase64;
+                document.getElementById("downloadBtn").disabled=false;
+                document.getElementById("statusText").textContent="✅ 局部修复已应用，点击保存结果可下载透明 PNG";
+                dialog.close();
+            };
+            buttons();dialog.showModal();
         }
 
         // SAM: click on result image → no-op (view only)
