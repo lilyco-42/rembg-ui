@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 if(process.env.GITHUB_ACTIONS!=='true')throw Error('Run public verification in GitHub Actions');
 const require=createRequire(new URL('../site-resources/package.json',import.meta.url));
 const {chromium}=require('@playwright/test');
@@ -12,14 +13,26 @@ const response=await fetch('https://lain42.top/downloads/manifest.json',{cache:'
 assert.equal(response.status,200);
 assert.deepEqual(await response.json(),expected);
 checks.push('public-catalog-equals-reviewed-126-item-manifest');
+function headers(raw){
+ const final=raw.split(/\r?\n\r?\n/).filter(block=>block.startsWith('HTTP/')).at(-1);
+ assert.ok(final,'No HTTP response headers');
+ const lines=final.split(/\r?\n/),status=Number(lines.shift().split(' ')[1]);
+ return {status,fields:Object.fromEntries(lines.filter(line=>line.includes(':')).map(line=>{const p=line.indexOf(':');return[line.slice(0,p).toLowerCase(),line.slice(p+1).trim()]}))};
+}
 for(const file of packages){
- const head=await fetch(file.url,{method:'HEAD',signal:AbortSignal.timeout(30000)});
- assert.equal(head.status,200);assert.equal(head.headers.get('content-length'),String(file.size));
+ // Use curl's explicit HEAD handling: the site's HEAD has the GET size and no
+ // body. Node 22's fetch rejected that response with a body-length mismatch.
+ const rawHead=execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','--head',file.url],{encoding:'utf8'});
+ await writeFile(`live-resource-evidence/${file.id}-head.txt`,rawHead);
+ const head=headers(rawHead);
+ assert.equal(head.status,200);assert.equal(head.fields['content-length'],String(file.size));
  for(const [start,end] of [[0,65535],[file.size-65536,file.size-1]]){
-  const part=await fetch(file.url,{headers:{Range:`bytes=${start}-${end}`},signal:AbortSignal.timeout(30000)});
-  if(part.status!==206){await part.body?.cancel();throw Error('Expected public partial download, got '+part.status)}
-  assert.equal(part.headers.get('content-range'),`bytes ${start}-${end}/${file.size}`);
-  const data=Buffer.from(await part.arrayBuffer());assert.equal(data.length,end-start+1);
+  const headerFile=`live-resource-evidence/${file.id}-${start}-headers.txt`;
+  const data=execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','--max-filesize','65536','--range',`${start}-${end}`,'--dump-header',headerFile,file.url],{maxBuffer:131072});
+  const part=headers(await readFile(headerFile,'utf8'));
+  assert.equal(part.status,206);
+  assert.equal(part.fields['content-range'],`bytes ${start}-${end}/${file.size}`);
+  assert.equal(data.length,end-start+1);
   if(start===0)assert.ok(data.subarray(0,4).equals(Buffer.from([0x50,0x4b,0x03,0x04])));
   else assert.ok(data.includes(Buffer.from([0x50,0x4b,0x05,0x06])),'ZIP end record missing');
  }
