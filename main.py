@@ -793,6 +793,11 @@ async def webgpu_u2netp_model(request: Request):
     from pathlib import Path
     if request.headers.get("X-Rembg-Token") != security.token:
         raise HTTPException(403, "Forbidden")
+    # Browser-side inference does not go through the quota-controlled Python
+    # remove endpoint. Keep the experimental API disabled for paid releases
+    # until usage accounting is integrated.
+    if os.environ.get("REMBG_ENABLE_WEBGPU_EXPERIMENT") != "1":
+        raise HTTPException(403, "WebGPU experiment disabled until accounting and validation are complete")
     path = Path.home() / ".u2net" / "u2netp.onnx"
     if not path.is_file():
         raise HTTPException(404, "WebGPU U2Netp model is not installed (~/.u2net/u2netp.onnx)")
