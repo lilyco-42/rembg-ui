@@ -1,0 +1,24 @@
+name: Verify published website resources
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-downloads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: site-resources
+      - run: npx playwright install --with-deps chromium
+        working-directory: site-resources
+      - run: node ops/verify-live-resources.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-resource-evidence
+          path: live-resource-evidence/
