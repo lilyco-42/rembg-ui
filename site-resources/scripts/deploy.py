@@ -17,7 +17,12 @@ args = parser.parse_args()
 stage, root = args.stage.resolve(), args.root.resolve()
 baseline = json.loads((stage / 'deployment-baseline.json').read_text())
 packages = json.loads((stage / 'packages.json').read_text())
-digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+def digest(path):
+    checksum = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            checksum.update(chunk)
+    return checksum.hexdigest()
 expected_existing = {'downloads/index.html','downloads/manifest.json','downloads/downloads.css'}
 assert set(baseline['existing']) == expected_existing
 assert baseline['new'] == ['downloads/rembg/index.html']

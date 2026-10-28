@@ -1,6 +1,8 @@
 name: Verify published website resources
 on:
   workflow_dispatch:
+  push:
+    paths: ['ops/verify-live-resources.mjs', '.github/workflows/verify-live-resources.yml']
 permissions:
   contents: read
 jobs:
