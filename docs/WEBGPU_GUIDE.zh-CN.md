@@ -75,3 +75,16 @@ Linux AMD 实机 GPU 推理通过；Windows 与 macOS 的 CI 仅验证模型转�
 ### CI 验证范围
 
 2026-10-28 Actions 运行 40707408217：Windows / Linux 的模型转换、离线运行时安装、CPU 输出验证通过；macOS Job 被取消，不能作为此轮成功结果。此前一轮 macOS 测试通过，但它仍不是苹果 GPU 的真实推理验证。请以 GitHub Actions 最新 run 为准。
+
+## 大模型 FP16 性能优化实验（2026-10-28）
+
+- 本机已有 BRIA RMBG ONNX 模型 **977 MiB**，算子图 **7,267 节点**，输入为动态 H×W；其推理计算量远高于 U2Netp，不可套用轻量模型的 92 ms 基准。
+- 新增保守的 FP16 转换工具：模型原始文件不覆盖、转换前检查可用内存和磁盘、转换后进行 ONNX checker，并且写入新文件。Linux 开发测试示例：
+
+      uv run --no-project --with onnx --with onnxconverter-common --with numpy python scripts/prepare_large_webgpu_fp16.py --input ~/.u2net/bria-rmbg.onnx --output ~/.u2net/bria-rmbg-webgpu-fp16.onnx
+
+- 本机转换成功，结果约 **490 MiB**（513,577,080 bytes），校验 SHA-256 为 `3f281cbac29e7a95eddd424ef565ea3cff88fe75546fe09901bd571fcdb3e2d4`。
+- 首次 Chromium / AMD RDNA 3 / ONNX Runtime WebGPU 1.22.0、512×512 全图前向测试 **失败**，页面只抛出异常码 `1046310184`，原因尚未定位，**没有大模型 WebGPU 的成功推理、性能或者画质成绩**。
+- FP16 轻模型独立试验：原模型 4.4 MiB → FP16 2.3 MiB，WebGPU 实际推理预热中位数约 81.5 ms（先前 FP32 92–93 ms），但 FP16 和 FP32 输出出现数值偏差，尚不能证明抠图画质一致。
+
+**后续优化顺序**：先找出大模型 GPU 加载异常的具体算子/图形节点并做正确性回归；然后做 512 与 1024 分辨率显存峰值、冷启动与热运行分析；接着核验 FP16 透明边缘质量；最后才考虑模型量化与按显卡能力自动选模型。不要在商用 UI 中展示尚未验证的大模型 GPU 加速。
