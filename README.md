@@ -1,3 +1,7 @@
+## WebGPU 推理实测与国内下载加速
+
+[简体中文：安装引导、镜像与 CPU/GPU 实测图表](docs/WEBGPU_GUIDE.zh-CN.md)（实验功能，非商用版）
+
 ﻿<p align="center">
   <img src="https://raw.githubusercontent.com/lilyco-42/rembg-ui/master/docs/logo.png" alt="rembg-ui" width="200">
 </p>
