@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-10-28",
+  "existing": {
+    "downloads/index.html": "b2c4bb28a352881f50c212f2c6059a7603b6cb620a0e84fd801a5e70f5951d6f",
+    "downloads/manifest.json": "50ee2dba5e5b04990055203f03b6690986d5ff8b5f6e8692843a603ddc9f1610",
+    "downloads/downloads.css": "e393fffa1ae6f38708f4313629ac5993bcf149b6c2f25261227ba8a5aa2cca99"
+  },
+  "new": [
+    "downloads/rembg/index.html"
+  ]
+}

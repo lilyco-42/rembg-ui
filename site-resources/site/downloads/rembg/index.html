@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>批量抠图软件下载与文件夹教程 · Rembg Studio</title>
+ <meta name="description" content="下载 Rembg Studio Windows 完整包：解压运行，选择整个文件夹，批量去背景并导出 ZIP。附版本、SHA-256 和更新入口。">
+ <link rel="stylesheet" href="/assets/studio.css"><link rel="stylesheet" href="/downloads/downloads.css">
+ <script src="/assets/studio.js?v=gptnav-20261015" defer></script>
+ <style>.rembg-guide{max-width:840px;margin:auto}.rembg-guide h1{font-size:clamp(30px,5vw,52px);line-height:1.2}.rembg-guide p,.rembg-guide li{line-height:1.85}.rembg-guide li{margin:12px 0}.rembg-guide code{overflow-wrap:anywhere;white-space:normal}.rembg-guide .download-actions{flex-wrap:wrap}.rembg-guide ol{padding-left:24px}.rembg-guide details{margin:14px 0}.rembg-guide summary{cursor:pointer;font-weight:600}</style>
+</head>
+<body data-studio-shell data-page-title="批量抠图下载">
+ <a class="skip-link" href="#main">跳到主要内容</a>
+ <main id="main" class="downloads-main rembg-guide">
+  <header class="resource-priority">
+   <div class="eyebrow">REMBG STUDIO / WINDOWS</div>
+   <h1>选一个文件夹，批量去掉图片背景。</h1>
+   <p>下载完整 ZIP，全部解压后运行 <code>rembg-ui.exe</code>。首次使用所选模型需要联网下载，图片处理在你的电脑上完成。</p>
+   <div class="download-actions"><a class="button brand" id="rembg-download" href="https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261011-0249/Rembg-UI-windows.zip">下载 Windows 版 ZIP →</a><a class="button secondary" href="https://github.com/lilyco-42/rembg-ui/releases/latest" target="_blank" rel="noopener noreferrer">官方最新版本 / 更新记录 ↗</a></div>
+   <p>本站文件：<strong>v0.2.7-20261011-0249</strong> · 2026-10-11 · Windows x64 · 664,874,833 字节（约 634 MiB）。本站提供截至 2026-10-28 核对的最新公开版，后续更新可查看上方官方入口。</p>
+   <div class="download-checksum">SHA-256：<code>32d18be09bbf2ece3e3044f3425956a50f184fcc9bd796e805765b02155d3cef</code></div>
+  </header>
+  <section aria-labelledby="steps-title">
+   <h2 id="steps-title">如何批量抠图？</h2>
+   <ol>
+    <li><strong>解压并打开。</strong>把 ZIP 完整解压到一个文件夹，再运行里面的 <code>rembg-ui.exe</code>，在自动打开的本机浏览器页面中操作。不要直接在压缩包中运行，也不要只复制 EXE。</li>
+    <li><strong>选择整个文件夹。</strong>在「商品图工作台」点击「选择整个文件夹」，把图片加入批量队列；也可以多选图片或拖入多张。非图片文件会被跳过。</li>
+    <li><strong>选择输出效果。</strong>只想保留原尺寸透明 PNG，可关闭「统一商品图」；需要统一尺寸时，在「交付规格」里选择画布、背景和格式。透明背景请选择 PNG 或 WebP。</li>
+    <li><strong>开始批量处理。</strong>点击「开始 / 继续 / 重试失败项」。首次使用模型请等待下载完成；处理过程中可查看成功、失败和待处理数量。</li>
+    <li><strong>检查并保存。</strong>检查结果后点击「下载交付 ZIP」。ZIP 只包含已完成且符合导出筛选的图片；失败项可重试，任务清单记录本批处理状态。</li>
+   </ol>
+   <p>每批数量与使用额度以客户端显示的试用或授权方案为准。自动去背景可能需要手动修边，复杂图片请逐张检查结果。</p>
+  </section>
+  <section aria-labelledby="questions-title">
+   <h2 id="questions-title">下载与更新常见问题</h2>
+   <details><summary>旧版没有「选择整个文件夹」怎么办？</summary><p>关闭旧程序，在新的文件夹中解压本站完整包，再运行新目录中的 EXE。确认打开的是该程序新启动的页面；有新版时可从官方更新记录核对后下载。</p></details>
+   <details><summary>下载后需要联网吗？</summary><p>首次使用所选模型需要联网下载模型文件；已经下载的模型用于本机处理。网络和模型下载失败时按客户端提示处理，不要把模型下载进度当成正在抠图。</p></details>
+   <details><summary>如何核对文件？</summary><p>Windows PowerShell 中执行 <code>Get-FileHash .\Rembg-UI-windows.zip -Algorithm SHA256</code>，把结果与上面的 SHA-256 对比。文件大小和摘要用于确认下载一致性。</p></details>
+   <details><summary>需要 macOS、Linux 或 Android 版？</summary><p>请查看<a href="https://github.com/lilyco-42/rembg-ui/releases/latest" target="_blank" rel="noopener noreferrer">项目官方 Releases</a>，按系统选择文件。本站此处的 ZIP 是 Windows x64 版。</p></details>
+  </section>
+  <section class="resource-priority"><h2>还需要手机投屏或 ADB？</h2><p>scrcpy 官方 Windows 完整包内含 ADB；独立 Android Platform-Tools 提供 Google 官方入口。</p><div class="download-actions"><a class="button secondary" href="/downloads/index.html?q=scrcpy">查看 scrcpy 与 ADB →</a><a class="button secondary" href="/downloads/index.html">全部软件下载 →</a></div></section>
+ </main>
+ <footer class="site-footer"><div class="site-footer-row"><span>© 2026 云枢智创工作室</span><a href="/downloads/index.html">软件下载中心</a></div></footer>
+</body>
+</html>

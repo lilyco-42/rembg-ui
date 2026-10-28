@@ -1,0 +1,20 @@
+[
+  {
+    "platform": "Windows x64",
+    "file": "Rembg-UI-windows.zip",
+    "size": 664874833,
+    "sha256": "32d18be09bbf2ece3e3044f3425956a50f184fcc9bd796e805765b02155d3cef",
+    "url": "https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261011-0249/Rembg-UI-windows.zip",
+    "id": "rembg-studio-windows",
+    "source_url": "https://github.com/lilyco-42/rembg-ui/releases/download/v0.2.7-20261011-0249/Rembg-UI-windows.zip"
+  },
+  {
+    "platform": "Windows x64",
+    "file": "scrcpy-win64-v5.0.1.zip",
+    "size": 11264634,
+    "sha256": "b12a2c4ee8be317422451fc7dcf8ee20a71b5ea7ef9ad73ddd825a25316227a5",
+    "url": "https://lain42.top/downloads/files/scrcpy/v5.0.1/scrcpy-win64-v5.0.1.zip",
+    "id": "scrcpy-windows",
+    "source_url": "https://github.com/Genymobile/scrcpy/releases/download/v5.0.1/scrcpy-win64-v5.0.1.zip"
+  }
+]

@@ -1,0 +1,70 @@
+name: Validate software resource downloads
+on:
+  workflow_dispatch:
+  push:
+    paths: ['site-resources/**', '.github/workflows/site-resources.yml']
+  pull_request:
+    paths: ['site-resources/**', '.github/workflows/site-resources.yml']
+permissions:
+  contents: read
+concurrency:
+  group: software-resources-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: site-resources
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Verify official archive hashes and packaged folder picker
+        run: python scripts/verify-packages.py
+      - name: Package static site files
+        run: tar -czf software-resources-site.tar.gz -C site .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: software-resources-site
+          path: site-resources/software-resources-site.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: software-resources-evidence
+          path: |
+            site-resources/screenshots/
+            site-resources/package-evidence/
+            site-resources/playwright-report/
+            site-resources/test-results/
+  scrcpy-windows:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check official Windows scrcpy and ADB executables
+        shell: pwsh
+        run: |
+          $entry = Get-Content site-resources/packages.json -Raw | ConvertFrom-Json | Where-Object id -eq 'scrcpy-windows'
+          Invoke-WebRequest $entry.source_url -OutFile scrcpy.zip
+          if ((Get-Item scrcpy.zip).Length -ne $entry.size) { throw 'Size mismatch' }
+          if ((Get-FileHash scrcpy.zip -Algorithm SHA256).Hash.ToLower() -ne $entry.sha256) { throw 'SHA mismatch' }
+          Expand-Archive scrcpy.zip -DestinationPath scrcpy
+          $binary = Get-ChildItem scrcpy -Filter scrcpy.exe -Recurse
+          $adb = Get-ChildItem scrcpy -Filter adb.exe -Recurse
+          if (@($binary).Count -ne 1 -or @($adb).Count -ne 1) { throw 'Missing or duplicate binaries' }
+          New-Item evidence -ItemType Directory | Out-Null
+          & $binary.FullName --version 2>&1 | Tee-Object evidence/scrcpy-version.txt
+          if ($LASTEXITCODE -ne 0) { throw 'scrcpy version failed' }
+          & $adb.FullName version 2>&1 | Tee-Object evidence/adb-version.txt
+          if ($LASTEXITCODE -ne 0) { throw 'ADB version failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: software-resources-windows-evidence
+          path: evidence/

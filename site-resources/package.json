@@ -1,0 +1,11 @@
+{
+  "name": "lain42-commercial-entry",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": { "@playwright/test": "1.63.0" }
+}
