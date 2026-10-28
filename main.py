@@ -424,30 +424,9 @@ async def network_info():
 @app.get("/api/models")
 async def list_models():
     """返回模型列表及本地安装状态"""
-    model_dir = os.path.expanduser("~/.u2net")
-    sessions = {
-        "bria-rmbg": {"name": "BRIA RMBG-2.0（商用需授权）", "group": "推荐", "size": "~170MB"},
-        "birefnet-general": {"name": "最强通用 (birefnet-general)", "group": "推荐", "size": "~970MB"},
-        "birefnet-massive": {"name": "海量数据版 (birefnet-massive)", "group": "推荐", "size": "~970MB"},
-        "birefnet-portrait": {"name": "人像专用 (birefnet-portrait)", "group": "人像", "size": "~970MB"},
-        "u2net_human_seg": {"name": "人体发丝 (u2net_human_seg)", "group": "人像", "size": "~170MB"},
-        "isnet-anime": {"name": "动漫插画 (isnet-anime)", "group": "动漫", "size": "~170MB"},
-        "birefnet-general-lite": {"name": "BiRefNet 轻量", "group": "极速", "size": "~170MB"},
-        "u2net": {"name": "通用均衡 (u2net)", "group": "极速", "size": "~170MB"},
-        "u2netp": {"name": "极速版 (u2netp)", "group": "极速", "size": "~50MB"},
-        "silueta": {"name": "最小体积 (silueta)", "group": "极速", "size": "~43MB"},
-        "isnet-general-use": {"name": "高精度通用", "group": "其他", "size": "~170MB"},
-        "u2net_cloth_seg": {"name": "服装解析", "group": "其他", "size": "~170MB"},
-        "birefnet-dis": {"name": "二分图像", "group": "其他", "size": "~970MB"},
-        "birefnet-hrsod": {"name": "高清显著", "group": "其他", "size": "~970MB"},
-        "birefnet-cod": {"name": "伪装检测", "group": "其他", "size": "~970MB"},
-        "sam": {"name": "SAM 通用分割", "group": "其他", "size": "~370MB"},
-    }
-    for key, info in sessions.items():
-        fpath = os.path.join(model_dir, f"{key}.onnx")
-        info["installed"] = os.path.exists(fpath)
-        info["path"] = fpath
-    return {"model_dir": model_dir, "models": sessions}
+    from model_catalog import catalog, model_dir
+    return {"model_dir": str(model_dir()), "models": catalog()}
+
 
 
 @app.post("/api/open-model-dir")
