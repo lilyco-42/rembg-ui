@@ -60,3 +60,18 @@ CachyOS，AMD HawkPoint 核显（浏览器报告 AMD RDNA 3），Chromium 156，
 ## 上架与跨平台限制
 
 Linux AMD 实机 GPU 推理通过；Windows 与 macOS 的 CI 仅验证模型转换、运行时下载和 CPU 输出一致性，并不能代表显卡实机运行。正式发布前，还需真实 Windows NVIDIA/Intel 及 macOS Apple GPU 实测、产品真实图片批处理与 UI 回归、商业许可和服务器端计费保障。
+
+### 浏览器 GPU 实机自动复测
+
+先准备已下载模型与运行时，并安装测试依赖：
+
+    npm install --no-save playwright-core
+    node scripts/bench_webgpu_u2netp.cjs
+
+测试脚本使用 Chromium 无头浏览器实际创建设备、执行 8 次 ORT WebGPU 前向推理，并检查输出的 320×320 共 102400 个数值；结果打印运行时间、GPU Adapter 厂商及架构。Linux 默认浏览器路径 /usr/bin/chromium；可通过 CHROMIUM_BINARY 环境变量指定其他平台安装位置。它需要 GPU 直通的图形运行环境，CI 不能只因脚本存在就宣称有真实 GPU。
+
+第二轮复测：AMD RDNA 3，会话创建 860.3 ms、预热中位数 93.1 ms（与首轮 92.2 ms 一致性较好）。
+
+### CI 验证范围
+
+2026-10-28 Actions 运行 40707408217：Windows / Linux 的模型转换、离线运行时安装、CPU 输出验证通过；macOS Job 被取消，不能作为此轮成功结果。此前一轮 macOS 测试通过，但它仍不是苹果 GPU 的真实推理验证。请以 GitHub Actions 最新 run 为准。
