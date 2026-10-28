@@ -167,7 +167,7 @@ _ensure_cuda_ldpath()
 PROVIDERS = _detect_providers()
 print(f"[GPU] Provider: {PROVIDERS[0]}")
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from PIL import Image
 from product_export import compose_product, validate_product_settings
 from rembg import new_session, remove
@@ -772,6 +772,31 @@ async def cloth_seg(request: Request, file: UploadFile = File(...)):
             _release_inference(request, entitlement, reservation, "cloth-seg")
         print(f"[Cloth Error] {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/webgpu-infer.mjs")
+async def webgpu_worker_script():
+    """Serve the same-origin WebGPU Worker used by the desktop browser UI."""
+    from pathlib import Path
+    folder = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+    target = folder / "frontend" / "webgpu-infer.mjs"
+    if not target.is_file():
+        raise HTTPException(404, "WebGPU Worker is not bundled")
+    return FileResponse(str(target), media_type="text/javascript", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/webgpu/u2netp-model")
+async def webgpu_u2netp_model(request: Request):
+    """Read an existing local U2Netp weight file; do not redistribute weights.
+    An auth header is required, including for access on local/LAN networks.
+    """
+    from pathlib import Path
+    if request.headers.get("X-Rembg-Token") != security.token:
+        raise HTTPException(403, "Forbidden")
+    path = Path.home() / ".u2net" / "u2netp.onnx"
+    if not path.is_file():
+        raise HTTPException(404, "WebGPU U2Netp model is not installed (~/.u2net/u2netp.onnx)")
+    return FileResponse(str(path), media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/", response_class=HTMLResponse)
