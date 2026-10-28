@@ -13,7 +13,9 @@ output = root / 'package-evidence'
 output.mkdir(exist_ok=True)
 results = []
 for entry in json.loads((root / 'packages.json').read_text()):
-    target = output / entry['file']
+    package_dir = root / 'verified-packages'
+    package_dir.mkdir(exist_ok=True)
+    target = package_dir / entry['file']
     digest = hashlib.sha256()
     size = 0
     with urllib.request.urlopen(entry['source_url'], timeout=120) as response, target.open('wb') as dest:
@@ -40,6 +42,5 @@ for entry in json.loads((root / 'packages.json').read_text()):
             assert any(Path(p).name == 'adb.exe' for p in files), 'ADB is absent'
         (output / (entry['id'] + '-contents.txt')).write_text('\n'.join(files) + '\n')
     results.append({'id': entry['id'], 'source_url': entry['source_url'], 'size': size, 'sha256': digest.hexdigest(), 'zip_crc': 'passed', 'files': len(files)})
-    target.unlink()
 (output / 'VERIFIED.json').write_text(json.dumps(results, indent=2) + '\n')
 print(json.dumps(results, indent=2))

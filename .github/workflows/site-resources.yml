@@ -34,6 +34,12 @@ jobs:
           name: software-resources-site
           path: site-resources/software-resources-site.tar.gz
       - uses: actions/upload-artifact@v4
+        with:
+          name: software-resources-verified-packages
+          path: site-resources/verified-packages/*.zip
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: software-resources-evidence
