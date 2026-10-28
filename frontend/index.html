@@ -1441,8 +1441,8 @@
                     alert("抠图失败: " + data.detail);
                 }
             } catch (error) {
-                document.getElementById("statusText").textContent = "❌ 网络错误";
-                alert("请求失败，请检查后端服务");
+                document.getElementById("statusText").textContent = "❌ 处理失败: " + (error?.message || String(error));
+                alert("处理失败: " + (error?.message || String(error)));
                 console.error(error);
             } finally {
                 document.getElementById("loadingMask").classList.remove("active");

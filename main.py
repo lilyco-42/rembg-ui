@@ -774,6 +774,25 @@ async def cloth_seg(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/vendor/ort/{asset_name}")
+async def webgpu_runtime_asset(asset_name: str):
+    """Serve pinned, local ORT WebGPU assets; do not rely on external CDN."""
+    from pathlib import Path
+    allowed = {"ort.webgpu.min.mjs", "ort-wasm-simd-threaded.jsep.mjs", "ort-wasm-simd-threaded.jsep.wasm"}
+    if asset_name not in allowed:
+        raise HTTPException(404, "Unknown runtime asset")
+    root = Path(__file__).resolve().parent
+    if hasattr(sys, "_MEIPASS"):
+        root = Path(sys._MEIPASS)
+    elif getattr(sys, "frozen", False):
+        root = Path(sys.executable).parent
+    path = root / "frontend" / "vendor" / "ort" / asset_name
+    if not path.is_file():
+        raise HTTPException(503, "Missing local WebGPU runtime; run scripts/install_webgpu_runtime.py")
+    mime = "application/wasm" if asset_name.endswith(".wasm") else "text/javascript"
+    return FileResponse(str(path), media_type=mime, headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/webgpu-infer.mjs")
 async def webgpu_worker_script():
     """Serve the same-origin WebGPU Worker used by the desktop browser UI."""

@@ -1,5 +1,5 @@
 // Actual browser GPU inference, not an ONNX Runtime CPU provider alias.
-const CDN='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
+const RUNTIME='/vendor/ort/';
 let session,ort;
 function normalize(rgba){
  const n=rgba.length/4,t=new Float32Array(n*3),mean=[.485,.456,.406],std=[.229,.224,.225];
@@ -12,8 +12,8 @@ self.onmessage=async({data})=>{
  try{
   if(!self.navigator?.gpu)throw Error('当前浏览器没有 WebGPU，无法启用 GPU 推理');
   if(!session){
-   ort=await import(CDN+'ort.webgpu.min.mjs');
-   ort.env.wasm.wasmPaths=CDN;
+   ort=await import(RUNTIME+'ort.webgpu.min.mjs');
+   ort.env.wasm.wasmPaths=RUNTIME;
    // Explicit webgpu only: never silently present CPU inference as GPU.
    session=await ort.InferenceSession.create(model,{executionProviders:['webgpu']});
   }
