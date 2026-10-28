@@ -740,6 +740,8 @@
         <!-- Rembg mode content -->
         <div id="rembgModeContent">
             <div class="section-label">模型</div>
+            <label style="display:block;margin:8px 0;color:#b6d4ee"><input type="checkbox" id="useWebGPU" style="width:auto" /> ⚡ 实验性 WebGPU AI 推理（U2Netp；独立于下方模型）</label>
+            <small style="display:block;color:var(--text-dim);margin:4px 0 9px">仅支持已安装 ~/.u2net/u2netp.onnx 的 WebGPU 浏览器。启用时不使用 BRIA/当前模型，也不宣称 CPU 为 GPU。</small>
             <select id="modelSelect">
                 <optgroup label="✨ 推荐">
                     <option value="bria-rmbg" selected>BRIA RMBG-2.0（商用需授权）</option>
@@ -1362,6 +1364,30 @@
         pc.addEventListener("mousemove", onCanvasMouseMove);
         pc.addEventListener("mouseup", onCanvasMouseUp);
 
+        let desktopGpuWorker, desktopGpuModel;
+        async function runDesktopWebGPU(file) {
+            if (!navigator.gpu) throw Error("浏览器 WebGPU 不可用；请在支持 WebGPU 的浏览器中打开");
+            if (document.getElementById("paramOnlyMask").checked) throw Error("WebGPU U2Netp 暂不支持仅输出遮罩");
+            if (!desktopGpuModel) {
+                const modelResponse = await fetch("/api/webgpu/u2netp-model", {headers:{"X-Rembg-Token":REMBG_TOKEN}});
+                if (!modelResponse.ok) throw Error("U2Netp 模型未安装或无权限（HTTP "+modelResponse.status+"）");
+                desktopGpuModel=await modelResponse.arrayBuffer();
+            }
+            if (!desktopGpuWorker) desktopGpuWorker=new Worker("/webgpu-infer.mjs",{type:"module"});
+            const bitmap=await createImageBitmap(file);
+            const id=crypto.randomUUID(),worker=desktopGpuWorker;
+            return new Promise((resolve,reject)=>{
+                const timeout=setTimeout(()=>{worker.removeEventListener("message",handle);reject(Error("GPU 推理超过 120 秒"));},120000);
+                function handle({data}){
+                    if(data.id!==id)return;
+                    clearTimeout(timeout);worker.removeEventListener("message",handle);
+                    if(data.error)reject(Error(data.error));else resolve(data);
+                }
+                worker.addEventListener("message",handle);
+                worker.postMessage({id,bitmap,model:desktopGpuModel},[bitmap]);
+            });
+        }
+
         async function processImage() {
             if (!selectedFile) return;
 
@@ -1382,6 +1408,20 @@
             formData.append("only_mask", document.getElementById("paramOnlyMask").checked);
 
             try {
+                if(document.getElementById("useWebGPU").checked){
+                    document.getElementById("statusText").textContent="WebGPU 正在执行 U2Netp GPU 推理…";
+                    const gpuResult=await runDesktopWebGPU(selectedFile);
+                    const dataUrl=await new Promise((resolve,reject)=>{
+                        const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(gpuResult.blob);
+                    });
+                    resultBase64=dataUrl;
+                    document.getElementById("resultImg").src=dataUrl;
+                    document.getElementById("resultImg").style.display="block";
+                    document.getElementById("resultEmpty").style.display="none";
+                    document.getElementById("downloadBtn").disabled=false;
+                    document.getElementById("statusText").textContent="✅ WebGPU AI（U2Netp）实际推理 "+gpuResult.elapsedMs+" ms";
+                    return;
+                }
                 const response = await fetch("/api/remove-bg", {
                     method: "POST",
                     headers: commercialHeaders(),
