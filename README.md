@@ -25,7 +25,7 @@
 
 - [GitHub Releases：正式版本与安装包](https://github.com/lilyco-42/rembg-ui/releases)
 - [LYCO 多平台下载页面](https://lain42.top/downloads/rembg-ui/index.html)
-- [Windows、Linux、macOS、Android、iOS 下载说明](docs/RELEASE-DOWNLOADS.zh-CN.md)
+- [Windows、Linux、macOS、Android、iOS 下载说明](https://github.com/lilyco-42/rembg-ui/blob/feat/desktop-webgpu-inference-20261028/docs/RELEASE-DOWNLOADS.zh-CN.md)
 
 | 平台 | 发布形式 |
 | --- | --- |
@@ -60,9 +60,9 @@ uv run python main.py --lan
 
 实验分支：[`feat/desktop-webgpu-inference-20261028`](https://github.com/lilyco-42/rembg-ui/tree/feat/desktop-webgpu-inference-20261028)
 
-- [WebGPU 中文使用教程、国内模型镜像、CPU/GPU 基准测试](docs/WEBGPU_GUIDE.zh-CN.md)
-- [本机 AMD RDNA 3 性能对比图](docs/benchmarks/cpu-vs-webgpu-rdna3.svg)
-- [原始测试数据](docs/benchmarks/amd-rdna3-2026-10-28.json)
+- [WebGPU 中文使用教程、国内模型镜像、CPU/GPU 基准测试](https://github.com/lilyco-42/rembg-ui/blob/feat/desktop-webgpu-inference-20261028/docs/WEBGPU_GUIDE.zh-CN.md)
+- [本机 AMD RDNA 3 性能对比图](https://github.com/lilyco-42/rembg-ui/blob/feat/desktop-webgpu-inference-20261028/docs/benchmarks/cpu-vs-webgpu-rdna3.svg)
+- [原始测试数据](https://github.com/lilyco-42/rembg-ui/blob/feat/desktop-webgpu-inference-20261028/docs/benchmarks/amd-rdna3-2026-10-28.json)
 - [技术预览 PR #11](https://github.com/lilyco-42/rembg-ui/pull/11)
 
 该实验使用浏览器 WebGPU 执行 U2Netp ONNX 推理。模型通过国内镜像优先下载、断点续传并校验 SHA-256，ONNX Runtime Web 运行时可离线打包。**商用额度计费尚未与客户端 GPU 执行路径统一，因此实验模式默认禁用，不应直接作为付费正式版销售。**
