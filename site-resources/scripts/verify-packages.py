@@ -36,7 +36,15 @@ for entry in json.loads((root / 'packages.json').read_text()):
             frontend = [p for p in files if p.replace('\\', '/').endswith('frontend/index.html')]
             assert len(frontend) == 1, 'Expected packaged UI'
             original = (root.parent / 'frontend/index.html').read_bytes()
-            assert archive.read(frontend[0]) == original, 'Packaged UI differs from pinned release source'
+            packaged = archive.read(frontend[0])
+            # Windows Git checkouts can materialize CRLF. Permit only that
+            # checkout transformation; all HTML/JS content must still match.
+            ui_proof = {'source_sha256': hashlib.sha256(original).hexdigest(),
+                        'packaged_sha256': hashlib.sha256(packaged).hexdigest(),
+                        'source_crlf': original.count(b'\r\n'), 'packaged_crlf': packaged.count(b'\r\n'),
+                        'normalized_match': packaged.replace(b'\r\n', b'\n') == original.replace(b'\r\n', b'\n')}
+            (output / 'rembg-packaged-ui.json').write_text(json.dumps(ui_proof, indent=2) + '\n')
+            assert ui_proof['normalized_match'], 'Packaged UI content differs from pinned release source'
             assert b'webkitdirectory' in original and '选择整个文件夹' in original.decode('utf-8')
         else:
             assert any(Path(p).name == 'adb.exe' for p in files), 'ADB is absent'
