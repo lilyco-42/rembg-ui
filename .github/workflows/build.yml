@@ -209,11 +209,31 @@ jobs:
             exit 1
           fi
 
+      - name: Build AppImage
+        run: |
+          set -euo pipefail
+          # appimagetool is an AppImage itself. Extract-and-run avoids FUSE on CI.
+          curl -fL --retry 3 \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+            -o /tmp/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool-x86_64.AppImage
+          printf '#!/usr/bin/env bash\nexec env APPIMAGE_EXTRACT_AND_RUN=1 /tmp/appimagetool-x86_64.AppImage "$@"\n' >/tmp/appimagetool
+          chmod +x /tmp/appimagetool
+          APPIMAGETOOL=/tmp/appimagetool bash build_appimage_linux.sh
+          test -s dist/Rembg-UI-linux-x86_64.AppImage
+          SIZE=$(stat -c%s dist/Rembg-UI-linux-x86_64.AppImage)
+          if [ "$SIZE" -ge 2147483648 ]; then
+            echo "::error::AppImage exceeds GitHub release 2 GiB per-asset limit"
+            exit 1
+          fi
+
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ steps.version.outputs.tag }}" dist/Rembg-UI-linux.tar.gz --clobber
+          gh release upload "${{ steps.version.outputs.tag }}" \
+            dist/Rembg-UI-linux.tar.gz \
+            dist/Rembg-UI-linux-x86_64.AppImage --clobber
 
   # macOS 构建：Nuitka 产出 .app 应用包，压缩为可下载的 .app.zip，追加到同一 Release。
   # 依赖 onnxruntime 已按平台区分（macOS 用 CPU 版），见 pyproject.toml 环境标记。
