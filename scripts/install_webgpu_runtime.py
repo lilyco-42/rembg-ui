@@ -2,6 +2,8 @@
 """Install pinned ORT WebGPU runtime assets from npmmirror (npm fallback)."""
 import argparse
 import pathlib
+import os
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -17,11 +19,14 @@ def main():
     if all((out/name).is_file() and (out/name).stat().st_size > 1000 for name in FILES):
         print("ORT WebGPU runtime cached:", out)
         return
+    npm = shutil.which("npm.cmd") if os.name == "nt" else shutil.which("npm")
+    if npm is None:
+        raise SystemExit("npm is required to bundle the offline WebGPU runtime")
     with tempfile.TemporaryDirectory() as temp:
         archive = pathlib.Path(temp)/f"onnxruntime-web-{VERSION}.tgz"
         for registry in ("https://registry.npmmirror.com", "https://registry.npmjs.org"):
             try:
-                subprocess.run(["npm", "pack", f"onnxruntime-web@{VERSION}", "--silent", "--pack-destination", temp, "--registry", registry],
+                subprocess.run([npm, "pack", f"onnxruntime-web@{VERSION}", "--silent", "--pack-destination", temp, "--registry", registry],
                                check=True, timeout=120)
                 break
             except (subprocess.SubprocessError, OSError) as error:
