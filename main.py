@@ -817,9 +817,9 @@ async def webgpu_u2netp_model(request: Request):
     # until usage accounting is integrated.
     if os.environ.get("REMBG_ENABLE_WEBGPU_EXPERIMENT") != "1":
         raise HTTPException(403, "WebGPU experiment disabled until accounting and validation are complete")
-    path = Path.home() / ".u2net" / "u2netp.onnx"
+    path = Path.home() / ".u2net" / "u2netp-webgpu.onnx"
     if not path.is_file():
-        raise HTTPException(404, "WebGPU U2Netp model is not installed (~/.u2net/u2netp.onnx)")
+        raise HTTPException(404, "Missing WebGPU-converted model. Run: uv run --no-project --with onnx python scripts/prepare_webgpu_model.py")
     return FileResponse(str(path), media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
 
 
