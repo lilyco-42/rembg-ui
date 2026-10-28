@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-28",
+  "machine": "CachyOS x86-64, AMD HawkPoint iGPU RDNA 3, Chromium 156",
+  "model": "U2Netp ONNX converted from original with ceil_mode fixed for 320x320",
+  "input": "1x3x320x320 float32; x[i] = sin(i * 0.007)",
+  "gpu": {
+    "backend": "Chromium WebGPU / ONNX Runtime Web 1.22.0",
+    "adapter_vendor": "amd",
+    "adapter_architecture": "rdna-3",
+    "session_create_ms": 751.1,
+    "runs_ms": [416.1,119.1,100.3,92.7,90.7,92.6,90.0,92.2]
+  },
+  "cpu": {
+    "backend": "ONNX Runtime CPU 1.31.1",
+    "runs_ms": {
+      "1": [462.2,440.3,377.7,369.3,365.0,391.5,392.1,391.7],
+      "2": [291.0,253.8,217.8,215.2,216.2,223.2,212.2,218.7],
+      "4": [182.5,154.2,133.6,135.8,143.4,138.2,140.3,140.4],
+      "8": [173.9,142.2,107.1,104.5,112.2,112.0,98.5,101.0]
+    }
+  },
+  "notes": "Warm median uses runs 4-8 of each process. No end-to-end image decoding/upload/PNG timings. Cold GPU first run differs from session initialization. Do not generalize to other GPUs."
+}

@@ -167,7 +167,7 @@ _ensure_cuda_ldpath()
 PROVIDERS = _detect_providers()
 print(f"[GPU] Provider: {PROVIDERS[0]}")
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from PIL import Image
 from product_export import compose_product, validate_product_settings
 from rembg import new_session, remove
@@ -772,6 +772,59 @@ async def cloth_seg(request: Request, file: UploadFile = File(...)):
             _release_inference(request, entitlement, reservation, "cloth-seg")
         print(f"[Cloth Error] {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/vendor/ort/{asset_name}")
+async def webgpu_runtime_asset(asset_name: str):
+    """Serve pinned, local ORT WebGPU assets; do not rely on external CDN."""
+    from pathlib import Path
+    allowed = {"ort.webgpu.min.mjs", "ort-wasm-simd-threaded.jsep.mjs", "ort-wasm-simd-threaded.jsep.wasm"}
+    if asset_name not in allowed:
+        raise HTTPException(404, "Unknown runtime asset")
+    root = Path(__file__).resolve().parent
+    if hasattr(sys, "_MEIPASS"):
+        root = Path(sys._MEIPASS)
+    elif getattr(sys, "frozen", False):
+        root = Path(sys.executable).parent
+    path = root / "frontend" / "vendor" / "ort" / asset_name
+    if not path.is_file():
+        raise HTTPException(503, "Missing local WebGPU runtime; run scripts/install_webgpu_runtime.py")
+    mime = "application/wasm" if asset_name.endswith(".wasm") else "text/javascript"
+    return FileResponse(str(path), media_type=mime, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/webgpu-infer.mjs")
+async def webgpu_worker_script():
+    """Serve the same-origin WebGPU Worker used by the desktop browser UI."""
+    from pathlib import Path
+    folder = Path(__file__).resolve().parent
+    if hasattr(sys, "_MEIPASS"):
+        folder = Path(sys._MEIPASS)
+    elif getattr(sys, "frozen", False):
+        folder = Path(sys.executable).parent
+    target = folder / "frontend" / "webgpu-infer.mjs"
+    if not target.is_file():
+        raise HTTPException(404, "WebGPU Worker is not bundled")
+    return FileResponse(str(target), media_type="text/javascript", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/webgpu/u2netp-model")
+async def webgpu_u2netp_model(request: Request):
+    """Read an existing local U2Netp weight file; do not redistribute weights.
+    An auth header is required, including for access on local/LAN networks.
+    """
+    from pathlib import Path
+    if request.headers.get("X-Rembg-Token") != security.token:
+        raise HTTPException(403, "Forbidden")
+    # Browser-side inference does not go through the quota-controlled Python
+    # remove endpoint. Keep the experimental API disabled for paid releases
+    # until usage accounting is integrated.
+    if os.environ.get("REMBG_ENABLE_WEBGPU_EXPERIMENT") != "1":
+        raise HTTPException(403, "WebGPU experiment disabled until accounting and validation are complete")
+    path = Path.home() / ".u2net" / "u2netp-webgpu.onnx"
+    if not path.is_file():
+        raise HTTPException(404, "Missing WebGPU-converted model. Run: uv run --no-project --with onnx python scripts/prepare_webgpu_model.py")
+    return FileResponse(str(path), media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -115,6 +115,9 @@ jobs:
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $tag"
 
+      - name: Install offline WebGPU runtime (China npm mirror first)
+        run: python scripts/install_webgpu_runtime.py
+
       - name: Build with Nuitka
         run: uv run python build_nuitka.py release
 
@@ -192,6 +195,9 @@ jobs:
         run: |
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
           echo "Version: ${{ needs.build-windows.outputs.tag }}"
+
+      - name: Install offline WebGPU runtime (China npm mirror first)
+        run: python scripts/install_webgpu_runtime.py
 
       - name: Build with Nuitka
         run: uv run python build_nuitka.py release
@@ -281,6 +287,9 @@ jobs:
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
           echo "Version: ${{ needs.build-windows.outputs.tag }}"
 
+      - name: Install offline WebGPU runtime (China npm mirror first)
+        run: python scripts/install_webgpu_runtime.py
+
       - name: Build with Nuitka
         env:
           # Nuitka 的自动 DMG 在部分 runner 上会生成只有 UDIF/XML 元数据的空镜像；
@@ -359,6 +368,9 @@ jobs:
         run: |
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
 
+      - name: Install offline WebGPU runtime (China npm mirror first)
+        run: python scripts/install_webgpu_runtime.py
+
       - name: Build with Nuitka
         run: uv run python build_nuitka.py release
 
@@ -417,6 +429,9 @@ jobs:
         shell: bash
         run: |
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Install offline WebGPU runtime (China npm mirror first)
+        run: python scripts/install_webgpu_runtime.py
 
       - name: Build with Nuitka
         run: uv run python build_nuitka.py release

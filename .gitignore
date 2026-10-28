@@ -34,3 +34,6 @@ tests/*
 需求.md
 
 sam_*.pt
+
+# Downloaded local WebGPU ONNX Runtime binaries
+/frontend/vendor/ort/
