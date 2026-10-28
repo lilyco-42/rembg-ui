@@ -797,7 +797,11 @@ async def webgpu_runtime_asset(asset_name: str):
 async def webgpu_worker_script():
     """Serve the same-origin WebGPU Worker used by the desktop browser UI."""
     from pathlib import Path
-    folder = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+    folder = Path(__file__).resolve().parent
+    if hasattr(sys, "_MEIPASS"):
+        folder = Path(sys._MEIPASS)
+    elif getattr(sys, "frozen", False):
+        folder = Path(sys.executable).parent
     target = folder / "frontend" / "webgpu-infer.mjs"
     if not target.is_file():
         raise HTTPException(404, "WebGPU Worker is not bundled")
