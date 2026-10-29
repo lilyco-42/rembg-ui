@@ -8,14 +8,41 @@ const MODEL_URL = new URL('./models/u2netp.onnx', import.meta.url).href;
 let ort = wasmOrt;
 let sessionPromise;
 let backend = 'wasm';
+let modelBytesPromise;
+async function fetchModel(onProgress) {
+ const response=await fetch(MODEL_URL);
+ if(!response.ok)throw Error('Model HTTP '+response.status);
+ const total=Number(response.headers.get('Content-Length'))||null;
+ if(!response.body) {
+  const bytes=await response.arrayBuffer();
+  onProgress(bytes.byteLength,total||bytes.byteLength);
+  return new Uint8Array(bytes);
+ }
+ const reader=response.body.getReader();
+ const chunks=[];let loaded=0;
+ for(;;){
+  const {done,value}=await reader.read();
+  if(done)break;
+  chunks.push(value);loaded+=value.byteLength;
+  onProgress(loaded,total);
+  if(loaded>512*1024*1024)throw Error('Model too large');
+ }
+ const output=new Uint8Array(loaded);let offset=0;
+ for(const chunk of chunks){output.set(chunk,offset);offset+=chunk.byteLength}
+ return output;
+}
 
-async function initializeSession() {
+
+async function initializeSession(onProgress) {
+  modelBytesPromise ??= fetchModel(onProgress);
+  let modelBytes;
+  try {modelBytes=await modelBytesPromise}catch(e){modelBytesPromise=undefined;throw e}
   if (self.navigator?.gpu) {
     try {
       const gpuOrt = await import(WEBGPU_RUNTIME);
       gpuOrt.env.wasm.numThreads = 1;
       gpuOrt.env.wasm.wasmPaths = WEBGPU_ASSETS;
-      const gpuSession = await gpuOrt.InferenceSession.create(MODEL_URL, {
+      const gpuSession = await gpuOrt.InferenceSession.create(modelBytes, {
         executionProviders: ['webgpu'],
       });
       ort = gpuOrt;
@@ -28,7 +55,7 @@ async function initializeSession() {
   }
   backend = 'wasm';
   ort = wasmOrt;
-  return wasmOrt.InferenceSession.create(MODEL_URL, { executionProviders: ['wasm'] });
+  return wasmOrt.InferenceSession.create(modelBytes, { executionProviders: ['wasm'] });
 }
 import {normalize,maskPixels} from './pixels.mjs?v=region-2';
 import {validateRegion} from './region.mjs?v=region-2';
@@ -43,7 +70,7 @@ self.onmessage=async ({data})=>{
   if(!['replace','add'].includes(mode))throw Error('无效的局部抠图方式');
   if(mode==='add'&&(!region||!(base instanceof Blob)))throw Error('添加局部需要已有透明底稿');
   self.postMessage({id,status:session?'正在抠图…':'正在初始化 WebGPU/WASM 与模型…'});
-  sessionPromise ??= initializeSession();
+  sessionPromise ??= initializeSession((received,total)=>self.postMessage({id,download:{received,total}}));
   try { session = await sessionPromise; }
   catch (error) { sessionPromise = undefined; throw error; }
   self.postMessage({id,status:backend === 'webgpu' ? 'WebGPU GPU 加速抠图中…' : 'WASM CPU 抠图中…'});

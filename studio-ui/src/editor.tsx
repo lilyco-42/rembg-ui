@@ -11,6 +11,8 @@ export function Editor({locale,models,onManageModels}:Props){
  const [file,setFile]=useState<File|null>(null),[source,setSource]=useState<string|null>(null);
  const [output,setOutput]=useState<string|null>(null),[busy,setBusy]=useState(false);
  const [problem,setProblem]=useState(""),[compare,setCompare]=useState(50);
+ const [transfer,setTransfer]=useState<{received:number;total:number|null}|null>(null);
+ const [stage,setStage]=useState("");
  const [selected,setSelected]=useState("u2netp");
  const pagesMode=import.meta.env.VITE_BROWSER_DEMO==="true";
  const workerRef=useRef<Worker|null>(null);
@@ -24,7 +26,7 @@ export function Editor({locale,models,onManageModels}:Props){
  }
  async function run(){
   if(!file||busy)return;
-  setBusy(true);setProblem("");setOutput(null);
+  setBusy(true);setProblem("");setOutput(null);setTransfer(null);setStage("");
   try{const body=new FormData();body.append("file",file);body.append("model_name",selected);
    if(pagesMode){
     const bitmap=await createImageBitmap(file);
@@ -34,7 +36,8 @@ export function Editor({locale,models,onManageModels}:Props){
     const png=await new Promise<Blob>((resolve,reject)=>{
      const timeout=setTimeout(()=>{worker.removeEventListener("message",receive);reject(new Error("Inference timed out"))},180000);
      const receive=(event:MessageEvent)=>{const data=event.data;if(data.id!==id)return;
-      if(data.status)return;
+      if(data.download){setTransfer(data.download);return;}
+      if(data.status){setStage(data.status);return;}
       clearTimeout(timeout);worker.removeEventListener("message",receive);
       if(data.error)reject(new Error(data.error));else if(data.transparent instanceof Blob)resolve(data.transparent);else reject(new Error("Invalid inference result"));
      };
@@ -72,7 +75,11 @@ export function Editor({locale,models,onManageModels}:Props){
      {!available.length&&<button className="mt-2 text-left text-xs text-sky-300 underline" onClick={onManageModels}>{t("editorNoModel")}</button>}
     </div>
     <Button className="w-full py-3" onClick={run} disabled={!file||!available.length||busy}><Play size={16}/>{busy?t("editorRunning"):t("editorRun")}</Button>
-    {busy&&<div role="status" className="text-xs text-sky-300">{t("editorRunning")}</div>}
+    {busy&&<div role="status" className="space-y-2 text-xs text-sky-300">
+     <p>{stage||t("editorRunning")}</p>
+     {pagesMode&&transfer&&<><progress className="h-2 w-full accent-sky-400" max={transfer.total||undefined} value={transfer.total?transfer.received:undefined} aria-label={locale==="zh-CN"?"模型下载进度":"Model download progress"}/>
+      <p>{(transfer.received/1048576).toFixed(1)} MiB{transfer.total?` / ${(transfer.total/1048576).toFixed(1)} MiB · ${Math.floor(transfer.received/transfer.total*100)}%`:""}</p></>}
+    </div>}
     {problem&&<p role="alert" className="rounded-lg border border-rose-700 bg-rose-950/40 p-3 text-sm text-rose-200">{problem}</p>}
     <Button variant="outline" className="w-full" disabled={!output||busy} onClick={save}><Download size={16}/>{t("editorDownload")}</Button>
     <div className="border-t border-slate-700 pt-3 text-xs leading-6 text-slate-400"><ImagePlus size={16} className="mr-1 inline"/>{t("editorHint")}</div>
