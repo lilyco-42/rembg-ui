@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from "react";
 import {Download,ImagePlus,Play,RotateCcw,UploadCloud} from "lucide-react";
 import {Button} from "./components/ui/button";
 import {Card,CardContent} from "./components/ui/card";
+import {recommendedModels} from "./recommended-models";
 import {downloadModel,mirrorCandidates} from "./model-sources";
 import {translate,type Locale,type MessageKey} from "./i18n/messages";
 
@@ -19,12 +20,14 @@ export function Editor({locale,models,onManageModels}:Props){
  const workerRef=useRef<Worker|null>(null);
  const [customModel,setCustomModel]=useState<File|null>(null);
  const [modelUrl,setModelUrl]=useState("");
+ const [recommendedData,setRecommendedData]=useState<Record<string,ArrayBuffer>>({});
  const [customData,setCustomData]=useState<ArrayBuffer|null>(null);
  const [modelStatus,setModelStatus]=useState("");
  const [modelBusy,setModelBusy]=useState(false);
  const customFileRef=useRef<HTMLInputElement>(null);
  const available=pagesMode?[
   ["u2netp",{installed:true,name:"U2Netp"}] as [string,Model],
+  ...recommendedModels.filter(m=>m.id!=="u2netp"&&recommendedData[m.id]).map(m=>[m.id,{installed:true,name:m.name}] as [string,Model]),
   ...(customData?[["user-onnx",{installed:true,name:customModel?.name||"Custom ONNX"}] as [string,Model]]:[])
  ]:Object.entries(models).filter(([,m])=>m.installed);
  useEffect(()=>{if(available.length&&!available.some(([id])=>id===selected))setSelected(available[0][0]);},[models,selected]);
@@ -53,7 +56,7 @@ export function Editor({locale,models,onManageModels}:Props){
       if(data.error)reject(new Error(data.error));else if(data.transparent instanceof Blob)resolve(data.transparent);else reject(new Error("Invalid inference result"));
      };
      worker.addEventListener("message",receive);
-     const bytes=selected==="user-onnx"&&customData?customData.slice(0):undefined;
+     const bytes=selected==="user-onnx"&&customData?customData.slice(0):recommendedData[selected]?.slice(0);
      worker.postMessage({id,bitmap,modelId:selected,modelBytes:bytes},bytes?[bitmap,bytes]:[bitmap]);
     });
     setOutput(await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Cannot read PNG"));reader.readAsDataURL(png)}));
@@ -86,6 +89,18 @@ export function Editor({locale,models,onManageModels}:Props){
       {available.map(([id])=><option value={id} key={id}>{id}</option>)}</select>
      {!available.length&&<button className="mt-2 text-left text-xs text-sky-300 underline" onClick={onManageModels}>{t("editorNoModel")}</button>}
     </div>
+    {pagesMode&&<div className="space-y-2 rounded-lg border border-slate-700 p-3 text-xs">
+      <p className="font-semibold">{locale==="zh-CN"?"推荐模型 · 按用途选择":"Recommended models"}</p>
+      {recommendedModels.map(m=><div key={m.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-800/70 p-2">
+       <div><p className="font-semibold">{m.name}</p><p className="text-slate-400">{locale==="zh-CN"?m.zh:m.en}</p><p className="text-[10px] text-amber-300">{m.license}</p></div>
+       <Button variant="outline" disabled={busy||modelBusy} onClick={async()=>{
+        if(!m.url||recommendedData[m.id]){setSelected(m.id);return}
+        setModelBusy(true);setProblem("");setTransfer(null);setModelStatus((locale==="zh-CN"?"测速并下载 ":"Downloading ")+m.name);
+        try{const data=await downloadModel(mirrorCandidates(m.url),setTransfer);setRecommendedData(v=>({...v,[m.id]:data}));setSelected(m.id);setModelStatus(m.name+" ✓")}
+        catch(e){setProblem(String(e))}finally{setModelBusy(false)}
+       }}>{m.id==="u2netp"||recommendedData[m.id]?(locale==="zh-CN"?"选择":"Use"):(locale==="zh-CN"?"下载":"Get")}</Button>
+      </div>)}
+     </div>}
     {pagesMode&&<div className="space-y-2 rounded-lg border border-slate-700 p-3 text-xs">
       <p className="font-semibold">{locale==="zh-CN"?"第三方 ONNX 模型（U2Netp 兼容）":"Third-party ONNX (U2Netp-compatible)"}</p>
       <p className="text-slate-400">{locale==="zh-CN"?"仅支持 RGB 320×320 输入和单通道 320×320 遮罩输出；不保证其他架构兼容。":"Requires RGB 320×320 input and a 320×320 single-channel mask."}</p>
