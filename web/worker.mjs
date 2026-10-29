@@ -9,6 +9,7 @@ let ort = wasmOrt;
 let sessionPromise;
 let backend = 'wasm';
 let modelBytesPromise;
+let activeModel='bundled';
 async function fetchModel(onProgress) {
  const response=await fetch(MODEL_URL);
  if(!response.ok)throw Error('Model HTTP '+response.status);
@@ -33,8 +34,8 @@ async function fetchModel(onProgress) {
 }
 
 
-async function initializeSession(onProgress) {
-  modelBytesPromise ??= fetchModel(onProgress);
+async function initializeSession(onProgress, suppliedBytes) {
+  modelBytesPromise ??= suppliedBytes ? Promise.resolve(new Uint8Array(suppliedBytes)) : fetchModel(onProgress);
   let modelBytes;
   try {modelBytes=await modelBytesPromise}catch(e){modelBytesPromise=undefined;throw e}
   if (self.navigator?.gpu) {
@@ -63,14 +64,17 @@ wasmOrt.env.wasm.numThreads=1;
 wasmOrt.env.wasm.wasmPaths=new URL('./vendor/',import.meta.url).href;
 let session;
 self.onmessage=async ({data})=>{
- const {id,bitmap,size,region,mode='replace',base}=data;
+ const {id,bitmap,size,region,mode='replace',base,modelId='bundled',modelBytes}=data;
  let input, outputs,small,crop,cutout,baseBitmap;
  try {
   if(region)validateRegion(region,bitmap.width,bitmap.height);
   if(!['replace','add'].includes(mode))throw Error('无效的局部抠图方式');
   if(mode==='add'&&(!region||!(base instanceof Blob)))throw Error('添加局部需要已有透明底稿');
   self.postMessage({id,status:session?'正在抠图…':'正在初始化 WebGPU/WASM 与模型…'});
-  sessionPromise ??= initializeSession((received,total)=>self.postMessage({id,download:{received,total}}));
+  if(activeModel!==modelId){
+    session?.release?.();session=undefined;sessionPromise=undefined;modelBytesPromise=undefined;activeModel=modelId;
+  }
+  sessionPromise ??= initializeSession((received,total)=>self.postMessage({id,download:{received,total}}),modelBytes);
   try { session = await sessionPromise; }
   catch (error) { sessionPromise = undefined; throw error; }
   self.postMessage({id,status:backend === 'webgpu' ? 'WebGPU GPU 加速抠图中…' : 'WASM CPU 抠图中…'});

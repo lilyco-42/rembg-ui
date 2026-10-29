@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from "react";
 import {Download,ImagePlus,Play,RotateCcw,UploadCloud} from "lucide-react";
 import {Button} from "./components/ui/button";
 import {Card,CardContent} from "./components/ui/card";
+import {downloadModel,mirrorCandidates} from "./model-sources";
 import {translate,type Locale,type MessageKey} from "./i18n/messages";
 
 type Model={installed:boolean;name:string;purpose?:string};
@@ -16,7 +17,16 @@ export function Editor({locale,models,onManageModels}:Props){
  const [selected,setSelected]=useState("u2netp");
  const pagesMode=import.meta.env.VITE_BROWSER_DEMO==="true";
  const workerRef=useRef<Worker|null>(null);
- const available=pagesMode?[["u2netp",{installed:true,name:"U2Netp"}] as [string,Model]]:Object.entries(models).filter(([,m])=>m.installed);
+ const [customModel,setCustomModel]=useState<File|null>(null);
+ const [modelUrl,setModelUrl]=useState("");
+ const [customData,setCustomData]=useState<ArrayBuffer|null>(null);
+ const [modelStatus,setModelStatus]=useState("");
+ const [modelBusy,setModelBusy]=useState(false);
+ const customFileRef=useRef<HTMLInputElement>(null);
+ const available=pagesMode?[
+  ["u2netp",{installed:true,name:"U2Netp"}] as [string,Model],
+  ...(customData?[["user-onnx",{installed:true,name:customModel?.name||"Custom ONNX"}] as [string,Model]]:[])
+ ]:Object.entries(models).filter(([,m])=>m.installed);
  useEffect(()=>{if(available.length&&!available.some(([id])=>id===selected))setSelected(available[0][0]);},[models,selected]);
  useEffect(()=>()=>{workerRef.current?.terminate()},[]);
  useEffect(()=>{if(!file){setSource(null);return}const url=URL.createObjectURL(file);setSource(url);return()=>URL.revokeObjectURL(url)},[file]);
@@ -30,6 +40,7 @@ export function Editor({locale,models,onManageModels}:Props){
   try{const body=new FormData();body.append("file",file);body.append("model_name",selected);
    if(pagesMode){
     const bitmap=await createImageBitmap(file);
+    if(selected==="user-onnx"&&!customData)throw Error("Import a model first");
     const worker=workerRef.current??new Worker(new URL(import.meta.env.BASE_URL+"browser/worker.mjs",location.origin),{type:"module"});
     workerRef.current=worker;
     const id=crypto.randomUUID();
@@ -42,7 +53,8 @@ export function Editor({locale,models,onManageModels}:Props){
       if(data.error)reject(new Error(data.error));else if(data.transparent instanceof Blob)resolve(data.transparent);else reject(new Error("Invalid inference result"));
      };
      worker.addEventListener("message",receive);
-     worker.postMessage({id,bitmap},[bitmap]);
+     const bytes=selected==="user-onnx"&&customData?customData.slice(0):undefined;
+     worker.postMessage({id,bitmap,modelId:selected,modelBytes:bytes},bytes?[bitmap,bytes]:[bitmap]);
     });
     setOutput(await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Cannot read PNG"));reader.readAsDataURL(png)}));
    }else{
@@ -74,6 +86,19 @@ export function Editor({locale,models,onManageModels}:Props){
       {available.map(([id])=><option value={id} key={id}>{id}</option>)}</select>
      {!available.length&&<button className="mt-2 text-left text-xs text-sky-300 underline" onClick={onManageModels}>{t("editorNoModel")}</button>}
     </div>
+    {pagesMode&&<div className="space-y-2 rounded-lg border border-slate-700 p-3 text-xs">
+      <p className="font-semibold">{locale==="zh-CN"?"第三方 ONNX 模型（U2Netp 兼容）":"Third-party ONNX (U2Netp-compatible)"}</p>
+      <p className="text-slate-400">{locale==="zh-CN"?"仅支持 RGB 320×320 输入和单通道 320×320 遮罩输出；不保证其他架构兼容。":"Requires RGB 320×320 input and a 320×320 single-channel mask."}</p>
+      <input ref={customFileRef} className="hidden" type="file" accept=".onnx" onChange={async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>512*1024*1024){setProblem("Model exceeds 512 MiB");return}setCustomModel(f);setCustomData(await f.arrayBuffer());setSelected("user-onnx");setModelStatus(f.name)}}/>
+      <Button variant="outline" className="w-full" disabled={modelBusy||busy} onClick={()=>customFileRef.current?.click()}>{locale==="zh-CN"?"导入本地 ONNX":"Import local ONNX"}</Button>
+      <input className="w-full rounded-md border border-slate-600 bg-slate-900 p-2" type="url" placeholder="https://huggingface.co/.../model.onnx" value={modelUrl} onChange={e=>setModelUrl(e.target.value)}/>
+      <Button variant="outline" className="w-full" disabled={modelBusy||busy||!modelUrl.trim()} onClick={async()=>{setModelBusy(true);setProblem("");setTransfer(null);try{
+        const urls=mirrorCandidates(modelUrl);setModelStatus(locale==="zh-CN"?"镜像测速并下载中…":"Benchmarking mirrors and downloading…");
+        const data=await downloadModel(urls,setTransfer);setCustomModel(new File([data],"downloaded.onnx"));setCustomData(data);setSelected("user-onnx");setModelStatus(locale==="zh-CN"?"模型已下载，点击一键抠图":"Model ready");
+       }catch(e){setProblem(String(e))}finally{setModelBusy(false)}}}>{locale==="zh-CN"?"智能测速并下载":"Benchmark mirrors & download"}</Button>
+      {modelStatus&&<p role="status" className="text-sky-300">{modelStatus}</p>}
+      {modelBusy&&transfer&&<><progress className="h-2 w-full accent-sky-400" value={transfer.received} max={transfer.total||undefined}/><p>{(transfer.received/1048576).toFixed(1)} MiB{transfer.total?` / ${(transfer.total/1048576).toFixed(1)} MiB · ${Math.floor(transfer.received/transfer.total*100)}%`:""}</p></>}
+     </div>}
     <Button className="w-full py-3" onClick={run} disabled={!file||!available.length||busy}><Play size={16}/>{busy?t("editorRunning"):t("editorRun")}</Button>
     {busy&&<div role="status" className="space-y-2 text-xs text-sky-300">
      <p>{stage||t("editorRunning")}</p>
