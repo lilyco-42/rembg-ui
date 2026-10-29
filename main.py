@@ -429,6 +429,54 @@ async def list_models():
 
 
 
+# BYOM desktop download jobs; no model weights are shipped with the installer.
+import uuid
+from model_catalog import MODELS as BYOM_MODELS, install as install_byom
+_model_download_jobs = {}
+_model_download_guard = threading.Lock()
+
+@app.post("/api/models/{model_name}/download")
+async def download_model(model_name: str, request: Request):
+    if request.headers.get("X-Rembg-Token") != security.token:
+        raise HTTPException(403, "Forbidden")
+    if model_name not in BYOM_MODELS:
+        raise HTTPException(404, "Unknown model")
+    if not BYOM_MODELS[model_name]["url"]:
+        raise HTTPException(403, "License-gated model; import a licensed model manually")
+    with _model_download_guard:
+        for job_id, job in _model_download_jobs.items():
+            if job["model"] == model_name and job["state"] == "running":
+                return {"job_id": job_id, "state": "running"}
+        job_id = uuid.uuid4().hex
+        _model_download_jobs[job_id] = {"model": model_name, "state": "running"}
+    def worker():
+        try:
+            outcome = install_byom(model_name)
+            state = {"state": "completed", "result": outcome}
+        except Exception as exc:
+            state = {"state": "failed", "error": str(exc)[:300]}
+        with _model_download_guard:
+            _model_download_jobs[job_id].update(state)
+    threading.Thread(target=worker, daemon=True).start()
+    return {"job_id": job_id, "state": "running"}
+
+@app.get("/api/models/download/{job_id}")
+async def download_model_status(job_id: str):
+    with _model_download_guard:
+        job = _model_download_jobs.get(job_id)
+        if job is None:
+            raise HTTPException(404, "Unknown job")
+        return dict(job)
+
+@app.get("/vendor/bootstrap/bootstrap.min.css")
+async def bootstrap_css():
+    from pathlib import Path
+    root = Path(sys._MEIPASS) if hasattr(sys, "_MEIPASS") else (Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent)
+    path = root / "frontend" / "vendor" / "bootstrap" / "bootstrap.min.css"
+    if not path.exists():
+        raise HTTPException(404, "Bootstrap CSS not bundled")
+    return FileResponse(str(path), media_type="text/css")
+
 @app.post("/api/open-model-dir")
 async def open_model_dir():
     """用系统文件管理器打开模型目录"""
@@ -442,7 +490,7 @@ async def open_model_dir():
 def remove_bg(
     request: Request,
     file: UploadFile = File(...),
-    model_name: str = Form("bria-rmbg"),
+    model_name: str = Form("u2netp"),
     alpha_matting: bool = Form(False),
     alpha_matting_fg: int = Form(240),
     alpha_matting_bg: int = Form(10),

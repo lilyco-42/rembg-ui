@@ -744,7 +744,7 @@
             <small style="display:block;color:var(--text-dim);margin:4px 0 9px">需安装 WebGPU 专用模型 ~/.u2net/u2netp-webgpu.onnx；仅支持兼容 WebGPU 的浏览器。启用时不使用 BRIA/当前模型，也不宣称 CPU 为 GPU。</small>
             <select id="modelSelect">
                 <optgroup label="✨ 推荐">
-                    <option value="bria-rmbg" selected>BRIA RMBG-2.0（商用需授权）</option>
+                    <option value="bria-rmbg">BRIA RMBG-2.0（商用需授权）</option>
                     <option value="birefnet-general">最强通用 (birefnet-general)</option>
                     <option value="birefnet-massive">海量数据版 (birefnet-massive)</option>
                 </optgroup>
@@ -758,7 +758,7 @@
                 <optgroup label="⚡ 极速">
                     <option value="birefnet-general-lite">BiRefNet 轻量</option>
                     <option value="u2net">通用均衡 (u2net)</option>
-                    <option value="u2netp">极速版 (u2netp)</option>
+                    <option value="u2netp" selected>极速版 (u2netp)</option>
                     <option value="silueta">最小体积 (silueta)</option>
                 </optgroup>
                 <optgroup label="🔧 其他">
@@ -771,6 +771,7 @@
                 </optgroup>
             </select>
 
+            <div id="modelManagerShell" style="margin:12px 0" aria-label="模型下载管理"></div>
             <div class="advanced-toggle" onclick="toggleAdvanced()">
                 <span id="advArrow">▶</span> 高级参数
             </div>
@@ -2792,6 +2793,94 @@
 
             selectCandidate(0);
         }
+
+        // Bootstrap lives in a Shadow DOM: avoid overriding the editor's mature layout.
+        const modelShell = document.getElementById("modelManagerShell").attachShadow({mode:"open"});
+        modelShell.innerHTML = `
+          <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css">
+          <style>
+            :host{display:block;color:#e9eef9;font:13px system-ui,sans-serif}
+            .card{background:#1c2b40!important;border:1px solid #35475f;color:#e9eef9;border-radius:14px}
+            .small{color:#b9c9df!important}
+            .btn{min-height:39px} .progress{height:8px;background:#34475e}
+            .alert{font-size:12px;padding:.55rem .7rem;margin-top:.65rem}
+          </style>
+          <div class="card p-3 shadow-sm">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <strong>📦 模型管理</strong><span class="badge text-bg-primary">首次使用向导</span>
+            </div>
+            <p class="small mt-2 mb-2" id="byomHelp">选好模型，点击一键下载，安装完成即可开始抠图。</p>
+            <button class="btn btn-primary w-100" id="byomInstall" type="button">检查所选模型</button>
+            <div id="byomProgress" class="progress mt-2 d-none"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div></div>
+            <div id="byomMessage" class="small mt-2" role="status" aria-live="polite"></div>
+            <a href="https://github.com/lilyco-42/rembg-ui/releases" target="_blank" rel="noopener noreferrer" class="small mt-2">查看安装指南和版本</a>
+          </div>`;
+        const byomButton = modelShell.getElementById("byomInstall");
+        const byomMessage = modelShell.getElementById("byomMessage");
+        const byomProgress = modelShell.getElementById("byomProgress");
+        let byomCatalog = {};
+        function setByomBusy(active) {
+            byomButton.disabled = active;
+            byomProgress.classList.toggle("d-none", !active);
+        }
+        function showByomModel() {
+            const key = document.getElementById("modelSelect").value;
+            const item = byomCatalog[key];
+            if (!item) {
+                byomButton.textContent = "打开模型目录";
+                byomButton.disabled = false;
+                byomMessage.textContent = "此模型需要使用模型目录手动管理。";
+                return;
+            }
+            byomButton.textContent = item.installed ? "✓ 已安装，可以开始抠图" : (item.source ? "↓ 一键下载 " + key : "查看模型授权与手动导入");
+            byomButton.disabled = !!item.installed;
+            byomMessage.textContent = item.license || "";
+        }
+        async function fetchByomCatalog() {
+            const response = await fetch("/api/models");
+            if (!response.ok) throw Error("无法读取模型目录");
+            byomCatalog = (await response.json()).models || {};
+            showByomModel();
+        }
+        byomButton.addEventListener("click", async () => {
+            const model = document.getElementById("modelSelect").value;
+            const item = byomCatalog[model];
+            if (!item) return openModelDir();
+            if (!item.source) {
+                byomMessage.textContent = "此模型需从权利人渠道取得授权后手动导入。";
+                return openModelDir();
+            }
+            setByomBusy(true);
+            byomMessage.textContent = "正在下载，首次使用需要联网；下载完成后可离线运行。";
+            try {
+                const response = await fetch("/api/models/"+encodeURIComponent(model)+"/download", {
+                    method:"POST",headers:{"X-Rembg-Token":document.querySelector('meta[name="rembg-token"]')?.content || ""}
+                });
+                const info = await response.json();
+                if (!response.ok) throw Error(info.detail || "启动下载失败");
+                for (let attempt=0;attempt<720;attempt++) {
+                    await new Promise(resolve=>setTimeout(resolve,1500));
+                    const statusResponse=await fetch("/api/models/download/"+encodeURIComponent(info.job_id));
+                    if (!statusResponse.ok) throw Error("下载进度查询失败");
+                    const status=await statusResponse.json();
+                    if (status.state==="failed") throw Error(status.error || "下载失败");
+                    if (status.state==="completed") {
+                        byomMessage.textContent = "✓ 模型已就绪！现在可以上传图片，一键抠图。";
+                        await fetchByomCatalog();
+                        await loadModelStatus();
+                        return;
+                    }
+                }
+                throw Error("下载仍在进行，请稍后刷新检查");
+            } catch(error) {
+                byomMessage.textContent = "下载失败："+error.message+"。可稍后重试或手动导入模型。";
+            } finally {
+                setByomBusy(false);
+                if (byomCatalog[model]?.installed) byomButton.disabled = true;
+            }
+        });
+        document.getElementById("modelSelect").addEventListener("change",showByomModel);
+        fetchByomCatalog().catch(e=>{byomMessage.textContent=e.message});
 
         // Load model status
         async function loadModelStatus() {
