@@ -22,7 +22,7 @@ def model_dir():
 def catalog():
     root=model_dir()
     return {key:{**v,"name":key,"group":"模型市场","size":"按需下载","installed":(root/v["file"]).is_file(),"path":str(root/v["file"]),"source":v["url"],"file":v["file"]} for key,v in MODELS.items()}
-def install(model, *, source="official", expected_sha256=None):
+def install(model, *, source="official", expected_sha256=None, progress=None):
     if model not in MODELS:raise ValueError("Unknown model")
     entry=MODELS[model]
     if not entry["url"]:raise ValueError("License-gated model: import a user-authorized local file instead")
@@ -41,11 +41,21 @@ def install(model, *, source="official", expected_sha256=None):
     with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=35) as response:
         if response.geturl().split(":")[0]!="https":raise ValueError("Insecure redirect")
         status=response.status
-        mode="ab" if pos and status==206 else "wb"
+        # The server must confirm the starting offset before append.
+        content_range=response.headers.get("Content-Range","")
+        append=bool(pos and status==206 and content_range.startswith(f"bytes {pos}-"))
+        if pos and status==206 and not append:
+            raise ValueError("Resume offset mismatch")
+        mode="ab" if append else "wb"
+        length=int(response.headers.get("Content-Length") or 0)
+        total=(pos if append else 0)+length if length else None
+        if total and total>2*1024**3:raise ValueError("Model exceeds 2 GiB safety limit")
         with part.open(mode) as handle:
+            if progress:progress(handle.tell(),total)
             while chunk:=response.read(1024*1024):
                 handle.write(chunk)
                 if handle.tell()>2*1024**3:raise ValueError("Model exceeds 2 GiB safety limit")
+                if progress:progress(handle.tell(),total)
     if part.stat().st_size<1024:raise ValueError("Download incomplete")
     h=hashlib.sha256()
     with part.open("rb") as f:

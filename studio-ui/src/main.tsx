@@ -20,6 +20,7 @@ function App(){
  const {locale,setLocale,t}=useLocale();
  const[models,setModels]=useState<Record<string,Model>>({});
  const[busy,setBusy]=useState<string|null>(null);
+ const[downloadProgress,setDownloadProgress]=useState<{received:number;total:number|null}|null>(null);
  const[loading,setLoading]=useState(true);
  const[message,setMessage]=useState("");
  const[search,setSearch]=useState("");
@@ -36,7 +37,7 @@ function App(){
  ),[models,filter,search,locale]);
  const installedCount=Object.values(models).filter(m=>m.installed).length;
  async function download(id:string){
-  setBusy(id);setError(false);setMessage(t("downloading",{name:id}));
+  setBusy(id);setDownloadProgress(null);setError(false);setMessage(t("downloading",{name:id}));
   try{
    const r=await fetch("/api/models/"+encodeURIComponent(id)+"/download",{method:"POST",headers:{"X-Rembg-Token":securityToken}});
    const d=await r.json();if(!r.ok)throw Error(d.detail||t("startError"));
@@ -45,12 +46,13 @@ function App(){
     const x=await fetch("/api/models/download/"+encodeURIComponent(d.job_id));
     if(!x.ok)throw Error(t("statusError"));
     const status=await x.json();
+    if(typeof status.bytes_received==="number")setDownloadProgress({received:status.bytes_received,total:status.bytes_total??null});
     if(status.state==="failed")throw Error(status.error||t("downloadError"));
     if(status.state==="completed"){await refresh();setMessage(t("finished",{name:id}));return}
    }
    throw Error(t("timeout"));
   }catch(e){setMessage(e instanceof Error?e.message:String(e));setError(true)}
-  finally{setBusy(null)}
+  finally{setBusy(null);setDownloadProgress(null)}
  }
  return <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
   <header className="mb-8 flex flex-wrap items-start justify-between gap-5">
@@ -88,7 +90,7 @@ function App(){
     <h2 className="mt-4 text-lg font-semibold">{model.name||id}</h2>
     <p className="mt-1 min-h-11 text-sm text-slate-400">{localizedPurpose[id]?.[locale==="zh-CN"?"zh":"en"]||model.purpose||t("unknown")}</p>
     <div className="my-3 flex flex-1 items-start gap-2 text-xs leading-5 text-amber-300"><ShieldAlert size={14} aria-hidden="true" className="mt-0.5 shrink-0"/><span>{model.license||t("licenseHint")}</span></div>
-    {busy===id&&<div className="mb-3"><Progress value={undefined}/><p className="mt-2 text-xs text-slate-400">{t("checking")}</p></div>}
+    {busy===id&&<div className="mb-3"><Progress value={downloadProgress?.total?Math.min(100,Math.round(downloadProgress.received/downloadProgress.total*100)):0}/><p className="mt-2 text-xs text-slate-400">{downloadProgress?.total?`${(downloadProgress.received/1024/1024).toFixed(1)} / ${(downloadProgress.total/1024/1024).toFixed(1)} MiB`:t("checking")}</p></div>}
     <Button className="w-full" disabled={model.installed||!!busy||!model.source} onClick={()=>download(id)}><Download size={16} aria-hidden="true"/>{model.installed?t("installedButton"):model.source?t("download"):t("licenseImport")}</Button>
    </CardContent></Card>)}
   </section>

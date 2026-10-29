@@ -451,7 +451,10 @@ async def download_model(model_name: str, request: Request):
         _model_download_jobs[job_id] = {"model": model_name, "state": "running"}
     def worker():
         try:
-            outcome = install_byom(model_name)
+            def update_progress(received, total):
+                with _model_download_guard:
+                    _model_download_jobs[job_id].update(bytes_received=received, bytes_total=total)
+            outcome = install_byom(model_name, progress=update_progress)
             state = {"state": "completed", "result": outcome}
         except Exception as exc:
             state = {"state": "failed", "error": str(exc)[:300]}
