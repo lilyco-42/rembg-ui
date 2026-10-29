@@ -1,10 +1,11 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import{createRoot}from"react-dom/client";
-import{Download,HardDrive,RefreshCw,ShieldAlert,Box,Search,ArrowLeft,Languages}from"lucide-react";
+import{Download,HardDrive,RefreshCw,ShieldAlert,Box,Search,ArrowLeft,Languages,Scissors}from"lucide-react";
 import{Button}from"./components/ui/button";
 import{Card,CardContent}from"./components/ui/card";
 import{Progress}from"./components/ui/progress";
 import {useLocale} from "./i18n/use-locale";
+import {Editor} from "./editor";
 import "./index.css";
 
 type Model={name:string;purpose?:string;license?:string;installed:boolean;source?:string|null;path?:string};
@@ -19,6 +20,7 @@ const delay=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function App(){
  const {locale,setLocale,t}=useLocale();
  const[models,setModels]=useState<Record<string,Model>>({});
+ const[page,setPage]=useState<"editor"|"models">("editor");
  const[busy,setBusy]=useState<string|null>(null);
  const[downloadProgress,setDownloadProgress]=useState<{received:number;total:number|null}|null>(null);
  const[loading,setLoading]=useState(true);
@@ -70,6 +72,8 @@ function App(){
     <Button variant="outline" disabled={loading} onClick={()=>{setLoading(true);refresh().catch(e=>{setMessage(e.message);setError(true)}).finally(()=>setLoading(false))}}><RefreshCw size={16} aria-hidden="true"/>{t("refresh")}</Button>
    </div>
   </header>
+  <nav className="mb-7 flex gap-2 border-b border-slate-700 pb-4" aria-label="Workspace"><Button variant={page==="editor"?"default":"outline"} onClick={()=>setPage("editor")}><Scissors size={16}/>{t("editorTab")}</Button><Button variant={page==="models"?"default":"outline"} onClick={()=>setPage("models")}><Box size={16}/>{t("title")}</Button></nav>
+  {page==="editor"?<Editor locale={locale} models={models} onManageModels={()=>setPage("models")}/>:<>
   <div className="mb-6 grid grid-cols-3 gap-3">
    {([{k:"total",v:Object.keys(models).length},{k:"available",v:installedCount},{k:"requiresDownload",v:Object.keys(models).length-installedCount}] as const).map(item=>
     <Card key={item.k}><CardContent className="p-4"><p className="text-xs text-slate-400">{t(item.k)}</p><p className="mt-1 text-2xl font-semibold tabular-nums">{item.v}</p></CardContent></Card>
@@ -95,6 +99,7 @@ function App(){
    </CardContent></Card>)}
   </section>
   {!loading&&items.length===0&&<p className="py-16 text-center text-slate-400">{t("empty")}</p>}
+  </>}
   <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-5 text-xs text-slate-500">
    <span><HardDrive size={14} aria-hidden="true" className="mr-1 inline"/>{t("footer")}</span>
    <a href="/" className="inline-flex items-center gap-2 text-sky-300 hover:underline"><ArrowLeft size={14} aria-hidden="true"/>{t("back")}</a>
