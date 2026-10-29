@@ -12,8 +12,11 @@ export function Editor({locale,models,onManageModels}:Props){
  const [output,setOutput]=useState<string|null>(null),[busy,setBusy]=useState(false);
  const [problem,setProblem]=useState(""),[compare,setCompare]=useState(50);
  const [selected,setSelected]=useState("u2netp");
- const available=Object.entries(models).filter(([,m])=>m.installed);
+ const pagesMode=import.meta.env.VITE_BROWSER_DEMO==="true";
+ const workerRef=useRef<Worker|null>(null);
+ const available=pagesMode?[["u2netp",{installed:true,name:"U2Netp"}] as [string,Model]]:Object.entries(models).filter(([,m])=>m.installed);
  useEffect(()=>{if(available.length&&!available.some(([id])=>id===selected))setSelected(available[0][0]);},[models,selected]);
+ useEffect(()=>()=>{workerRef.current?.terminate()},[]);
  useEffect(()=>{if(!file){setSource(null);return}const url=URL.createObjectURL(file);setSource(url);return()=>URL.revokeObjectURL(url)},[file]);
  function choose(f?:File){setProblem("");setOutput(null);if(!f)return;
   if(!["image/png","image/jpeg","image/webp"].includes(f.type)||f.size>20*1024*1024){setProblem(t("editorFormats"));return}
@@ -23,9 +26,27 @@ export function Editor({locale,models,onManageModels}:Props){
   if(!file||busy)return;
   setBusy(true);setProblem("");setOutput(null);
   try{const body=new FormData();body.append("file",file);body.append("model_name",selected);
-   const r=await fetch("/api/remove-bg",{method:"POST",body});
-   const data=await r.json();if(!r.ok||!data.success||typeof data.image!=="string"||!data.image.startsWith("data:image/"))throw Error(data.detail||t("editorError"));
-   setOutput(data.image);
+   if(pagesMode){
+    const bitmap=await createImageBitmap(file);
+    const worker=workerRef.current??new Worker(new URL(import.meta.env.BASE_URL+"browser/worker.mjs",location.origin),{type:"module"});
+    workerRef.current=worker;
+    const id=crypto.randomUUID();
+    const png=await new Promise<Blob>((resolve,reject)=>{
+     const timeout=setTimeout(()=>{worker.removeEventListener("message",receive);reject(new Error("Inference timed out"))},180000);
+     const receive=(event:MessageEvent)=>{const data=event.data;if(data.id!==id)return;
+      if(data.status)return;
+      clearTimeout(timeout);worker.removeEventListener("message",receive);
+      if(data.error)reject(new Error(data.error));else if(data.transparent instanceof Blob)resolve(data.transparent);else reject(new Error("Invalid inference result"));
+     };
+     worker.addEventListener("message",receive);
+     worker.postMessage({id,bitmap},[bitmap]);
+    });
+    setOutput(await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Cannot read PNG"));reader.readAsDataURL(png)}));
+   }else{
+    const r=await fetch("/api/remove-bg",{method:"POST",body});
+    const data=await r.json();if(!r.ok||!data.success||typeof data.image!=="string"||!data.image.startsWith("data:image/"))throw Error(data.detail||t("editorError"));
+    setOutput(data.image);
+   }
   }catch(e){setProblem(e instanceof Error?e.message:t("editorError"))}finally{setBusy(false)}
  }
  function save(){if(!output)return;const a=document.createElement("a");a.href=output;a.download=(file?.name.replace(/\.[^.]+$/,"")||"image")+"-transparent.png";a.click()}

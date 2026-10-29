@@ -9,6 +9,7 @@ import {Editor} from "./editor";
 import "./index.css";
 
 type Model={name:string;purpose?:string;license?:string;installed:boolean;source?:string|null;path?:string};
+const pagesMode=import.meta.env.VITE_BROWSER_DEMO==="true";
 const securityToken=document.querySelector<HTMLMetaElement>('meta[name="rembg-token"]')?.content||"";
 const localizedPurpose:Record<string,{zh:string;en:string}>={
  "u2netp":{zh:"轻量通用",en:"Fast general-purpose"},"u2net":{zh:"通用抠图",en:"General background removal"},
@@ -29,6 +30,7 @@ function App(){
  const[filter,setFilter]=useState<"all"|"installed"|"missing">("all");
  const[error,setError]=useState(false);
  const refresh=useCallback(async()=>{
+  if(pagesMode){setModels({"u2netp":{name:"U2Netp",installed:true,purpose:"WebGPU / WASM browser inference",source:null}});return;}
   const r=await fetch("/api/models");if(!r.ok)throw Error(t("fetchError"));
   const data=await r.json();setModels(data.models||{});
  },[locale]);

@@ -42,3 +42,5 @@ sam_*.pt
 /studio-ui/*.tsbuildinfo
 
 /studio-ui/translations-export/
+
+/frontend/studio-ui/browser/

@@ -1,0 +1,13 @@
+import {execFileSync} from "node:child_process";
+import {cpSync,mkdirSync,rmSync} from "node:fs";
+import {fileURLToPath} from "node:url";
+import path from "node:path";
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
+const repo=path.resolve(root,"..");
+execFileSync("npm",["run","build"],{cwd:root,stdio:"inherit",env:{...process.env,VITE_BROWSER_DEMO:"true"}});
+const source=path.join(repo,"web","dist");
+const destination=path.join(repo,"frontend","studio-ui","browser");
+mkdirSync(destination,{recursive:true});
+cpSync(source,destination,{recursive:true});
+rmSync(path.join(destination,"index.html"),{force:true});
+console.log("Built standalone GitHub Pages app with real browser inference assets");
