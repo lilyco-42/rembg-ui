@@ -3,8 +3,12 @@ export function mirrorCandidates(raw:string):string[]{
  const url=new URL(raw.trim());
  if(url.protocol!=="https:")throw Error("HTTPS required");
  const sources=[url.href];
- if(url.hostname==="huggingface.co"){
-  const mirror=new URL(url.href);mirror.hostname="hf-mirror.com";sources.push(mirror.href);
+ // Browser fetch cannot read GitHub Release redirects without CORS.
+ if(url.hostname==="github.com" && /^\/danielgatis\/rembg\/releases\/download\/v0\.0\.0\/[a-z0-9_-]+\.onnx$/.test(url.pathname)){
+  sources.unshift("https://huggingface.co/tomjackson2023/rembg/resolve/main/"+url.pathname.split("/").at(-1));
+ }
+ if(url.hostname==="huggingface.co" || sources.some(s=>s.startsWith("https://huggingface.co/"))){
+  const mirror=new URL(sources.find(s=>s.startsWith("https://huggingface.co/"))!);mirror.hostname="hf-mirror.com";sources.push(mirror.href);
  }
  return sources;
 }
