@@ -25,6 +25,7 @@ export function Editor({locale,models,onManageModels}:Props){
  const [hubBusy,setHubBusy]=useState(false);
  const [hubSearch,setHubSearch]=useState("");
  const [hubError,setHubError]=useState("");
+ const [hubFile,setHubFile]=useState("");
  const [recommendedData,setRecommendedData]=useState<Record<string,ArrayBuffer>>({});
  const [customData,setCustomData]=useState<ArrayBuffer|null>(null);
  const [modelStatus,setModelStatus]=useState("");
@@ -103,7 +104,7 @@ export function Editor({locale,models,onManageModels}:Props){
       <div className="max-h-64 space-y-2 overflow-y-auto">{hubModels.filter(m=>m.id.toLowerCase().includes(hubSearch.toLowerCase())).slice(0,25).map(m=><div key={m.id} className="rounded-lg bg-slate-800 p-2">
        <a className="break-all font-medium text-sky-300 hover:underline" href={'https://huggingface.co/'+m.id} target="_blank" rel="noopener noreferrer">{m.id}</a>
        <p className="text-slate-400">↓ {m.downloads.toLocaleString()} · {m.license} · {m.onnx.length} ONNX</p>
-       <select aria-label={m.id} className="mt-1 w-full rounded bg-slate-900 p-2" onChange={e=>setModelUrl(modelFileURL(m.id,e.target.value))} value=""><option value="" disabled>{locale==="zh-CN"?"选择 ONNX 文件并填入下载栏":"Select ONNX file for download"}</option>{m.onnx.map(name=><option key={name} value={name}>{name}</option>)}</select>
+       <select aria-label={m.id} className="mt-1 w-full rounded bg-slate-900 p-2" onChange={e=>(setModelUrl(modelFileURL(m.id,e.target.value)),setHubFile(m.id+"/"+e.target.value))} value=""><option value="" disabled>{locale==="zh-CN"?"选择 ONNX 文件并填入下载栏":"Select ONNX file for download"}</option>{m.onnx.map(name=><option key={name} value={name}>{name}</option>)}</select>
       </div>)}</div></>}
     </div>}
     {pagesMode&&<div className="space-y-2 rounded-lg border border-slate-700 p-3 text-xs">
@@ -123,8 +124,11 @@ export function Editor({locale,models,onManageModels}:Props){
       <p className="text-slate-400">{locale==="zh-CN"?"仅支持 RGB 320×320 输入和单通道 320×320 遮罩输出；不保证其他架构兼容。":"Requires RGB 320×320 input and a 320×320 single-channel mask."}</p>
       <input ref={customFileRef} className="hidden" type="file" accept=".onnx" onChange={async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>512*1024*1024){setProblem("Model exceeds 512 MiB");return}setCustomModel(f);setCustomData(await f.arrayBuffer());setSelected("user-onnx");setModelStatus(f.name)}}/>
       <Button variant="outline" className="w-full" disabled={modelBusy||busy} onClick={()=>customFileRef.current?.click()}>{locale==="zh-CN"?"导入本地 ONNX":"Import local ONNX"}</Button>
-      <input className="w-full rounded-md border border-slate-600 bg-slate-900 p-2" type="url" placeholder="https://huggingface.co/.../model.onnx" value={modelUrl} onChange={e=>setModelUrl(e.target.value)}/>
+      <input className="w-full rounded-md border border-slate-600 bg-slate-900 p-2" type="url" placeholder="https://huggingface.co/.../model.onnx" value={modelUrl} onChange={e=>{setModelUrl(e.target.value);setHubFile("")}}/>
       <Button variant="outline" className="w-full" disabled={modelBusy||busy||!modelUrl.trim()} onClick={async()=>{setModelBusy(true);setProblem("");setTransfer(null);try{
+        if(hubFile && !/\/(u2netp?|u2net_human_seg|silueta)\.onnx$/i.test(hubFile)){
+         throw Error(locale==="zh-CN"?"该 ONNX 未验证与 U2Netp 推理适配器兼容。为防止浪费流量，请选择推荐模型，或自行导入兼容模型。":"This model has not been validated with the U2Netp adapter. Use a recommended model or an explicitly compatible ONNX.");
+        }
         const urls=mirrorCandidates(modelUrl);setModelStatus(locale==="zh-CN"?"镜像测速并下载中…":"Benchmarking mirrors and downloading…");
         const data=await downloadModel(urls,setTransfer);setCustomModel(new File([data],"downloaded.onnx"));setCustomData(data);setSelected("user-onnx");setModelStatus(locale==="zh-CN"?"模型已下载，点击一键抠图":"Model ready");
        }catch(e){setProblem(String(e))}finally{setModelBusy(false)}}}>{locale==="zh-CN"?"智能测速并下载":"Benchmark mirrors & download"}</Button>

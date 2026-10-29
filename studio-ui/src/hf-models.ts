@@ -2,14 +2,16 @@ export type HubModel={id:string;downloads:number;lastModified?:string;gated?:boo
 export type HubEntry={id:string;downloads:number;license:string;updated:string;onnx:string[];gated:boolean};
 const searchTerms=['background-removal','u2net','rembg'];
 export async function searchHubModels(signal?:AbortSignal):Promise<HubEntry[]>{
- const groups=await Promise.all(searchTerms.map(async term=>{
+ const groups=await Promise.allSettled(searchTerms.map(async term=>{
   const qs=new URLSearchParams({search:term,sort:'downloads',direction:'-1',limit:'35',full:'true'});
   const result=await fetch('https://huggingface.co/api/models?'+qs,{signal});
   if(!result.ok)throw Error('Hugging Face HTTP '+result.status);
   return await result.json() as HubModel[];
  }));
+ const successful=groups.filter((item):item is PromiseFulfilledResult<HubModel[]>=>item.status==='fulfilled');
+ if(!successful.length)throw Error('Hugging Face API unavailable on all search endpoints');
  const seen=new Map<string,HubEntry>();
- for(const model of groups.flat()){
+ for(const model of successful.flatMap(item=>item.value)){
   if(!/^[\w.-]+\/[\w.-]+$/.test(model.id)||model.gated)continue;
   const onnx=(model.siblings||[]).map(x=>x.rfilename).filter(n=>n.endsWith('.onnx')&&!n.includes('..')&&!n.startsWith('/')&&n.split('/').length<=5);
   if(!onnx.length)continue;
