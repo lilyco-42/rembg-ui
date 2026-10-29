@@ -542,7 +542,7 @@
     {
       "id": "ghboost",
       "name": "ghboost",
-      "summary": "一键加速 Google / YouTube / GitHub，Windows 托盘版免设定；含 GitHub hosts 加速与免费节点扫描测速。",
+      "summary": "一键加速 Google / YouTube / GitHub，Windows 托盘版免设定；含 GitHub hosts 加速与普通节点扫描测速。",
       "category": "网络工具",
       "license": "MIT",
       "repository": "https://github.com/lilyco-42/ghboost",
