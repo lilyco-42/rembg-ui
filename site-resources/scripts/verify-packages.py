@@ -35,11 +35,16 @@ for entry in json.loads((root / 'packages.json').read_text()):
         if entry['id'].startswith('rembg'):
             frontend = [p for p in files if p.replace('\\', '/').endswith('frontend/index.html')]
             assert len(frontend) == 1, 'Expected packaged UI'
-            original = (root.parent / 'frontend/index.html').read_bytes()
+            # Compare with the immutable source of the published release, which
+            # may differ from this resource-maintenance branch's application UI.
+            with urllib.request.urlopen(entry['frontend_source_url'], timeout=60) as response:
+                original = response.read(4 * 1024 * 1024)
+            assert hashlib.sha256(original).hexdigest() == entry['frontend_sha256'], 'Pinned release source differs'
             packaged = archive.read(frontend[0])
             # Windows Git checkouts can materialize CRLF. Permit only that
             # checkout transformation; all HTML/JS content must still match.
-            ui_proof = {'source_sha256': hashlib.sha256(original).hexdigest(),
+            ui_proof = {'source_url': entry['frontend_source_url'],
+                        'source_sha256': hashlib.sha256(original).hexdigest(),
                         'packaged_sha256': hashlib.sha256(packaged).hexdigest(),
                         'source_crlf': original.count(b'\r\n'), 'packaged_crlf': packaged.count(b'\r\n'),
                         'normalized_match': packaged.replace(b'\r\n', b'\n') == original.replace(b'\r\n', b'\n')}

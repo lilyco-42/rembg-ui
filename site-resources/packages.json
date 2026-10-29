@@ -2,11 +2,13 @@
   {
     "platform": "Windows x64",
     "file": "Rembg-UI-windows.zip",
-    "size": 664874833,
-    "sha256": "32d18be09bbf2ece3e3044f3425956a50f184fcc9bd796e805765b02155d3cef",
-    "url": "https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261011-0249/Rembg-UI-windows.zip",
+    "size": 664877616,
+    "sha256": "7bbc33e24391ed3d43efed6a1cb450af4f511fc136b246c70cc1548953435647",
+    "url": "https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261028-1536/Rembg-UI-windows.zip",
     "id": "rembg-studio-windows",
-    "source_url": "https://github.com/lilyco-42/rembg-ui/releases/download/v0.2.7-20261011-0249/Rembg-UI-windows.zip"
+    "source_url": "https://github.com/lilyco-42/rembg-ui/releases/download/v0.2.7-20261028-1536/Rembg-UI-windows.zip",
+    "frontend_source_url": "https://raw.githubusercontent.com/lilyco-42/rembg-ui/c1b65d10f0477d79a3423423ab2fafdae2f2baae/frontend/index.html",
+    "frontend_sha256": "5f558d857aad73222a7bb83b25b2c8ffa88fedb3e1159a09a425da2fdbc029cf"
   },
   {
     "platform": "Windows x64",

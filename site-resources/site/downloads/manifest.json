@@ -12,7 +12,7 @@
       "platforms": [
         "windows"
       ],
-      "version": "0.2.7 · 2026-10-11",
+      "version": "0.2.7 · 2026-10-28",
       "license": "见项目源码及所用模型许可",
       "repository": "https://github.com/lilyco-42/rembg-ui",
       "official": "https://github.com/lilyco-42/rembg-ui/releases/latest",
@@ -21,9 +21,9 @@
       "mirror": {
         "platform": "Windows x64",
         "file": "Rembg-UI-windows.zip",
-        "size": 664874833,
-        "sha256": "32d18be09bbf2ece3e3044f3425956a50f184fcc9bd796e805765b02155d3cef",
-        "url": "https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261011-0249/Rembg-UI-windows.zip"
+        "size": 664877616,
+        "sha256": "7bbc33e24391ed3d43efed6a1cb450af4f511fc136b246c70cc1548953435647",
+        "url": "https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261028-1536/Rembg-UI-windows.zip"
       },
       "note": "完整解压后再运行 EXE，不要只取出一个文件。首次使用所选模型需要联网下载；图片处理在本机完成。试用与授权批量额度以客户端为准。"
     },
