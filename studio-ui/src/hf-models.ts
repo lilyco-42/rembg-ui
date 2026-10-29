@@ -24,3 +24,11 @@ export function modelFileURL(repo:string,filename:string){
  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)||filename.includes('..')||filename.startsWith('/'))throw Error('Invalid model path');
  return 'https://huggingface.co/'+repo+'/resolve/main/'+filename.split('/').map(encodeURIComponent).join('/');
 }
+
+/** Manually audited U2Net-family repositories. A filename alone does not prove compatibility. */
+const compatibleRepos=new Set(['BritishWerewolf/U-2-Netp','BritishWerewolf/U-2-Net','BritishWerewolf/U-2-Net-Human-Seg','tomjackson2023/rembg','jellybox/u2net','jellybox/u2net-human-seg']);
+export function isCompatibleHubModel(repo:string,filename:string):boolean{
+ if(!compatibleRepos.has(repo))return false;
+ if(repo==='tomjackson2023/rembg')return /^(u2netp|u2net|u2net_human_seg|silueta)\.onnx$/i.test(filename);
+ return /^([\w-]+\/)?(model|u2net|u2netp|u2net-human-seg_320)\.onnx$/i.test(filename);
+}

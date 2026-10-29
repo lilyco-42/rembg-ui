@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from "react";
 import {Download,ImagePlus,Play,RotateCcw,UploadCloud} from "lucide-react";
 import {Button} from "./components/ui/button";
 import {Card,CardContent} from "./components/ui/card";
-import {searchHubModels,modelFileURL,type HubEntry} from "./hf-models";
+import {searchHubModels,modelFileURL,isCompatibleHubModel,type HubEntry} from "./hf-models";
 import {recommendedModels} from "./recommended-models";
 import {downloadModel,mirrorCandidates} from "./model-sources";
 import {translate,type Locale,type MessageKey} from "./i18n/messages";
@@ -26,6 +26,7 @@ export function Editor({locale,models,onManageModels}:Props){
  const [hubSearch,setHubSearch]=useState("");
  const [hubError,setHubError]=useState("");
  const [hubFile,setHubFile]=useState("");
+ const [showUnverified,setShowUnverified]=useState(false);
  const [recommendedData,setRecommendedData]=useState<Record<string,ArrayBuffer>>({});
  const [customData,setCustomData]=useState<ArrayBuffer|null>(null);
  const [modelStatus,setModelStatus]=useState("");
@@ -100,11 +101,11 @@ export function Editor({locale,models,onManageModels}:Props){
      <p className="text-slate-400">{locale==="zh-CN"?"来自官方 Hub API，显示含 ONNX 文件的公开仓库。仅已知 U2Net 兼容模型可保证按当前推理方式运行。":"Live public ONNX repositories. Most require a separate inference adapter; only U2Net-compatible models may run here."}</p>
      <Button variant="outline" className="w-full" disabled={hubBusy||modelBusy} onClick={async()=>{setHubBusy(true);setHubError("");try{setHubModels(await searchHubModels())}catch(e){setHubError(String(e))}finally{setHubBusy(false)}}}>{hubBusy?"Loading…":locale==="zh-CN"?"刷新 Hugging Face 列表":"Refresh Hugging Face models"}</Button>
      {hubError&&<p role="alert" className="text-rose-300">{hubError}</p>}
-     {hubModels.length>0&&<><input value={hubSearch} onChange={e=>setHubSearch(e.target.value)} className="w-full rounded-md border border-slate-700 bg-slate-900 p-2" placeholder={locale==="zh-CN"?"搜索仓库":"Filter repositories"}/>
-      <div className="max-h-64 space-y-2 overflow-y-auto">{hubModels.filter(m=>m.id.toLowerCase().includes(hubSearch.toLowerCase())).slice(0,25).map(m=><div key={m.id} className="rounded-lg bg-slate-800 p-2">
+     {hubModels.length>0&&<><label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={showUnverified} onChange={e=>setShowUnverified(e.target.checked)}/>{locale==="zh-CN"?"显示未适配模型（仅查看）":"Show unsupported models (browse only)"}</label><input value={hubSearch} onChange={e=>setHubSearch(e.target.value)} className="w-full rounded-md border border-slate-700 bg-slate-900 p-2" placeholder={locale==="zh-CN"?"搜索仓库":"Filter repositories"}/>
+      <div className="max-h-64 space-y-2 overflow-y-auto">{hubModels.filter(m=>m.id.toLowerCase().includes(hubSearch.toLowerCase())&&(showUnverified||m.onnx.some(n=>isCompatibleHubModel(m.id,n)))).slice(0,12).map(m=><div key={m.id} className="rounded-lg bg-slate-800 p-2">
        <a className="break-all font-medium text-sky-300 hover:underline" href={'https://huggingface.co/'+m.id} target="_blank" rel="noopener noreferrer">{m.id}</a>
-       <p className="text-slate-400">↓ {m.downloads.toLocaleString()} · {m.license} · {m.onnx.length} ONNX</p>
-       <select aria-label={m.id} className="mt-1 w-full rounded bg-slate-900 p-2" onChange={e=>(setModelUrl(modelFileURL(m.id,e.target.value)),setHubFile(m.id+"/"+e.target.value))} value=""><option value="" disabled>{locale==="zh-CN"?"选择 ONNX 文件并填入下载栏":"Select ONNX file for download"}</option>{m.onnx.map(name=><option key={name} value={name}>{name}</option>)}</select>
+       <p className="text-slate-400">↓ {m.downloads.toLocaleString()} · {m.license} · {m.onnx.length} ONNX · {m.onnx.some(n=>isCompatibleHubModel(m.id,n))?(locale==="zh-CN"?"已知兼容":"Known-compatible"):(locale==="zh-CN"?"需适配":"Adapter required")}</p>
+       <select aria-label={m.id} className="mt-1 w-full rounded bg-slate-900 p-2" onChange={e=>(setModelUrl(modelFileURL(m.id,e.target.value)),setHubFile(m.id+"/"+e.target.value))} value=""><option value="" disabled>{locale==="zh-CN"?"选择 ONNX 文件并填入下载栏":"Select ONNX file for download"}</option>{m.onnx.map(name=><option key={name} value={name} disabled={!isCompatibleHubModel(m.id,name)}>{name}{isCompatibleHubModel(m.id,name)?"":" · adapter required"}</option>)}</select>
       </div>)}</div></>}
     </div>}
     {pagesMode&&<div className="space-y-2 rounded-lg border border-slate-700 p-3 text-xs">
@@ -126,7 +127,7 @@ export function Editor({locale,models,onManageModels}:Props){
       <Button variant="outline" className="w-full" disabled={modelBusy||busy} onClick={()=>customFileRef.current?.click()}>{locale==="zh-CN"?"导入本地 ONNX":"Import local ONNX"}</Button>
       <input className="w-full rounded-md border border-slate-600 bg-slate-900 p-2" type="url" placeholder="https://huggingface.co/.../model.onnx" value={modelUrl} onChange={e=>{setModelUrl(e.target.value);setHubFile("")}}/>
       <Button variant="outline" className="w-full" disabled={modelBusy||busy||!modelUrl.trim()} onClick={async()=>{setModelBusy(true);setProblem("");setTransfer(null);try{
-        if(hubFile && !/\/(u2netp?|u2net_human_seg|silueta)\.onnx$/i.test(hubFile)){
+        if(hubFile && !hubModels.some(m=>m.onnx.some(name=>m.id+"/"+name===hubFile&&isCompatibleHubModel(m.id,name)))){
          throw Error(locale==="zh-CN"?"该 ONNX 未验证与 U2Netp 推理适配器兼容。为防止浪费流量，请选择推荐模型，或自行导入兼容模型。":"This model has not been validated with the U2Netp adapter. Use a recommended model or an explicitly compatible ONNX.");
         }
         const urls=mirrorCandidates(modelUrl);setModelStatus(locale==="zh-CN"?"镜像测速并下载中…":"Benchmarking mirrors and downloading…");

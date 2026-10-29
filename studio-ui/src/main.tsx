@@ -61,8 +61,8 @@ function App(){
  return <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
   <header className="mb-8 flex flex-wrap items-start justify-between gap-5">
    <div className="max-w-2xl"><p className="text-xs font-bold tracking-[.22em] text-sky-400">REMBG STUDIO</p>
-    <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{t("title")}</h1>
-    <p className="mt-3 text-sm leading-7 text-slate-400">{t("subtitle")}</p>
+    <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{page==="editor"?t("editorTitle"):t("title")}</h1>
+    <p className="mt-3 text-sm leading-7 text-slate-400">{page==="editor"?t("editorSubtitle"):t("subtitle")}</p>
    </div>
    <div className="flex items-center gap-2">
     <label className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
@@ -104,7 +104,7 @@ function App(){
   </>}
   <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-5 text-xs text-slate-500">
    <span><HardDrive size={14} aria-hidden="true" className="mr-1 inline"/>{t("footer")}</span>
-   <a href="/" className="inline-flex items-center gap-2 text-sky-300 hover:underline"><ArrowLeft size={14} aria-hidden="true"/>{t("back")}</a>
+   <a href={pagesMode?"https://lilyco-42.github.io/":"/"} className="inline-flex items-center gap-2 text-sky-300 hover:underline"><ArrowLeft size={14} aria-hidden="true"/>{t("back")}</a>
   </footer>
  </main>
 }
