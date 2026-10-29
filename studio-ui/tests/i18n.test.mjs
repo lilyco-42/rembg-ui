@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const source=readFileSync(new URL("../src/i18n/messages.ts",import.meta.url),"utf8");
+const zh=source.split('"zh-CN": {')[1].split('\n  "en": {')[0];
+const en=source.split('  "en": {')[1].split('\n} as const')[0];
+const keys=(s)=>new Set([...s.matchAll(/(?:^|,)\s*([a-zA-Z]+):/gm)].map(m=>m[1]));
+test("both dictionaries contain the exact same keys",()=>assert.deepEqual([...keys(zh)].sort(),[...keys(en)].sort()));
+test("both dictionaries have at least 25 translated entries",()=>assert.ok(keys(zh).size>=25));
+test("translation strings do not contain common mojibake",()=>assert.doesNotMatch(source,/鍩轰簬|鏅鸿兘|鎶犲浘/));
