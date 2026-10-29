@@ -40,3 +40,5 @@ sam_*.pt
 
 /studio-ui/node_modules/
 /studio-ui/*.tsbuildinfo
+
+/studio-ui/translations-export/

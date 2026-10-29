@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-const source=readFileSync(new URL("../src/i18n/messages.ts",import.meta.url),"utf8");
-const zh=source.split('"zh-CN": {')[1].split('\n  "en": {')[0];
-const en=source.split('  "en": {')[1].split('\n} as const')[0];
-const keys=(s)=>new Set([...s.matchAll(/(?:^|,)\s*([a-zA-Z]+):/gm)].map(m=>m[1]));
-test("both dictionaries contain the exact same keys",()=>assert.deepEqual([...keys(zh)].sort(),[...keys(en)].sort()));
-test("both dictionaries have at least 25 translated entries",()=>assert.ok(keys(zh).size>=25));
-test("translation strings do not contain common mojibake",()=>assert.doesNotMatch(source,/鍩轰簬|鏅鸿兘|鎶犲浘/));
+const base=new URL("../locales/",import.meta.url);
+const zh=JSON.parse(readFileSync(new URL("zh-CN.json",base),"utf8"));
+const en=JSON.parse(readFileSync(new URL("en.json",base),"utf8"));
+test("English and Chinese keys match",()=>assert.deepEqual(Object.keys(zh).sort(),Object.keys(en).sort()));
+test("all translated values are nonempty",()=>assert.ok(Object.values({...zh,...en}).every(v=>typeof v==="string"&&v.length)));
+test("all variables match",()=>{
+ const tokens=s=>[...s.matchAll(/\{(\w+)\}/g)].map(x=>x[1]).sort();
+ for(const k of Object.keys(zh))assert.deepEqual(tokens(zh[k]),tokens(en[k]),k);
+});
+test("no mojibake",()=>assert.doesNotMatch(JSON.stringify(zh),/鍩轰簬|鏅鸿兘|鎶犲浘/));

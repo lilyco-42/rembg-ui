@@ -12,3 +12,5 @@
 ## 国际化（i18n）
 
 当前支持简体中文（zh-CN）和英文（en），浏览器语言自动匹配，手动切换保存在 localStorage（不可用时自动降级）。翻译集中管理在 `src/i18n/messages.ts`，使用 `npm test` 检查词条一致性。界面支持模型搜索、按安装状态筛选、安装统计和移动端布局。其他语言可按词典结构扩展。
+
+第三方翻译请阅读 [TRANSLATING.md](TRANSLATING.md)，编辑 `locales/*.json`；导出命令：`npm run i18n:export`。
