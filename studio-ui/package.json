@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "test": "node --test tests/*.test.mjs",
     "i18n:check": "node scripts/i18n.mjs",
-    "i18n:export": "node scripts/i18n.mjs --export"
+    "i18n:export": "node scripts/i18n.mjs --export",
+    "build:pages": "node scripts/build-pages.mjs"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
