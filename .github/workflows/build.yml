@@ -115,6 +115,13 @@ jobs:
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $tag"
 
+      - name: Build shadcn-style model center
+        shell: bash
+        run: |
+          cd studio-ui
+          npm ci --registry=https://registry.npmmirror.com
+          npm run build
+
       - name: Install offline WebGPU runtime (China npm mirror first)
         run: python scripts/install_webgpu_runtime.py
 
@@ -195,6 +202,13 @@ jobs:
         run: |
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
           echo "Version: ${{ needs.build-windows.outputs.tag }}"
+
+      - name: Build shadcn-style model center
+        shell: bash
+        run: |
+          cd studio-ui
+          npm ci --registry=https://registry.npmmirror.com
+          npm run build
 
       - name: Install offline WebGPU runtime (China npm mirror first)
         run: python scripts/install_webgpu_runtime.py
@@ -287,6 +301,13 @@ jobs:
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
           echo "Version: ${{ needs.build-windows.outputs.tag }}"
 
+      - name: Build shadcn-style model center
+        shell: bash
+        run: |
+          cd studio-ui
+          npm ci --registry=https://registry.npmmirror.com
+          npm run build
+
       - name: Install offline WebGPU runtime (China npm mirror first)
         run: python scripts/install_webgpu_runtime.py
 
@@ -368,6 +389,13 @@ jobs:
         run: |
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
 
+      - name: Build shadcn-style model center
+        shell: bash
+        run: |
+          cd studio-ui
+          npm ci --registry=https://registry.npmmirror.com
+          npm run build
+
       - name: Install offline WebGPU runtime (China npm mirror first)
         run: python scripts/install_webgpu_runtime.py
 
@@ -429,6 +457,13 @@ jobs:
         shell: bash
         run: |
           echo "tag=${{ needs.build-windows.outputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build shadcn-style model center
+        shell: bash
+        run: |
+          cd studio-ui
+          npm ci --registry=https://registry.npmmirror.com
+          npm run build
 
       - name: Install offline WebGPU runtime (China npm mirror first)
         run: python scripts/install_webgpu_runtime.py

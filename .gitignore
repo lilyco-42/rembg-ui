@@ -37,3 +37,6 @@ sam_*.pt
 
 # Downloaded local WebGPU ONNX Runtime binaries
 /frontend/vendor/ort/
+
+/studio-ui/node_modules/
+/studio-ui/*.tsbuildinfo

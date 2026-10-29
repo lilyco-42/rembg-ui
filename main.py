@@ -468,6 +468,25 @@ async def download_model_status(job_id: str):
             raise HTTPException(404, "Unknown job")
         return dict(job)
 
+@app.get("/studio-ui/")
+async def studio_ui_index():
+    from pathlib import Path
+    root=Path(sys._MEIPASS) if hasattr(sys,"_MEIPASS") else (Path(sys.executable).parent if getattr(sys,"frozen",False) else Path(__file__).resolve().parent)
+    path=root/"frontend"/"studio-ui"/"index.html"
+    if not path.is_file():raise HTTPException(503,"Studio UI not built; run npm run build in studio-ui")
+    html=path.read_text(encoding="utf-8").replace("<head>","<head><meta name=\"rembg-token\" content=\""+security.token+"\">",1)
+    return HTMLResponse(html,headers={"Cache-Control":"no-store"})
+
+@app.get("/studio-ui/assets/{asset}")
+async def studio_ui_asset(asset: str):
+    from pathlib import Path
+    if not (asset.endswith(".js") or asset.endswith(".css")) or "/" in asset or ".." in asset:
+        raise HTTPException(404,"Unknown asset")
+    root=Path(sys._MEIPASS) if hasattr(sys,"_MEIPASS") else (Path(sys.executable).parent if getattr(sys,"frozen",False) else Path(__file__).resolve().parent)
+    path=root/"frontend"/"studio-ui"/"assets"/asset
+    if not path.is_file():raise HTTPException(404,"Unknown asset")
+    return FileResponse(path,media_type="text/css" if asset.endswith(".css") else "text/javascript")
+
 @app.get("/vendor/bootstrap/bootstrap.min.css")
 async def bootstrap_css():
     from pathlib import Path
