@@ -58,6 +58,14 @@ jobs:
       - name: Python unit tests
         run: uv run python -m unittest discover -s tests -t .
 
+      - name: UI internationalization and component tests
+        shell: bash
+        run: |
+          cd studio-ui
+          npm ci --registry=https://registry.npmmirror.com
+          npm test
+          npm run build
+
       # web 测试只 import node 内建与仓库内 .mjs，无需 npm install
       - name: Web unit tests
         working-directory: web
@@ -148,7 +156,16 @@ jobs:
             echo "[Release] 已清理同 tag 的旧草稿 release id=$id"
           done
 
+      - name: Preserve Windows ZIP as downloadable workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rembg-UI-windows
+          path: Rembg-UI-windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Create/Update release
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -247,7 +264,16 @@ jobs:
             exit 1
           fi
 
+      - name: Preserve Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rembg-UI-linux
+          path: dist/Rembg-UI-linux.tar.gz
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload to release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -341,7 +367,16 @@ jobs:
           echo "asset=Rembg-UI-macOS.zip" >> "$GITHUB_OUTPUT"
           echo "已生成并校验 .app zip（${app_size_kb} KiB）"
 
+      - name: Preserve macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rembg-UI-macos
+          path: Rembg-UI-macOS.zip
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload to release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -415,6 +450,7 @@ jobs:
           }
 
       - name: Upload to release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -485,6 +521,7 @@ jobs:
           fi
 
       - name: Upload to release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -599,6 +636,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Android assets to release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$VERSION_TAG" dist/android/* --clobber
