@@ -2,6 +2,10 @@ import {execFileSync} from "node:child_process";
 import {cpSync,mkdirSync,rmSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import path from "node:path";
+if ((process.env.REMBG_EDITION || "").toLowerCase() !== "community") {
+  console.error("Browser demo is a free Community artifact; set REMBG_EDITION=community explicitly.");
+  process.exit(2);
+}
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const repo=path.resolve(root,"..");
 execFileSync("npm",["run","build"],{cwd:root,stdio:"inherit",env:{...process.env,VITE_BROWSER_DEMO:"true"}});
