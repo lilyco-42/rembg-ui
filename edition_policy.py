@@ -20,3 +20,12 @@ def community_entitlement():
         "monthly_images": None,
         "max_batch_images": 10,
     }
+
+def require_trusted_cloud_billing():
+    """Fail closed for hosted paid inference until a trusted server ledger exists.
+
+    Local SQLite usage and browser-reported usage are not trusted cloud billing.
+    This flag is intended for production deployments; it never creates privileges.
+    """
+    if current_edition() == "pro" and os.environ.get("REMBG_HOSTED_PAID_MODE") == "1":
+        raise RuntimeError("Hosted Pro billing is not configured; paid inference is disabled")
