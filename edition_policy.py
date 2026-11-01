@@ -10,3 +10,13 @@ def current_edition():
 def allow_local_webgpu():
     # Local inference is free for Community; Pro has no metered browser path.
     return current_edition() == "community" and os.environ.get("REMBG_ENABLE_WEBGPU_EXPERIMENT") == "1"
+
+def community_entitlement():
+    """Explicit unlimited local entitlement, not a paid or signed license."""
+    return {
+        "status": "active",
+        "plan_id": "community",
+        "label": "Community (free local)",
+        "monthly_images": None,
+        "max_batch_images": 10,
+    }
