@@ -218,7 +218,10 @@ async def commercial_plans():
 
 
 def _request_entitlement(request: Request) -> dict:
-    """Resolve the signed plan for a local API request, failing closed."""
+    """Community local inference is unlimited; Pro keeps signed plans and quotas."""
+    from edition_policy import current_edition
+    if current_edition() == "community":
+        return {"plan_id": "community", "monthly_images": None, "max_batch_images": 10}
     try:
         return resolve_entitlement(
             request.headers.get("X-Rembg-License"),
