@@ -2,7 +2,7 @@
 import os
 import unittest
 from unittest.mock import patch
-from edition_policy import current_edition, allow_local_webgpu
+from edition_policy import current_edition, allow_local_webgpu, community_entitlement
 
 class EditionPolicyTests(unittest.TestCase):
     def test_default_is_pro_and_no_webgpu(self):
@@ -24,3 +24,10 @@ class EditionPolicyTests(unittest.TestCase):
         with patch.dict(os.environ, {"REMBG_EDITION": "unknown", "REMBG_ENABLE_WEBGPU_EXPERIMENT": "1"}, clear=True):
             with self.assertRaises(ValueError): current_edition()
             with self.assertRaises(ValueError): allow_local_webgpu()
+
+    def test_community_entitlement_is_free_and_explicit(self):
+        entitlement = community_entitlement()
+        self.assertEqual(entitlement["plan_id"], "community")
+        self.assertEqual(entitlement["status"], "active")
+        self.assertIsNone(entitlement["monthly_images"])
+        self.assertEqual(entitlement["max_batch_images"], 10)
