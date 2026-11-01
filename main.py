@@ -865,11 +865,11 @@ async def webgpu_u2netp_model(request: Request):
     from pathlib import Path
     if request.headers.get("X-Rembg-Token") != security.token:
         raise HTTPException(403, "Forbidden")
-    # Browser-side inference does not go through the quota-controlled Python
-    # remove endpoint. Keep the experimental API disabled for paid releases
-    # until usage accounting is integrated.
-    if os.environ.get("REMBG_ENABLE_WEBGPU_EXPERIMENT") != "1":
-        raise HTTPException(403, "WebGPU experiment disabled until accounting and validation are complete")
+    # Local browser inference is unlimited in Community but never an implicit
+    # paid Pro entitlement. Do not use a frontend flag as billing authority.
+    from edition_policy import allow_local_webgpu
+    if not allow_local_webgpu():
+        raise HTTPException(403, "Local WebGPU is disabled for this edition or experiment")
     path = Path.home() / ".u2net" / "u2netp-webgpu.onnx"
     if not path.is_file():
         raise HTTPException(404, "Missing WebGPU-converted model. Run: uv run --no-project --with onnx python scripts/prepare_webgpu_model.py")
