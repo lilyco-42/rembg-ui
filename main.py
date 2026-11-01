@@ -219,9 +219,13 @@ async def commercial_plans():
 
 def _request_entitlement(request: Request) -> dict:
     """Community local inference is unlimited; Pro keeps signed plans and quotas."""
-    from edition_policy import current_edition, community_entitlement
+    from edition_policy import current_edition, community_entitlement, require_trusted_cloud_billing
     if current_edition() == "community":
         return community_entitlement()
+    try:
+        require_trusted_cloud_billing()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     try:
         return resolve_entitlement(
             request.headers.get("X-Rembg-License"),
