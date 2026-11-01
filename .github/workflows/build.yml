@@ -268,7 +268,7 @@ jobs:
         with:
           name: Rembg-UI-linux
           path: dist/Rembg-UI-linux.tar.gz
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
 
       - name: Upload to release
@@ -370,7 +370,7 @@ jobs:
         with:
           name: Rembg-UI-macos
           path: Rembg-UI-macOS.zip
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
 
       - name: Upload to release
