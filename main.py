@@ -219,9 +219,9 @@ async def commercial_plans():
 
 def _request_entitlement(request: Request) -> dict:
     """Community local inference is unlimited; Pro keeps signed plans and quotas."""
-    from edition_policy import current_edition
+    from edition_policy import current_edition, community_entitlement
     if current_edition() == "community":
-        return {"plan_id": "community", "monthly_images": None, "max_batch_images": 10}
+        return community_entitlement()
     try:
         return resolve_entitlement(
             request.headers.get("X-Rembg-License"),
