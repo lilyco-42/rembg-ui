@@ -2,7 +2,7 @@
 import os
 import unittest
 from unittest.mock import patch
-from edition_policy import current_edition, allow_local_webgpu, community_entitlement
+from edition_policy import current_edition, allow_local_webgpu, community_entitlement, require_trusted_cloud_billing
 
 class EditionPolicyTests(unittest.TestCase):
     def test_default_is_pro_and_no_webgpu(self):
@@ -31,3 +31,14 @@ class EditionPolicyTests(unittest.TestCase):
         self.assertEqual(entitlement["status"], "active")
         self.assertIsNone(entitlement["monthly_images"])
         self.assertEqual(entitlement["max_batch_images"], 10)
+
+    def test_hosted_pro_fails_closed_without_trusted_ledger(self):
+        with patch.dict(os.environ, {"REMBG_EDITION": "pro", "REMBG_HOSTED_PAID_MODE": "1"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "paid inference is disabled"):
+                require_trusted_cloud_billing()
+
+    def test_local_pro_and_free_community_do_not_claim_cloud_billing(self):
+        with patch.dict(os.environ, {"REMBG_EDITION": "pro"}, clear=True):
+            self.assertIsNone(require_trusted_cloud_billing())
+        with patch.dict(os.environ, {"REMBG_EDITION": "community", "REMBG_HOSTED_PAID_MODE": "1"}, clear=True):
+            self.assertIsNone(require_trusted_cloud_billing())
