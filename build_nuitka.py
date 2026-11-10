@@ -81,9 +81,6 @@ def build(mode: str = "release"):
         "--include-package=fastapi",
         "--include-package=sponsor",
         "--nofollow-import-to=fastapi.agents",
-        # 跳过 torch._inductor：其生成的模板代码含非 UTF-8 字符，
-        # 在 Windows(gbk) 下 Nuitka anti-bloat 解析会崩（gbk 编码报错）；Linux 下同样精简体积
-        "--nofollow-import-to=torch._inductor",
         # torch 的 include 头文件目录（~1 万个文件）运行时永远用不到，却会被 Nuitka 计入
         # macOS codesign 命令行（Standalone.py 把 data_file_paths 一并传入签名），超出
         # macOS ARG_MAX 报 "command line was too long" FATAL（曾致 macOS 构建失败）。
