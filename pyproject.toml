@@ -28,12 +28,19 @@ dependencies = [
     # 因此 Linux 锁定到 PyTorch 官方 CPU 源；Windows 的 PyPI wheel 本就是 CPU 版，macOS 无 CUDA 版，无需处理。
     # ⚠️ uv 的 [tool.uv.sources] 只对直接依赖生效，故 torch 需显式声明（反正 ultralytics 必带它）。
     "torch>=2.13.0",
+    # 与 torch 同理：torchvision 是 ultralytics 的传递依赖，uv sources 只对显式依赖生效；
+    # 不显式声明会回退 PyPI 默认 wheel（链 libcudart.so.13 的 CUDA13 构建），
+    # 与本机 CPU torch 不匹配导致 SAM 全崩。
+    "torchvision>=0.15.0",
     "ultralytics>=8.4.104",
     "uvicorn>=0.51.0",
 ]
 
 [tool.uv.sources]
 torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
     { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
 ]
 
