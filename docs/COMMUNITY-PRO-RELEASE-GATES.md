@@ -51,3 +51,13 @@ Base: PR #11 (`04f8914126c7ab5552eecb353d9fce1fd2ff236f`).
 5. Verify WebGPU on AMD 780M; ship Community preview first, then Pro capabilities.
 
 **Do not merge or mark PR #11 sale-ready based on this document alone.**
+
+## 2026-11-12 780M 真机验证证据（本机实测，非合并结论）
+
+- 对应上方第 32 行闸门：**Chromium 156 / RADV PHOENIX / AMD Radeon 780M** 已完成真实 GPU 执行验证；Chrome/Edge 与 Windows/macOS 真机仍未测，故该闸门整体保持未勾选。
+- 执行证据：`scripts/bench_webgpu_u2netp.cjs` → adapter `amd/rdna-3`（非 SwiftShader/CPU）、sessionCreate 1116.8ms、warmMedian **88.6ms**、8 次前向输出均 102400 个有限值（No fallback to CPU）。
+- 已知图像 mask：真实测试图经 WebGPU `session.run` 产出 mask，合成 640×480 RGBA 透明 PNG（alpha 0..255 / 256 级 / 91023 透明 + 9526 不透明像素），见 `docs/WEBGPU_GUIDE.zh-CN.md` 的 2026-11-12 复验小节。
+- 错误路径：无 `navigator.gpu` → worker 返回「当前浏览器没有 WebGPU，无法启用 GPU 推理」；推理期 device-lost 类异常 → worker catch 以 `error` 字段回传，不伪装成 CPU 的 GPU 加速。两者均由 Playwright + Chromium CDP 实跑验证。
+- 桌面 ONNX Runtime 路径（非 WebGPU）：MIGraphX EP 在 780M 上 u2netp p50 60–63ms vs CPU 102ms（约 1.7×），`remove-bg` 端到端 200，见 `docs/AMD-ROCM-GPU.zh-CN.md`。
+
+> 本节仅记录硬件与错误路径的实测结果，**不代表上方 8 条强制合并闸门已解除**，也不代表可标记 sale-ready。

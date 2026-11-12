@@ -88,3 +88,10 @@ Linux AMD 实机 GPU 推理通过；Windows 与 macOS 的 CI 仅验证模型转�
 - FP16 轻模型独立试验：原模型 4.4 MiB → FP16 2.3 MiB，WebGPU 实际推理预热中位数约 81.5 ms（先前 FP32 92–93 ms），但 FP16 和 FP32 输出出现数值偏差，尚不能证明抠图画质一致。
 
 **后续优化顺序**：先找出大模型 GPU 加载异常的具体算子/图形节点并做正确性回归；然后做 512 与 1024 分辨率显存峰值、冷启动与热运行分析；接着核验 FP16 透明边缘质量；最后才考虑模型量化与按显卡能力自动选模型。不要在商用 UI 中展示尚未验证的大模型 GPU 加速。
+
+## 2026-11-12 AMD Radeon 780M 真机复验（Chromium 156 / RADV PHOENIX）
+
+- `scripts/bench_webgpu_u2netp.cjs` 实跑 8 次前向：adapter `amd/rdna-3`（非 SwiftShader）、sessionCreate 1116.8ms、warmMedian **88.6ms**、输出 102400 个有限值。
+- 已知测试图端到端：WebGPU session.run 产出 mask，合成 640×480 RGBA 透明 PNG（alpha 0..255、256 级、91023 透明像素 / 9526 不透明像素），产物 `webgpu-780m-result.png`。
+- 错误路径：无 `navigator.gpu` 时 worker 返回「当前浏览器没有 WebGPU，无法启用 GPU 推理」；推理期异常（如 device lost）由 worker catch 以 `error` 字段回传，不伪装为 CPU 的 GPU 加速。
+- 仍需补：Windows/macOS 真机、更多真实图片全像素误差与细发丝/透明边缘画质回归。
