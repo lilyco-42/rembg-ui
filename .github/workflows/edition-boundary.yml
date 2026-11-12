@@ -1,0 +1,25 @@
+name: Edition boundary regression
+on:
+  pull_request:
+    paths:
+      - "edition_policy.py"
+      - "main.py"
+      - "tests/test_edition_policy.py"
+      - ".github/workflows/edition-boundary.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  edition-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Assert fail-closed Community/Pro boundary
+        run: |
+          python -m unittest discover -s tests -p test_edition_policy.py -v
+          python -m py_compile edition_policy.py main.py

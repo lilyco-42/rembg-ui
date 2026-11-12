@@ -18,3 +18,15 @@
 - 没有通用的模型官方下载保证，个别上游源可能失效或限制访问。下载失败可通过模型目录手动导入。
 - WebGPU 大模型推理仍是实验功能，默认关闭；当前普通模型走现有 CPU/ONNX 推理路径。
 - 本次更新尚未验证所有平台的完整下载安装与图形化使用流程，不应标注为已完成正式发布。
+
+## 社区版 / 商用版一键启动器（推荐）
+
+同一个程序包含两种版本，由服务端环境变量 `REMBG_EDITION` 决定；直接双击主程序默认是**商用版公开试用**（每月 30 张、每批 10 张）。想用**免费、本地不限张数**的社区版，请用一键启动器，不必手敲命令：
+
+1. 从 Release 下载 `Rembg-UI-launchers.zip`，解压到程序目录（与 `rembg-ui` / `rembg-ui.exe` 同级）。
+2. Windows 双击 `START-Community.bat`、Linux 运行 `START-Community.sh`、macOS 双击 `START-Community.command`；商用版把 `Community` 换成 `Pro`。
+3. 浏览器自动打开后，其余步骤与上面的五步一致。
+
+启动器源码与完整说明见仓库 `launchers/README.zh-CN.md`（含 AMD ROCm 加速包用法、两版额度对照、技术预览声明）。文件名用英文是为避免 Windows 各语言版解压中文名乱码。
+
+> 本页与 `launchers/README.zh-CN.md`、Release 说明一致：当前为 **technical preview**，不是正式可售版本；8 条强制合并闸门见 `docs/COMMUNITY-PRO-RELEASE-GATES.md`。

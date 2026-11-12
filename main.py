@@ -50,122 +50,18 @@ os.environ["ORT_CUDA_DEVICE_ID"] = "0"
 import numpy as np
 import uvicorn
 
-# 最小可加载 ONNX 模型（单个 Relu 节点），仅用于探测 CUDA Provider 能否真正建会话。
-# 不能用空模型 b""：那样 ORT 永远报 “No graph was found”，导致 CUDA 探测必然失败、
-# 永远回退 CPU；也不能只信 get_available_providers()（缺 cuDNN 时它仍会把 CUDA 列出来）。
-_MIN_ONNX = base64.b64decode(
-    "CA06OwoMCgF4EgF5IgRSZWx1EgFtWhMKAXgSDgoMCAESCAoCCAEKAggBYhMKAXkSDgoMCAESCAoCCAEKAggBQgQKABAN"
+from gpu_providers import detect_providers, ensure_cuda_ldpath
+
+# 在 import onnxruntime（detect_providers 内部惰性导入）之前，确保 nvidia 运行库目录
+# 已进入 LD_LIBRARY_PATH；否则 cuDNN 9 的循环依赖会让 CUDA Provider 加载失败、回退 CPU。
+# AMD ROCm / MIGraphX 变体没有 nvidia 目录，此调用直接返回、不会重启进程。
+ensure_cuda_ldpath()
+PROVIDERS = detect_providers()
+_first_provider = PROVIDERS[0]
+print(
+    "[GPU] Provider: "
+    + (_first_provider[0] if isinstance(_first_provider, (tuple, list)) else _first_provider)
 )
-
-
-def _cuda_lib_dirs():
-    """返回需要加入 CUDA 运行库搜索路径的目录（Linux）：
-      - -cuda 打包产物：二进制同级的 nvidia-cuda/lib/
-      - 开发环境：pip 安装的 nvidia-* 包所在 site-packages/nvidia/<pkg>/lib/
-        （如 nvidia-cudnn-cu12 提供 libcudnn.so.9）。"""
-    dirs = []
-    # -cuda 打包产物
-    base = os.path.join(os.path.dirname(sys.executable), "nvidia-cuda", "lib")
-    if os.path.isdir(base):
-        dirs.append(base)
-    # 开发环境：site-packages/nvidia/*/lib
-    try:
-        import site
-
-        for sp in list(site.getsitepackages()) + [os.path.dirname(os.__file__)]:
-            ndir = os.path.join(sp, "nvidia")
-            if os.path.isdir(ndir):
-                for sub in os.listdir(ndir):
-                    lib = os.path.join(ndir, sub, "lib")
-                    if os.path.isdir(lib):
-                        dirs.append(lib)
-    except Exception:
-        pass
-    return dirs
-
-
-def _ensure_cuda_ldpath():
-    """Linux 上，若 nvidia 运行库目录未进入 LD_LIBRARY_PATH，就重启本进程并前置该路径。
-
-    onnxruntime-gpu 的 CUDA Provider 通过 dlopen 按 SONAME 查找 libcudnn.so.9 等库；
-    cuDNN 9 的子库之间（libcudnn.so.9 ↔ libcudnn_ops_infer.so.9）存在循环依赖，
-    仅靠 ctypes 逐个预加载无法解开，必须由动态链接器在进程启动时就从目录里解析。
-    因此在 import onnxruntime 之前，把库目录放进 LD_LIBRARY_PATH 并 os.execv 重启自身。"""
-    if not sys.platform.startswith("linux"):
-        return
-    dirs = _cuda_lib_dirs()
-    if not dirs:
-        return
-    existing = set(p for p in os.environ.get("LD_LIBRARY_PATH", "").split(os.pathsep) if p)
-    if all(d in existing for d in dirs):
-        return
-    new_path = os.pathsep.join(dirs + ([os.environ["LD_LIBRARY_PATH"]] if os.environ.get("LD_LIBRARY_PATH") else []))
-    os.environ["LD_LIBRARY_PATH"] = new_path
-    os.execv(sys.executable, [sys.executable] + sys.argv)
-
-
-def _preload_cuda_runtime():
-    """Linux 兜底：以 RTLD_GLOBAL 预加载 nvidia 运行库（SONAME 常驻进程）。
-    主要解循环依赖靠 _ensure_cuda_ldpath()（启动期把目录放进 LD_LIBRARY_PATH）。
-    这里作为补充，覆盖无法修改环境变量的场景（如部分打包产物）。"""
-    if not sys.platform.startswith("linux"):
-        return
-    import ctypes
-    from glob import glob
-
-    dirs = _cuda_lib_dirs()
-    if not dirs:
-        return
-    remaining = []
-    for d in dirs:
-        remaining += glob(os.path.join(d, "*.so*"))
-    progress = True
-    while progress and remaining:
-        progress = False
-        still = []
-        for path in remaining:
-            try:
-                ctypes.CDLL(path, mode=os.RTLD_GLOBAL)
-                progress = True
-            except OSError:
-                still.append(path)
-        remaining = still
-
-
-def _detect_providers():
-    """按平台探测 GPU 加速：Linux/Windows 探测 CUDA（NVIDIA），macOS 探测 CoreML
-    （Apple GPU/神经网络引擎加速，标准 onnxruntime wheel 内置该 Provider），均不可用回退 CPU"""
-    try:
-        from onnxruntime import get_available_providers
-        available = get_available_providers()
-        if sys.platform == "darwin":
-            if "CoreMLExecutionProvider" in available:
-                return ["CoreMLExecutionProvider", "CPUExecutionProvider"]
-            return ["CPUExecutionProvider"]
-        _preload_cuda_runtime()
-        if "CUDAExecutionProvider" not in available:
-            return ["CPUExecutionProvider"]
-        # 用真实的最小模型真正创建 CUDA session，确认 Provider 能加载
-        # （get_available_providers 可能误报 CUDA：例如缺 cuDNN 时 ORT 仍把它列出来；
-        #  空模型 b"" 又会因 “No graph” 永远失败，所以必须用真实模型）
-        import onnxruntime as ort
-        so = ort.SessionOptions()
-        so.log_severity_level = 3
-        so.add_session_config_entry("session.use_env_allocators", "1")
-        try:
-            ort.InferenceSession(_MIN_ONNX, sess_options=so, providers=["CUDAExecutionProvider"])
-        except Exception:
-            return ["CPUExecutionProvider"]
-        return ["CUDAExecutionProvider", "CPUExecutionProvider"]
-    except Exception:
-        return ["CPUExecutionProvider"]
-
-
-# 在 import onnxruntime（即 _detect_providers 内部）之前，确保 nvidia 运行库目录已进入
-# LD_LIBRARY_PATH；否则 cuDNN 9 的循环依赖会让 CUDA Provider 加载失败、回退 CPU。
-_ensure_cuda_ldpath()
-PROVIDERS = _detect_providers()
-print(f"[GPU] Provider: {PROVIDERS[0]}")
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse
 from PIL import Image
@@ -218,7 +114,14 @@ async def commercial_plans():
 
 
 def _request_entitlement(request: Request) -> dict:
-    """Resolve the signed plan for a local API request, failing closed."""
+    """Community local inference is unlimited; Pro keeps signed plans and quotas."""
+    from edition_policy import current_edition, community_entitlement, require_trusted_cloud_billing
+    if current_edition() == "community":
+        return community_entitlement()
+    try:
+        require_trusted_cloud_billing()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     try:
         return resolve_entitlement(
             request.headers.get("X-Rembg-License"),
@@ -865,11 +768,11 @@ async def webgpu_u2netp_model(request: Request):
     from pathlib import Path
     if request.headers.get("X-Rembg-Token") != security.token:
         raise HTTPException(403, "Forbidden")
-    # Browser-side inference does not go through the quota-controlled Python
-    # remove endpoint. Keep the experimental API disabled for paid releases
-    # until usage accounting is integrated.
-    if os.environ.get("REMBG_ENABLE_WEBGPU_EXPERIMENT") != "1":
-        raise HTTPException(403, "WebGPU experiment disabled until accounting and validation are complete")
+    # Local browser inference is unlimited in Community but never an implicit
+    # paid Pro entitlement. Do not use a frontend flag as billing authority.
+    from edition_policy import allow_local_webgpu
+    if not allow_local_webgpu():
+        raise HTTPException(403, "Local WebGPU is disabled for this edition or experiment")
     path = Path.home() / ".u2net" / "u2netp-webgpu.onnx"
     if not path.is_file():
         raise HTTPException(404, "Missing WebGPU-converted model. Run: uv run --no-project --with onnx python scripts/prepare_webgpu_model.py")
