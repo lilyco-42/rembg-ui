@@ -11,7 +11,7 @@ dependencies = [
     "numba==0.60.0",
     "numpy<2",
     # macOS 无 onnxruntime-gpu 的 wheel：CPU 版 onnxruntime 即可跑 rembg；
-    # Windows / Linux 用 GPU 版（无 GPU 时 _detect_providers 会自动回退 CPU）
+    # Windows / Linux 用 GPU 版（无 GPU 时 detect_providers() 会自动回退 CPU）
     # ⚠️ 必须 <1.27：1.27 起 GPU 版改用 CUDA 13（要 libcudart.so.13），
     # 与本项目 -cuda 产物随包分发的 nvidia-*-cu12 运行库不匹配，
     # 且 CUDA 13 要求驱动 ≥580，老机器上会直接 ImportError 起不来。
@@ -50,6 +50,16 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [project.optional-dependencies]
+
+# -amd 构建变体：把 onnxruntime-gpu 换成 onnxruntime-migraphx，让 AMD ROCm GPU
+# （如 Radeon 780M / gfx1103）经 MIGraphX ExecutionProvider 真正加速。
+# ⚠️ 两个 ORT 发行版共享 onnxruntime/capi 目录，绝不能共存于同一环境；amd 变体构建
+# 必须用 `uv sync --extra amd --no-install-package onnxruntime-gpu` 排除 CUDA 版。
+# 运行前提：用户机器已装 ROCm 用户态（/opt/rocm；Arch: pacman -S rocm-hip-sdk migraphx）。
+# 缺 ROCm 时 detect_providers() 的最小模型探测会话会失败并自动回退 CPU，不影响启动。
+amd = [
+    "onnxruntime-migraphx>=1.27,<1.28; sys_platform == 'linux'",
+]
 # -cuda 构建变体：把 onnxruntime-gpu 所需的 CUDA 12 运行库（NVIDIA 官方 wheel，
 # 含 cudnn 9 / cublas / cudart 等，安装后 ~2.5 GB）打进产物，用户免装 CUDA 即可 GPU 加速。
 # 仅 Win/Linux 有 wheel，标记避免 macOS 下通用锁解析失败；macOS 加速走 CoreML（无需额外包）。

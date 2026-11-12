@@ -145,10 +145,11 @@ def build(mode: str = "release"):
 
     print(f"Building [{mode.upper()}] with Nuitka (version {version})...")
     subprocess.run(cmd, check=True)
-    # CUDA 变体收尾（仅 win/linux）：macOS 用 --mode=app 无 .dist 目录，且 nvidia 包
-    # 本就因平台标记不会安装，无需调用
+    # 收尾（仅 win/linux）：macOS 用 --mode=app 无 .dist 目录，无需调用
     if sys.platform.startswith(("win", "linux")):
-        _bundle_cuda_runtime(build_dir / f"{OUTPUT_NAME}.dist")
+        dist_dir = build_dir / f"{OUTPUT_NAME}.dist"
+        _bundle_cuda_runtime(dist_dir)
+        _bundle_ort_providers(dist_dir)
 
 
 def _bundle_cuda_runtime(dist_dir: Path) -> None:
@@ -156,7 +157,7 @@ def _bundle_cuda_runtime(dist_dir: Path) -> None:
     默认构建（无 --extra cuda）环境没有这些包，直接跳过。
     - Windows：*.dll 平铺到 dist 根目录——exe 所在目录在 DLL 搜索路径首位，
       onnxruntime 按名加载 cudart64_12.dll 等可直接命中；
-    - Linux：*.so* 收集到 dist/nvidia-cuda/lib/——运行时由 main._preload_cuda_runtime
+    - Linux：*.so* 收集到 dist/nvidia-cuda/lib/——运行时由 gpu_providers._preload_cuda_runtime
       用 ctypes 按绝对路径预加载（dlopen 的库不做相对搜索，必须显式加载）。
     同时确保 onnxruntime 的 CUDA Provider 动态库真的进了产物（Nuitka 的 dll 追踪
     只报过 1 个 DLL，Provider 是运行时 dlopen 的，不保证被复制）。"""
@@ -199,6 +200,46 @@ def _bundle_cuda_runtime(dist_dir: Path) -> None:
             if f.suffix in (".dll", ".so") and not (capi_dst / f.name).exists():
                 shutil.copy2(f, capi_dst / f.name)
                 print(f"[cuda] 补拷缺失的 ORT Provider 库: {f.name}")
+
+
+def _bundle_ort_providers(dist_dir: Path) -> None:
+    """把构建环境 onnxruntime/capi 下的 Provider 动态库全部补进产物。
+
+    ExecutionProvider（CUDA / TensorRT / MIGraphX / ROCM）是运行期由 ORT 按
+    dlopen/LoadLibrary 加载的，Nuitka 的 DLL 依赖追踪看不到它们；缺少时
+    get_available_providers() 不会列出该 EP，GPU 加速静默回退 CPU。
+    这里不区分构建变体：装的是 onnxruntime-gpu 就补 CUDA/TensorRT，装的是
+    onnxruntime-migraphx（--extra amd）就补 MIGraphX，同一份代码都适用。
+    ROCm 用户态本身（/opt/rocm/lib/libmigraphx_c.so 等）属于系统库，不随包分发。
+    """
+    import shutil
+    import sysconfig
+
+    if not dist_dir.is_dir():
+        print(f"[ort] 未找到产物目录 {dist_dir.name}，跳过 Provider 库补拷")
+        return
+    purelib = Path(sysconfig.get_paths()["purelib"])
+    capi_src = purelib / "onnxruntime" / "capi"
+    if not capi_src.is_dir():
+        print("[ort] 构建环境未找到 onnxruntime/capi，跳过 Provider 库补拷")
+        return
+    capi_dst = dist_dir / "onnxruntime" / "capi"
+    capi_dst.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for f in capi_src.iterdir():
+        name = f.name
+        is_lib = name.endswith((".so", ".dll")) or (
+            ".so." in name or name.endswith(".dylib")
+        )
+        if not is_lib or not f.is_file():
+            continue
+        dst = capi_dst / name
+        if dst.exists():
+            continue
+        shutil.copy2(f, dst)
+        copied += 1
+        print(f"[ort] 补拷 Provider 库: {name}")
+    print(f"[ort] 共补拷 {copied} 个 ORT Provider 库")
 
 
 if __name__ == "__main__":

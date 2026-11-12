@@ -1065,6 +1065,23 @@ wheels = [
 ]
 
 [[package]]
+name = "onnxruntime-migraphx"
+version = "1.27.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "flatbuffers" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "protobuf" },
+]
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/12/e9/12aae039e0869827551ad6212a889958b7851ee866fed331c44bfbec5a02/onnxruntime_migraphx-1.27.1-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:4a178713a67dbcd1a952edb89d60e856ec70538f8f9848c89745ae2328305b6d" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/9c/b7/7946bd996b95c859162ccd76c7e1e3f01e3627e5bf06a3ae1bf288fe89bd/onnxruntime_migraphx-1.27.1-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:089c992442b6bff9f7786173ce6a31db111b104ae66be34d5467593951d905a4" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/7c/0b/0c5fb99b151bec12f5fef1fee6a58c628a5a18432805085de7c48fc36813/onnxruntime_migraphx-1.27.1-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:e4c9aef8479e89eb2a59ca0b51139d8e85723f3f56fbced17c8be1c643466d81" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/80/53/6c9102d0d611bde225b510def4bbac95e960fd40de03ac2d2a4a45a3c62f/onnxruntime_migraphx-1.27.1-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:e7d6005b3dd17eff1f81d43318c740f4986548560339d08e8826456124e10b95" },
+]
+
+[[package]]
 name = "opencv-python"
 version = "4.11.0.86"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -1571,6 +1588,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+amd = [
+    { name = "onnxruntime-migraphx", marker = "sys_platform == 'linux'" },
+]
 cuda = [
     { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "nvidia-cuda-runtime-cu12", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1599,6 +1619,7 @@ requires-dist = [
     { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform == 'linux' and extra == 'cuda') or (sys_platform == 'win32' and extra == 'cuda')" },
     { name = "onnxruntime", marker = "sys_platform == 'darwin'", specifier = ">=1.24.3" },
     { name = "onnxruntime-gpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'", specifier = ">=1.24.3,<1.27" },
+    { name = "onnxruntime-migraphx", marker = "sys_platform == 'linux' and extra == 'amd'", specifier = ">=1.27,<1.28" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "pymatting", specifier = ">=1.1.12" },
     { name = "python-multipart", specifier = ">=0.0.32" },
@@ -1610,7 +1631,7 @@ requires-dist = [
     { name = "ultralytics", specifier = ">=8.4.104" },
     { name = "uvicorn", specifier = ">=0.51.0" },
 ]
-provides-extras = ["cuda"]
+provides-extras = ["amd", "cuda"]
 
 [[package]]
 name = "requests"
