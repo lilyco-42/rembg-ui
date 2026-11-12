@@ -44,3 +44,6 @@ sam_*.pt
 /studio-ui/translations-export/
 
 /frontend/studio-ui/browser/
+
+# GPU provider detection unit tests
+!tests/test_gpu_providers.py
