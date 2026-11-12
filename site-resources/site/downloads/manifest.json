@@ -1,0 +1,1975 @@
+{
+  "schemaVersion": 2,
+  "updatedAt": "2026-10-28",
+  "mirrorBase": "https://dl.lilyco42.top/downloads",
+  "notice": "软件下载站同时支持 Windows、macOS、iOS 与 Android。R2 只用于已经验证的镜像文件，macOS/iOS 新增条目链接到官方发布页或 App Store；iOS 未签名 IPA 不能直接安装。",
+  "items": [
+    {
+      "id": "rembg-studio-windows",
+      "name": "Rembg Studio · 文件夹批量抠图",
+      "summary": "Windows 本地图片去背景工具。解压后运行 rembg-ui.exe，选择整个文件夹，开始批量处理，再下载交付 ZIP。",
+      "category": "图片 / 创作",
+      "platforms": [
+        "windows"
+      ],
+      "version": "0.2.7 · 2026-10-28",
+      "license": "见项目源码及所用模型许可",
+      "repository": "https://github.com/lilyco-42/rembg-ui",
+      "official": "https://github.com/lilyco-42/rembg-ui/releases/latest",
+      "channel": "本站文件",
+      "guide": "/downloads/rembg/index.html",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "Rembg-UI-windows.zip",
+        "size": 664877616,
+        "sha256": "7bbc33e24391ed3d43efed6a1cb450af4f511fc136b246c70cc1548953435647",
+        "url": "https://lain42.top/downloads/files/rembg-ui/v0.2.7-20261028-1536/Rembg-UI-windows.zip"
+      },
+      "note": "完整解压后再运行 EXE，不要只取出一个文件。首次使用所选模型需要联网下载；图片处理在本机完成。试用与授权批量额度以客户端为准。"
+    },
+    {
+      "id": "scrcpy-windows",
+      "name": "scrcpy · Android 投屏与控制",
+      "summary": "Genymobile 官方 Windows 64 位完整包，含 scrcpy 与 ADB。解压后用 USB 连接已开启 USB 调试的安卓设备，在手机确认授权，再运行 scrcpy.exe。",
+      "category": "Android / 设备工具",
+      "platforms": [
+        "windows"
+      ],
+      "version": "5.0.1",
+      "license": "Apache-2.0（scrcpy）；依赖许可见完整包",
+      "repository": "https://github.com/Genymobile/scrcpy",
+      "official": "https://github.com/Genymobile/scrcpy/releases/tag/v5.0.1",
+      "channel": "本站文件",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "scrcpy-win64-v5.0.1.zip",
+        "size": 11264634,
+        "sha256": "b12a2c4ee8be317422451fc7dcf8ee20a71b5ea7ef9ad73ddd825a25316227a5",
+        "url": "https://lain42.top/downloads/files/scrcpy/v5.0.1/scrcpy-win64-v5.0.1.zip"
+      },
+      "note": "本工具运行在电脑上，连接 Android 手机；不是 APK。保留完整压缩包中的 DLL、ADB 与许可文件。更多系统和 CPU 架构请查看官方发布页。"
+    },
+    {
+      "id": "android-platform-tools",
+      "name": "ADB / Android SDK Platform-Tools",
+      "summary": "Google 官方 ADB、fastboot 工具入口，支持 Windows、macOS 和 Linux。只需 Windows ADB 时，也可下载本站 scrcpy 完整包，里面包含 adb.exe。",
+      "category": "Android / 设备工具",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "version": "官方最新版本",
+      "license": "Google SDK 下载条款；组件许可见包内 NOTICE",
+      "official": "https://developer.android.com/tools/releases/platform-tools",
+      "channel": "Google 官方下载",
+      "note": "独立 Platform-Tools 从 Google 官方页面选择系统并阅读下载条款。Windows 的 scrcpy 完整包可直接使用其附带 ADB；ADB 是电脑端工具，不是手机安装包。"
+    },
+    {
+      "id": "zerostack-launchpad",
+      "name": "ZeroStack Launchpad · AI 自动编码平台",
+      "summary": "来自 lilyco-42 的 AI 自动编码循环、Axum Web 监控面板与 Android WebView 客户端模板；本项目是部署平台与源码，不是 ZeroStack CLI 的官方安装包。",
+      "category": "AI Agent / 编程",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux",
+        "android"
+      ],
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/zerostack-launchpad",
+      "official": "https://github.com/lilyco-42/zerostack-launchpad",
+      "install": "git clone https://github.com/lilyco-42/zerostack-launchpad.git",
+      "channel": "原创项目 · GitHub 源码",
+      "version": "源码模板",
+      "note": "服务器平台面向 Debian / Ubuntu；Windows/macOS 可浏览源码；仓库 Android APK 为示例 WebView 壳，若正式分发需自行签名，不等于 ZeroStack CLI 官方发行版。"
+    },
+    {
+      "id": "deepseek-harness-agent",
+      "name": "DeepSeek Harness · 插件化 Agent",
+      "summary": "DeepSeek AI 的开源 Agent 框架，以 Everything is a Plugin 架构运行 Web UI；支持 npm 快速启动，也提供本人 GitHub fork 查看代码。",
+      "category": "AI Agent / 编程",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/deepseek-harness",
+      "official": "https://github.com/deepseek-ai/deepseek-harness",
+      "install": "npx @deepseek-ai/dsh web",
+      "channel": "官方开源 · 开发预览",
+      "version": "开发者预览",
+      "note": "需要 Node.js；项目目前是 developer preview，更新可能包含不兼容变更。个人仓库副本：https://github.com/lilyco-42/deepseek-harness"
+    },
+    {
+      "id": "openai-codex-cli",
+      "name": "OpenAI Codex CLI · 编程智能体",
+      "summary": "OpenAI 推出的终端编码 Agent，可在本地项目中读代码、编写与运行测试。下载安装建议以官方安装器或官方 Releases 为准。",
+      "category": "AI Agent / 编程",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "license": "Apache-2.0",
+      "repository": "https://github.com/openai/codex",
+      "official": "https://github.com/openai/codex/releases/latest",
+      "install": "npm install -g @openai/codex",
+      "channel": "官方 Release",
+      "version": "官方最新版",
+      "note": "也可使用 OpenAI 官方安装器：https://chatgpt.com/codex/install.sh（macOS/Linux）、https://chatgpt.com/codex/install.ps1（Windows）；首次使用需按官方说明登录或配置 API Key。"
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "summary": "Anthropic 官方终端编程 Agent，支持终端与 IDE。请从 Anthropic 官方网站安装，本站仅提供说明和跳转，不托管或重新分发其专有安装包。",
+      "category": "AI 工具",
+      "license": "专有软件",
+      "official": "https://code.claude.com/docs/en/setup",
+      "install": "Windows: winget install Anthropic.ClaudeCode",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "channel": "官方安装入口",
+      "repository": "https://github.com/anthropics/claude-code",
+      "version": "官方最新版",
+      "note": "macOS/Linux 官方命令：curl -fsSL https://claude.ai/install.sh | bash。原仓库旧 npm 安装已标为 deprecated；需按 Anthropic 官方条款登录与使用。"
+    },
+    {
+      "id": "lyco",
+      "name": "lyco（lytray + lycore）",
+      "summary": "本地 Agent 小白版：下载解压双击 lytray.exe 即用，托盘一键完成环境自举等任务。mpkg 记忆包可回放可验证，不需要 API token，也不需要先懂 python / node / uv。",
+      "category": "AI 工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/lyco_agent",
+      "version": "0.1.0",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "lyco-windows.zip",
+        "size": 4539333,
+        "sha256": "6538286b3c291291f9027ba1d450e46fa05eca21d2576572adad3b370a929cda",
+        "url": "https://lain42.top/lyco-dl/lyco-windows.zip"
+      },
+      "official": "https://lain42.top/lyco-dl/",
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "clash-verge-rev",
+      "name": "Clash Verge Rev",
+      "summary": "跨平台代理客户端，适合 Clash 配置与订阅管理。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "repository": "https://github.com/clash-verge-rev/clash-verge-rev",
+      "release": "https://github.com/clash-verge-rev/clash-verge-rev/releases/tag/v2.5.2",
+      "version": "v2.5.2",
+      "official": "https://github.com/clash-verge-rev/clash-verge-rev/releases/tag/v2.5.2",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "Clash.Verge_2.5.2_x64-setup.exe",
+        "size": 46964366,
+        "sha256": "ba42f00b1082e352352080170fe86ae411bcc854cb13f1b8bebc9025e8a7cbf4",
+        "url": "https://dl.lilyco42.top/downloads/clash-verge-rev/v2.5.2/Clash.Verge_2.5.2_x64-setup.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "v2rayn",
+      "name": "v2rayN",
+      "summary": "Windows、Linux、macOS 通用的代理客户端。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "repository": "https://github.com/2dust/v2rayN",
+      "release": "https://github.com/2dust/v2rayN/releases/tag/7.24.9",
+      "version": "7.24.9",
+      "official": "https://github.com/2dust/v2rayN/releases/tag/7.24.9",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "v2rayN-windows-64-desktop.zip",
+        "size": 132305821,
+        "sha256": "fbf187b3eca3e391bf348cc559bb458ab6d8f5cd5afdfbce5de45b01c26bd179",
+        "url": "https://dl.lilyco42.top/downloads/v2rayn/7.24.9/v2rayN-windows-64-desktop.zip"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "zed",
+      "name": "Zed",
+      "summary": "高速、协作友好的现代代码编辑器。",
+      "category": "开发工具",
+      "license": "GPL-3.0",
+      "repository": "https://github.com/zed-industries/zed",
+      "release": "https://github.com/zed-industries/zed/releases/tag/v1.20.2",
+      "version": "v1.20.2",
+      "official": "https://zed.dev/download",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "Zed-x86_64.exe",
+        "size": 85627488,
+        "sha256": "82c2f6e682a73e3fca7102b49582101e44137defe8d002d5fc890213eb0153de",
+        "url": "https://dl.lilyco42.top/downloads/zed/1.20.2/Zed-x86_64.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "obs-studio",
+      "name": "OBS Studio",
+      "summary": "录屏、直播与虚拟摄像头工具。",
+      "category": "创作工具",
+      "license": "GPL-2.0",
+      "repository": "https://github.com/obsproject/obs-studio",
+      "release": "https://github.com/obsproject/obs-studio/releases/tag/32.2.2",
+      "version": "32.2.2",
+      "official": "https://obsproject.com/download",
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "aviutl",
+      "name": "AviUtl Installer Script",
+      "summary": "Windows 轻量视频编辑器的社区安装脚本，自动准备常用插件与运行环境。",
+      "category": "创作工具",
+      "license": "MIT（安装脚本）",
+      "official": "https://aviutl-installer.github.io/en/",
+      "platforms": [
+        "windows"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "rustdesk",
+      "name": "RustDesk",
+      "summary": "开源远程桌面客户端，支持自建中继。",
+      "category": "效率工具",
+      "license": "AGPL-3.0",
+      "repository": "https://github.com/rustdesk/rustdesk",
+      "release": "https://github.com/rustdesk/rustdesk/releases/tag/1.4.9",
+      "version": "1.4.9",
+      "official": "https://rustdesk.com/download/",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "rustdesk-1.4.9-x86_64.exe",
+        "size": 24472432,
+        "sha256": "eaedeb0088e687bf46f7c46a9c6ea5493ce51f3134dfd6acbedb47b5b9136274",
+        "url": "https://dl.lilyco42.top/downloads/rustdesk/1.4.9/rustdesk-1.4.9-x86_64.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "uv",
+      "name": "uv",
+      "summary": "快速的 Python 版本、环境与包管理器。",
+      "category": "开发工具",
+      "license": "MIT / Apache-2.0",
+      "repository": "https://github.com/astral-sh/uv",
+      "release": "https://github.com/astral-sh/uv/releases/tag/0.12.17",
+      "version": "0.12.17",
+      "official": "https://docs.astral.sh/uv/",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "uv-x86_64-pc-windows-msvc.zip",
+        "size": 17906210,
+        "sha256": "a252121d5b59398fcb137c6ea448176459a44010f33f67e0072305a637119ca7",
+        "url": "https://dl.lilyco42.top/downloads/uv/0.12.17/uv-x86_64-pc-windows-msvc.zip"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "chatgpt",
+      "name": "ChatGPT",
+      "summary": "官方桌面与移动应用。安装包由 OpenAI 官方分发。",
+      "category": "AI 工具",
+      "license": "商业软件",
+      "official": "https://chatgpt.com/download/",
+      "platforms": [
+        "windows",
+        "macos",
+        "ios"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "summary": "本地运行大模型的轻量运行时，适合无账号体验。",
+      "category": "AI 工具",
+      "license": "MIT",
+      "repository": "https://github.com/ollama/ollama",
+      "official": "https://ollama.com/download",
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "lm-studio",
+      "name": "LM Studio",
+      "summary": "本地模型下载、聊天与 OpenAI-compatible API 服务。",
+      "category": "AI 工具",
+      "license": "商业软件",
+      "official": "https://lmstudio.ai/download",
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "summary": "分布式版本控制工具，开发环境基础组件。",
+      "category": "开发工具",
+      "license": "GPL-2.0",
+      "repository": "https://github.com/git/git",
+      "official": "https://git-scm.com/downloads",
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "7zip",
+      "name": "7-Zip",
+      "summary": "高压缩比归档与解压工具。",
+      "category": "效率工具",
+      "license": "LGPL-2.1",
+      "version": "25.01",
+      "official": "https://www.7-zip.org/download.html",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "7z2501-x64.exe",
+        "size": 1643509,
+        "sha256": "78afa2a1c773caf3cf7edf62f857d2a8a5da55fb0fff5da416074c0d28b2b55f",
+        "url": "https://dl.lilyco42.top/downloads/7zip/25.01/7z2501-x64.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "summary": "跨平台代码编辑器，扩展生态成熟。",
+      "category": "开发工具",
+      "license": "MIT / Microsoft product license",
+      "official": "https://code.visualstudio.com/Download",
+      "platforms": [
+        "windows",
+        "macos"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "lilyco-qwen3-06b",
+      "name": "Qwen3-0.6B-Q4（手机端快脑）",
+      "summary": "0.6B 小参数本地模型，GGUF 一包，Termux/llama.cpp 直跑，离线 tool call。",
+      "category": "AI 工具",
+      "license": "Apache-2.0",
+      "repository": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF",
+      "release": "https://github.com/lilyco-42/lilyco-approve/releases/tag/v0.3.0",
+      "version": "Q4_K_M",
+      "official": "https://github.com/lilyco-42/lilyco-approve/releases/tag/v0.3.0",
+      "mirror": {
+        "platform": "Android GGUF",
+        "file": "Qwen3-0.6B-Q4_K_M.gguf",
+        "size": 396705472,
+        "sha256": "ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a",
+        "url": "https://dl.lilyco42.top/downloads/models/Qwen3-0.6B-Q4_K_M.gguf"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "lilyco-uground-2b",
+      "name": "UGround-V1-2B-Q2（手机端眼睛）",
+      "summary": "2B 视觉 grounding 模型，看屏出坐标，与 layout 树互补。",
+      "category": "AI 工具",
+      "license": "Apache-2.0",
+      "repository": "https://huggingface.co/osunlp/UGround-V1-2B",
+      "release": "https://github.com/lilyco-42/lilyco-approve/releases/tag/v0.3.0",
+      "version": "Q2_K",
+      "official": "https://github.com/lilyco-42/lilyco-approve/releases/tag/v0.3.0",
+      "mirror": {
+        "platform": "Android GGUF",
+        "file": "UGround-V1-2B.Q2_K.gguf",
+        "size": 676303712,
+        "sha256": "36483e9e1d19e75d0e2567ab8ed7f40e269200928880e8ba892eb9251277ecd6",
+        "url": "https://dl.lilyco42.top/downloads/models/UGround-V1-2B.Q2_K.gguf"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "lyco-router-v13",
+      "name": "lyco-router v13（端侧 NL→CLI）",
+      "summary": "0.6B 端侧命令路由器：自然语言直出 CLI，关灯题本地消化， thinking 须关。",
+      "category": "AI 工具",
+      "license": "Apache-2.0",
+      "repository": "https://huggingface.co/lyco42/lyco-agent-qwen3-0.6b-ondevice",
+      "release": "https://github.com/lilyco-42/lilyco-approve/releases/tag/v0.3.0",
+      "version": "v13 Q4_K_M",
+      "official": "https://github.com/lilyco-42/lilyco-approve/releases/tag/v0.3.0",
+      "mirror": {
+        "platform": "Android GGUF",
+        "file": "router_v13-Q4_K_M.gguf",
+        "size": 484219648,
+        "sha256": "2688b737ec1676dce3c691f38f6c240ce6142329863eb9b989ff7593db57e9ee",
+        "url": "https://dl.lilyco42.top/downloads/models/router_v13-Q4_K_M.gguf"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "lyco-jev",
+      "name": "lyco-jev（端侧 Jev 聊天判读）",
+      "summary": "聊天读屏后交给手机本机的 Jev-Style-0.8B 做类型化判读（意图/情绪/该不该回），给出 galgame 式候选回复；带 OCR+YOLO 识图与本地长期记忆，端侧权重已打进 APK，装完即完全离线，无需密钥。debug 构建，可直接安装。 备用 APK 与原阿里云镜像不是同一构建，已按实际文件重新计算 SHA-256。",
+      "category": "AI 工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/lyco-jev",
+      "release": "https://github.com/lilyco-42/lyco-jev",
+      "version": "本站备用构建",
+      "official": "https://github.com/lilyco-42/lyco-jev",
+      "mirror": {
+        "platform": "Android arm64（本站备用构建）",
+        "file": "lyco-jev-android-arm64.apk",
+        "size": 1155579350,
+        "sha256": "3b47b18b592fb4d530265d38abe44b0afe3f312ae8e10e48b710ef46a2ee4b77",
+        "url": "https://lain42.top/lyco-jev-dl/lyco-jev-android-arm64.apk"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "nekobox",
+      "name": "NekoBox",
+      "summary": "Android 代理客户端，基于 sing-box，支持 VMess / VLESS / Trojan / Hysteria 等协议。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "repository": "https://github.com/MatsuriDayo/NekoBoxForAndroid",
+      "release": "https://github.com/MatsuriDayo/NekoBoxForAndroid/releases/tag/1.4.2",
+      "version": "1.4.2",
+      "official": "https://github.com/MatsuriDayo/NekoBoxForAndroid/releases/tag/1.4.2",
+      "mirror": {
+        "platform": "Android arm64-v8a",
+        "file": "NekoBox-1.4.2-arm64-v8a.apk",
+        "size": 15252519,
+        "sha256": "d01e76feeb05e4701f3ae382cb71c0a3ebb77039005e5893f8817e1051f8ac28",
+        "url": "https://dl.lilyco42.top/downloads/nekobox/1.4.2/NekoBox-1.4.2-arm64-v8a.apk"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "clashmi",
+      "name": "clashmi",
+      "summary": "基于 ClashMeta / mihomo 的 Android 代理客户端，订阅管理与规则分流。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "repository": "https://github.com/KaringX/clashmi",
+      "release": "https://github.com/KaringX/clashmi/releases/tag/v1.0.30.1605",
+      "version": "1.0.30.1605",
+      "official": "https://github.com/KaringX/clashmi/releases/tag/v1.0.30.1605",
+      "mirror": {
+        "platform": "Android arm64-v8a",
+        "file": "clashmi-1.0.30.1605-arm64-v8a.apk",
+        "size": 52103310,
+        "sha256": "190cedb1d12d67936dca1a19a284d1820bd20a28e47e3a8aa355d5dcb8f62994",
+        "url": "https://dl.lilyco42.top/downloads/clashmi/1.0.30.1605/clashmi-1.0.30.1605-arm64-v8a.apk"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "clashmeta",
+      "name": "ClashMeta (CMFA)",
+      "summary": "基于 mihomo (Clash.Meta) 内核的 Android 代理客户端，规则分流与订阅管理。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "repository": "https://github.com/MetaCubeX/ClashMetaForAndroid",
+      "release": "https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/v2.11.35",
+      "version": "2.11.35",
+      "official": "https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/v2.11.35",
+      "mirror": {
+        "platform": "Android arm64-v8a",
+        "file": "cmfa-2.11.35-meta-arm64-v8a-release.apk",
+        "size": 48780036,
+        "sha256": "af7f05d8801798a8e75de682e5f67070138becb8623b7a341c3e5cd042a3753d",
+        "url": "https://dl.lilyco42.top/downloads/clashmeta/2.11.35/cmfa-2.11.35-meta-arm64-v8a-release.apk"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "ghboost",
+      "name": "ghboost",
+      "summary": "一键加速 Google / YouTube / GitHub，Windows 托盘版免设定；含 GitHub hosts 加速与普通节点扫描测速。",
+      "category": "网络工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/ghboost",
+      "release": "https://github.com/lilyco-42/ghboost/releases/tag/v0.3.17",
+      "version": "0.3.17",
+      "official": "https://github.com/lilyco-42/ghboost/releases/tag/v0.3.17",
+      "icon": "https://dl.lain42.top/downloads/icons/ghboost.png",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "lilyco-ghboost-0.3.17-x86_64.msi",
+        "size": 12152832,
+        "sha256": "d92cc0b3d18a1395a683215879925766027bf1c97983fcb19e515883ee117181",
+        "url": "https://dl.lilyco42.top/downloads/ghboost/0.3.17/lilyco-ghboost-0.3.17-x86_64.msi"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "stemscan",
+      "name": "stemscan",
+      "summary": "判断一首歌是纯器乐(BGM)还是人声+伴奏——把人声真拆出来量，不猜。",
+      "category": "创作工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/stemscan",
+      "release": "https://github.com/lilyco-42/stemscan/releases/tag/v0.1.0",
+      "version": "0.1.0",
+      "official": "https://github.com/lilyco-42/stemscan/releases/tag/v0.1.0",
+      "icon": "https://dl.lain42.top/downloads/icons/stemscan.png",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "stemscan-x86_64-pc-windows-msvc.exe",
+        "size": 3675136,
+        "sha256": "745d5e48109b9b0148d856c1f8e6cf1769333829f81641ad8cf89fb14f43a5c4",
+        "url": "https://dl.lilyco42.top/downloads/stemscan/0.1.0/stemscan-x86_64-pc-windows-msvc.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "simul-overlay",
+      "name": "simul-overlay",
+      "summary": "完全离线的同声传译：ASR + 翻译 + Tauri 字幕覆盖，普惠全球的离线同传。",
+      "category": "AI 工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/simul-overlay",
+      "release": "https://github.com/lilyco-42/simul-overlay/releases/tag/v0.2.0",
+      "version": "0.2.0",
+      "official": "https://github.com/lilyco-42/simul-overlay/releases/tag/v0.2.0",
+      "icon": "https://dl.lain42.top/downloads/icons/simul-overlay.png",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "simul-overlay_0.2.0_x64-setup.exe",
+        "size": 1691201,
+        "sha256": "81c68aa66476c1646f7cecfa4b532b9eb3556f78ab39b5c86aa638988fdb9e49",
+        "url": "https://dl.lilyco42.top/downloads/simul-overlay/0.2.0/simul-overlay_0.2.0_x64-setup.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "cute-pet",
+      "name": "cute-pet",
+      "summary": "桌面宠物，Rust 原生跨平台，跑在桌面/手机上的小陪伴。",
+      "category": "效率工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/cute-pet",
+      "release": "https://github.com/lilyco-42/cute-pet/releases/tag/v0.3.5",
+      "version": "0.3.5",
+      "official": "https://github.com/lilyco-42/cute-pet/releases/tag/v0.3.5",
+      "icon": "https://dl.lain42.top/downloads/icons/cute-pet.png",
+      "mirror": {
+        "platform": "Android arm64-v8a",
+        "file": "cute-pet-shell.apk",
+        "size": 42715247,
+        "sha256": "801aa079bbec675b736d486015fc5257068ed903310120f9f6f3d7a3d89aaf10",
+        "url": "https://dl.lilyco42.top/downloads/cute-pet/0.3.5/cute-pet-shell.apk"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "mc-remote",
+      "name": "MC 服务器管家",
+      "summary": "Windows 一键 Radxa Minecraft 服务器管理：mDNS 发现 + SSH 远程 + Web 控制台。",
+      "category": "效率工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/minecraft",
+      "release": "https://github.com/lilyco-42/minecraft/releases/tag/v0.1.0",
+      "version": "0.1.0",
+      "official": "https://github.com/lilyco-42/minecraft/releases/tag/v0.1.0",
+      "icon": "https://dl.lain42.top/downloads/icons/mc-remote.png",
+      "mirror": {
+        "platform": "Windows x64",
+        "file": "mc_remote.exe",
+        "size": 19379200,
+        "sha256": "77a54622d3f04621afd5e5195095f5e62b1e89ccaee209904030ba8f56dc7079",
+        "url": "https://dl.lilyco42.top/downloads/mc-remote/0.1.0/mc_remote.exe"
+      },
+      "platforms": [
+        "windows"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "mirage-tank",
+      "name": "mirage-tank",
+      "summary": "视错觉图——在不同背景上呈现不同内容，手机端即装即玩。",
+      "category": "创作工具",
+      "license": "MIT",
+      "repository": "https://github.com/lilyco-42/mirage-tank",
+      "release": "https://github.com/lilyco-42/mirage-tank/releases/tag/v0.1.0",
+      "version": "0.1.0",
+      "official": "https://github.com/lilyco-42/mirage-tank/releases/tag/v0.1.0",
+      "icon": "https://dl.lain42.top/downloads/icons/mirage-tank.png",
+      "mirror": {
+        "platform": "Android arm64-v8a",
+        "file": "mirage-tank-v0.1.0.apk",
+        "size": 1266371,
+        "sha256": "54072f9e00fd0606e7b19a523e8c67bca03db2657c29cb3fda0c45fba6b4e3f9",
+        "url": "https://dl.lilyco42.top/downloads/mirage-tank/0.1.0/mirage-tank-v0.1.0.apk"
+      },
+      "platforms": [
+        "android"
+      ],
+      "channel": "Cloudflare R2"
+    },
+    {
+      "id": "stronghold-protocol-windows",
+      "name": "卫戍协议：盟约（Windows 客户端）",
+      "summary": "自动棋 roguelike《卫戍协议：盟约》桌面客户端（Electron）。美术与音频全部内置，进对局不再下载资源；解压后整个文件夹一起放着用，双击里面的 exe 即可。",
+      "category": "游戏",
+      "license": "GPL-3.0-or-later（含《明日方舟》美术/音频，版权归鹰角/Yostar，仅限个人非商业自用）",
+      "repository": "https://github.com/lilyco-42/StrongholdProtocolClient",
+      "release": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/tag/v0.1.3-c11",
+      "version": "0.2.5-c44",
+      "official": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/tag/v0.2.5-c44",
+      "download_url": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/v0.2.5-c44/StrongholdProtocol-desktop-win-0.2.5-c44.zip",
+      "platforms": [
+        "windows"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "stronghold-protocol-android",
+      "name": "卫戍协议：盟约（安卓 APK）",
+      "summary": "同上的安卓版，横屏。debug 签名：与别的签名的同名版本互斥，装之前先卸掉旧的；默认连 sp.lain42.top，也可在菜单里加自己的服务器。",
+      "category": "游戏",
+      "license": "GPL-3.0-or-later（含《明日方舟》美术/音频，版权归鹰角/Yostar，仅限个人非商业自用）",
+      "repository": "https://github.com/lilyco-42/StrongholdProtocolClient",
+      "release": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/tag/v0.1.3-c11",
+      "version": "0.2.5-c44",
+      "official": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/tag/v0.2.5-c44",
+      "download_url": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/v0.2.5-c44/Stronghold-0.2.5-c44-android-release.apk",
+      "platforms": [
+        "android"
+      ],
+      "channel": "官方站点"
+    },
+    {
+      "id": "clash-verge-mac",
+      "name": "Clash Verge Rev（Mac）",
+      "summary": "Clash 订阅与规则管理，Mac 用户选择官方 DMG。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "official": "https://github.com/clash-verge-rev/clash-verge-rev/releases",
+      "channel": "GitHub Release",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "v2rayn-mac",
+      "name": "v2rayN（Mac）",
+      "summary": "跨平台代理客户端，选择 macOS/Apple Silicon 或 Intel 版本。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "official": "https://github.com/2dust/v2rayN/releases",
+      "channel": "GitHub Release",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "zed-mac",
+      "name": "Zed（Mac）",
+      "summary": "现代高性能代码编辑器，官方 macOS 下载。",
+      "category": "开发工具",
+      "license": "GPL-3.0",
+      "official": "https://zed.dev/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "rustdesk-mac",
+      "name": "RustDesk（Mac）",
+      "summary": "开源远程桌面软件，支持 Mac。",
+      "category": "效率工具",
+      "license": "AGPL-3.0",
+      "official": "https://github.com/rustdesk/rustdesk/releases",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "uv-mac",
+      "name": "uv（Mac）",
+      "summary": "高速 Python 包管理器，查看 Mac 安装方法。",
+      "category": "开发工具",
+      "license": "MIT / Apache-2.0",
+      "official": "https://docs.astral.sh/uv/getting-started/installation/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "iina-mac",
+      "name": "IINA",
+      "summary": "原生 macOS 视频播放器，支持多格式。",
+      "category": "媒体工具",
+      "license": "GPL-3.0",
+      "official": "https://www.iina.io/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "rectangle-mac",
+      "name": "Rectangle",
+      "summary": "窗口平铺、分屏和快捷键管理。",
+      "category": "效率工具",
+      "license": "MIT",
+      "official": "https://rectangleapp.com/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "raycast-mac",
+      "name": "Raycast",
+      "summary": "Mac 应用启动、剪贴板与工作流扩展。",
+      "category": "效率工具",
+      "license": "专有",
+      "official": "https://www.raycast.com/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "alttab-mac",
+      "name": "AltTab",
+      "summary": "更直观的 macOS 窗口切换。",
+      "category": "效率工具",
+      "license": "GPL-3.0",
+      "official": "https://alt-tab-macos.netlify.app/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "appcleaner-mac",
+      "name": "AppCleaner",
+      "summary": "卸载应用并清理关联文件。",
+      "category": "效率工具",
+      "license": "免费软件",
+      "official": "https://freemacsoft.net/appcleaner/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "keka-mac",
+      "name": "Keka",
+      "summary": "Mac 压缩与解压，支持 7z、ZIP 等。",
+      "category": "文件工具",
+      "license": "开源/商店版收费",
+      "official": "https://www.keka.io/en/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "coteditor-mac",
+      "name": "CotEditor",
+      "summary": "轻量级原生文本编辑器。",
+      "category": "开发工具",
+      "license": "Apache-2.0",
+      "official": "https://coteditor.com/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "homebrew-mac",
+      "name": "Homebrew",
+      "summary": "macOS 开源包管理器，按官网教程安装。",
+      "category": "开发工具",
+      "license": "BSD-2-Clause",
+      "official": "https://brew.sh/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "iterm2-mac",
+      "name": "iTerm2",
+      "summary": "支持分屏、搜索与热键的终端。",
+      "category": "开发工具",
+      "license": "GPL-2.0",
+      "official": "https://iterm2.com/downloads.html",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "warp-mac",
+      "name": "Warp Terminal",
+      "summary": "带 AI 辅助和工作流的终端。",
+      "category": "开发工具",
+      "license": "专有",
+      "official": "https://www.warp.dev/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "docker-desktop-mac",
+      "name": "Docker Desktop（Mac）",
+      "summary": "容器开发环境，区分 Apple Silicon/Intel。",
+      "category": "开发工具",
+      "license": "订阅条款",
+      "official": "https://www.docker.com/products/docker-desktop/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "orbstack-mac",
+      "name": "OrbStack",
+      "summary": "Mac 上轻量容器与 Linux 虚拟机。",
+      "category": "开发工具",
+      "license": "专有",
+      "official": "https://orbstack.dev/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "github-desktop-mac",
+      "name": "GitHub Desktop（Mac）",
+      "summary": "桌面 Git 工作流与版本管理。",
+      "category": "开发工具",
+      "license": "MIT",
+      "official": "https://desktop.github.com/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "cursor-mac",
+      "name": "Cursor（Mac）",
+      "summary": "AI 辅助代码编辑器，支持 Mac。",
+      "category": "AI 工具",
+      "license": "专有",
+      "official": "https://cursor.com/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "sublime-text-mac",
+      "name": "Sublime Text（Mac）",
+      "summary": "快捷高效的编辑器。",
+      "category": "开发工具",
+      "license": "专有",
+      "official": "https://www.sublimetext.com/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "jetbrains-toolbox-mac",
+      "name": "JetBrains Toolbox",
+      "summary": "管理 PyCharm、IDEA 等 IDE。",
+      "category": "开发工具",
+      "license": "专有",
+      "official": "https://www.jetbrains.com/toolbox-app/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "firefox-mac",
+      "name": "Firefox（Mac）",
+      "summary": "开源隐私浏览器。",
+      "category": "浏览器",
+      "license": "MPL-2.0",
+      "official": "https://www.mozilla.org/firefox/new/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "brave-mac",
+      "name": "Brave（Mac）",
+      "summary": "内置广告与跟踪保护的浏览器。",
+      "category": "浏览器",
+      "license": "MPL-2.0",
+      "official": "https://brave.com/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "tailscale-mac",
+      "name": "Tailscale（Mac）",
+      "summary": "跨设备组网和远程访问。",
+      "category": "网络工具",
+      "license": "混合许可",
+      "official": "https://tailscale.com/download/mac",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "wireguard-mac",
+      "name": "WireGuard（Mac）",
+      "summary": "轻量 VPN 隧道工具。",
+      "category": "网络工具",
+      "license": "GPL-2.0",
+      "official": "https://www.wireguard.com/install/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "proton-vpn-mac",
+      "name": "Proton VPN（Mac）",
+      "summary": "macOS 隐私 VPN 客户端。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "official": "https://protonvpn.com/download-macos",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "localsend-mac",
+      "name": "LocalSend（Mac）",
+      "summary": "在局域网跨设备传文件。",
+      "category": "文件工具",
+      "license": "MIT",
+      "official": "https://localsend.org/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "obsidian-mac",
+      "name": "Obsidian（Mac）",
+      "summary": "本地优先 Markdown 知识库。",
+      "category": "效率工具",
+      "license": "专有",
+      "official": "https://obsidian.md/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "bitwarden-mac",
+      "name": "Bitwarden（Mac）",
+      "summary": "跨平台密码管理。",
+      "category": "安全工具",
+      "license": "GPL-3.0",
+      "official": "https://bitwarden.com/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "keepassxc-mac",
+      "name": "KeePassXC",
+      "summary": "本地加密密码管理器。",
+      "category": "安全工具",
+      "license": "GPL-2.0 / GPL-3.0",
+      "official": "https://keepassxc.org/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "joplin-mac",
+      "name": "Joplin（Mac）",
+      "summary": "开源笔记与任务同步。",
+      "category": "效率工具",
+      "license": "AGPL-3.0",
+      "official": "https://joplinapp.org/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "handbrake-mac",
+      "name": "HandBrake（Mac）",
+      "summary": "视频转码与压缩。",
+      "category": "创作工具",
+      "license": "GPL-2.0",
+      "official": "https://handbrake.fr/downloads.php",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "blender-mac",
+      "name": "Blender（Mac）",
+      "summary": "免费 3D 建模与动画。",
+      "category": "创作工具",
+      "license": "GPL-3.0",
+      "official": "https://www.blender.org/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "krita-mac",
+      "name": "Krita（Mac）",
+      "summary": "开源数位绘画工具。",
+      "category": "创作工具",
+      "license": "GPL-3.0",
+      "official": "https://krita.org/en/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "vlc-mac",
+      "name": "VLC（Mac）",
+      "summary": "跨平台开源媒体播放器。",
+      "category": "媒体工具",
+      "license": "GPL-2.0",
+      "official": "https://www.videolan.org/vlc/download-macosx.html",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "transmission-mac",
+      "name": "Transmission（Mac）",
+      "summary": "轻巧的开源 BT 客户端。",
+      "category": "网络工具",
+      "license": "GPL-2.0 / MIT",
+      "official": "https://github.com/transmission/transmission/releases",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "qbittorrent-mac",
+      "name": "qBittorrent（Mac）",
+      "summary": "无广告 BT 下载工具。",
+      "category": "网络工具",
+      "license": "GPL-2.0",
+      "official": "https://www.qbittorrent.org/download.php",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "shotcut-mac",
+      "name": "Shotcut（Mac）",
+      "summary": "免费开源视频剪辑。",
+      "category": "创作工具",
+      "license": "GPL-3.0",
+      "official": "https://shotcut.org/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "signal-mac",
+      "name": "Signal（Mac）",
+      "summary": "加密通信桌面客户端。",
+      "category": "通讯工具",
+      "license": "AGPL-3.0",
+      "official": "https://signal.org/download/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "telegram-mac",
+      "name": "Telegram（Mac）",
+      "summary": "Mac 原生 Telegram 客户端。",
+      "category": "通讯工具",
+      "license": "GPL-3.0",
+      "official": "https://macos.telegram.org/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "discord-mac",
+      "name": "Discord（Mac）",
+      "summary": "语音、直播与社区聊天。",
+      "category": "通讯工具",
+      "license": "专有",
+      "official": "https://discord.com/download",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "logseq-mac",
+      "name": "Logseq（Mac）",
+      "summary": "大纲式双链笔记工具。",
+      "category": "效率工具",
+      "license": "AGPL-3.0",
+      "official": "https://logseq.com/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "utm-mac",
+      "name": "UTM",
+      "summary": "在 Mac 上创建虚拟机。",
+      "category": "开发工具",
+      "license": "Apache-2.0",
+      "official": "https://mac.getutm.app/",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "wireshark-mac",
+      "name": "Wireshark（Mac）",
+      "summary": "网络抓包与分析。",
+      "category": "网络工具",
+      "license": "GPL-2.0",
+      "official": "https://www.wireshark.org/download.html",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "calibre-mac",
+      "name": "Calibre（Mac）",
+      "summary": "电子书管理、转换和阅读。",
+      "category": "效率工具",
+      "license": "GPL-3.0",
+      "official": "https://calibre-ebook.com/download_osx",
+      "channel": "官方站点",
+      "platforms": [
+        "macos"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "stronghold-ios-dev",
+      "name": "卫戍协议：盟约（iOS 开发者测试）",
+      "summary": "iOS 未签名 IPA，仅适用于开发者签名测试，不能直接安装到普通 iPhone。",
+      "category": "游戏",
+      "license": "自有项目",
+      "official": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/tag/v0.2.5-c44",
+      "channel": "开发者测试",
+      "platforms": [
+        "ios"
+      ],
+      "version": "v0.2.5-c44 / 开发测试",
+      "download_url": "https://github.com/lilyco-42/StrongholdProtocolClient/releases/download/v0.2.5-c44/Stronghold-0.2.5-c44-ios-unsigned.ipa",
+      "note": "⚠ 未签名 IPA，普通 iPhone 无法直接安装。仅供拥有开发者签名及设备配置的测试人员使用；目前未发布可一键安装的 iOS 正式版。"
+    },
+    {
+      "id": "signal-ios",
+      "name": "Signal（iOS）",
+      "summary": "端到端加密聊天和通话。",
+      "category": "通讯工具",
+      "license": "AGPL-3.0",
+      "official": "https://apps.apple.com/app/id874139669",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://signal.org/download/ios/"
+    },
+    {
+      "id": "telegram-ios",
+      "name": "Telegram（iOS）",
+      "summary": "跨平台即时通讯。",
+      "category": "通讯工具",
+      "license": "GPL-3.0",
+      "official": "https://apps.apple.com/app/id686449807",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://telegram.org/apps"
+    },
+    {
+      "id": "discord-ios",
+      "name": "Discord（iOS）",
+      "summary": "社区聊天、语音与直播。",
+      "category": "通讯工具",
+      "license": "专有",
+      "official": "https://apps.apple.com/app/id985746746",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://discord.com/download"
+    },
+    {
+      "id": "firefox-ios",
+      "name": "Firefox（iOS）",
+      "summary": "隐私优先移动浏览器。",
+      "category": "浏览器",
+      "license": "MPL-2.0",
+      "official": "https://apps.apple.com/app/id989804926",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://www.mozilla.org/firefox/browsers/mobile/ios/"
+    },
+    {
+      "id": "brave-ios",
+      "name": "Brave（iOS）",
+      "summary": "广告和追踪防护浏览器。",
+      "category": "浏览器",
+      "license": "MPL-2.0",
+      "official": "https://brave.com/download/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "chrome-ios",
+      "name": "Chrome（iOS）",
+      "summary": "Google 官方浏览器。",
+      "category": "浏览器",
+      "license": "专有",
+      "official": "https://apps.apple.com/app/id535886823",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://www.google.com/chrome/"
+    },
+    {
+      "id": "duckduckgo-ios",
+      "name": "DuckDuckGo（iOS）",
+      "summary": "隐私搜索与浏览器。",
+      "category": "浏览器",
+      "license": "混合许可",
+      "official": "https://duckduckgo.com/app",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "proton-vpn-ios",
+      "name": "Proton VPN（iOS）",
+      "summary": "移动端隐私 VPN。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "official": "https://protonvpn.com/download-ios",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "mullvad-vpn-ios",
+      "name": "Mullvad VPN（iOS）",
+      "summary": "隐私 VPN 客户端。",
+      "category": "网络工具",
+      "license": "GPL-3.0",
+      "official": "https://mullvad.net/en/download/vpn/ios",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "tailscale-ios",
+      "name": "Tailscale（iOS）",
+      "summary": "移动设备接入自己的网络。",
+      "category": "网络工具",
+      "license": "混合许可",
+      "official": "https://apps.apple.com/app/id1470499037",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://tailscale.com/download/ios"
+    },
+    {
+      "id": "wireguard-ios",
+      "name": "WireGuard（iOS）",
+      "summary": "高效 VPN 隧道。",
+      "category": "网络工具",
+      "license": "GPL-2.0",
+      "official": "https://www.wireguard.com/install/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "localsend-ios",
+      "name": "LocalSend（iOS）",
+      "summary": "跨平台局域网互传文件。",
+      "category": "文件工具",
+      "license": "MIT",
+      "official": "https://apps.apple.com/app/id1661733229",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://localsend.org/download?os=ios"
+    },
+    {
+      "id": "bitwarden-ios",
+      "name": "Bitwarden（iOS）",
+      "summary": "加密密码保管和自动填充。",
+      "category": "安全工具",
+      "license": "GPL-3.0",
+      "official": "https://apps.apple.com/app/id1137397744",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://bitwarden.com/download/"
+    },
+    {
+      "id": "keepassium-ios",
+      "name": "KeePassium",
+      "summary": "在 iPhone 管理 KeePass 数据库。",
+      "category": "安全工具",
+      "license": "免费/开源",
+      "official": "https://keepassium.app/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "2fas-ios",
+      "name": "2FAS Authenticator",
+      "summary": "两步验证动态口令。",
+      "category": "安全工具",
+      "license": "开源",
+      "official": "https://2fas.com/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "obsidian-ios",
+      "name": "Obsidian（iOS）",
+      "summary": "手机端 Markdown 知识库。",
+      "category": "效率工具",
+      "license": "专有",
+      "official": "https://apps.apple.com/app/id1557175442",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://obsidian.md/mobile"
+    },
+    {
+      "id": "joplin-ios",
+      "name": "Joplin（iOS）",
+      "summary": "开源笔记与待办事项。",
+      "category": "效率工具",
+      "license": "AGPL-3.0",
+      "official": "https://joplinapp.org/help/apps/mobile/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "notion-ios",
+      "name": "Notion（iOS）",
+      "summary": "笔记、文档和项目管理。",
+      "category": "效率工具",
+      "license": "专有",
+      "official": "https://apps.apple.com/app/id1232780281",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://www.notion.so/mobile"
+    },
+    {
+      "id": "standardnotes-ios",
+      "name": "Standard Notes（iOS）",
+      "summary": "端到端加密笔记。",
+      "category": "安全工具",
+      "license": "AGPL-3.0",
+      "official": "https://standardnotes.com/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "claude-ios",
+      "name": "Claude（iOS）",
+      "summary": "Anthropic 官方 AI 助手。",
+      "category": "AI 工具",
+      "license": "专有",
+      "official": "https://claude.ai/download",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "perplexity-ios",
+      "name": "Perplexity（iOS）",
+      "summary": "AI 搜索与参考资料问答。",
+      "category": "AI 工具",
+      "license": "专有",
+      "official": "https://www.perplexity.ai/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "vlc-ios",
+      "name": "VLC（iOS）",
+      "summary": "多格式视频、音频播放器。",
+      "category": "媒体工具",
+      "license": "MPL / GPL",
+      "official": "https://apps.apple.com/app/id650377962",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://www.videolan.org/vlc/download-ios.html"
+    },
+    {
+      "id": "infuse-ios",
+      "name": "Infuse（iOS）",
+      "summary": "支持 NAS 的苹果生态视频播放器。",
+      "category": "媒体工具",
+      "license": "专有",
+      "official": "https://firecore.com/infuse",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "snapseed-ios",
+      "name": "Snapseed",
+      "summary": "Google 照片修图工具。",
+      "category": "创作工具",
+      "license": "专有",
+      "official": "https://apps.apple.com/app/id439438619",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "canva-ios",
+      "name": "Canva（iOS）",
+      "summary": "制作海报和社交媒体图片。",
+      "category": "创作工具",
+      "license": "专有",
+      "official": "https://www.canva.com/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "capcut-ios",
+      "name": "CapCut（iOS）",
+      "summary": "移动视频剪辑。",
+      "category": "创作工具",
+      "license": "专有",
+      "official": "https://www.capcut.com/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "lightroom-ios",
+      "name": "Lightroom（iOS）",
+      "summary": "RAW 摄影后期。",
+      "category": "创作工具",
+      "license": "专有",
+      "official": "https://www.adobe.com/products/photoshop-lightroom/mobile.html",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "ish-ios",
+      "name": "iSH Shell",
+      "summary": "iOS Linux 命令行环境。",
+      "category": "开发工具",
+      "license": "BSD-3-Clause",
+      "official": "https://apps.apple.com/app/id1436902243",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://ish.app/"
+    },
+    {
+      "id": "ashell-ios",
+      "name": "a-Shell",
+      "summary": "手机运行本地 Unix 命令。",
+      "category": "开发工具",
+      "license": "BSD-3-Clause",
+      "official": "https://apps.apple.com/app/id1473805438",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版",
+      "landing_page": "https://holzschu.github.io/a-Shell_iOS/"
+    },
+    {
+      "id": "blink-ios",
+      "name": "Blink Shell",
+      "summary": "SSH 和 Mosh 移动终端。",
+      "category": "开发工具",
+      "license": "专有",
+      "official": "https://blink.sh/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "termius-ios",
+      "name": "Termius（iOS）",
+      "summary": "管理 SSH 主机的手机客户端。",
+      "category": "开发工具",
+      "license": "专有",
+      "official": "https://termius.com/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "testflight-ios",
+      "name": "TestFlight",
+      "summary": "通过开发者邀请安装 Beta 应用。",
+      "category": "开发工具",
+      "license": "Apple",
+      "official": "https://testflight.apple.com/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "delta-ios",
+      "name": "Delta Emulator",
+      "summary": "iOS 经典游戏模拟器，请使用合法游戏文件。",
+      "category": "游戏",
+      "license": "开源",
+      "official": "https://apps.apple.com/app/id1048524688",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "ppsspp-ios",
+      "name": "PPSSPP（iOS）",
+      "summary": "PSP 模拟器，请使用合法游戏文件。",
+      "category": "游戏",
+      "license": "GPL-2.0",
+      "official": "https://www.ppsspp.org/download/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "steamlink-ios",
+      "name": "Steam Link（iOS）",
+      "summary": "串流自己电脑上的 Steam 游戏。",
+      "category": "游戏",
+      "license": "专有",
+      "official": "https://store.steampowered.com/steamlink/about/",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "kdeconnect-ios",
+      "name": "KDE Connect（iOS）",
+      "summary": "在电脑和手机之间传文件和设备联动。",
+      "category": "文件工具",
+      "license": "GPL-2.0",
+      "official": "https://kdeconnect.kde.org/download.html",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "procreatepocket-ios",
+      "name": "Procreate Pocket",
+      "summary": "专为 iPhone 设计的绘画应用。",
+      "category": "创作工具",
+      "license": "付费软件",
+      "official": "https://procreate.com/pocket",
+      "channel": "App Store",
+      "platforms": [
+        "ios"
+      ],
+      "version": "官方最新版"
+    },
+    {
+      "id": "lyco-music-windows",
+      "name": "Lyco Music（Windows）",
+      "summary": "网易云音乐风格的开源音乐播放器；桌面端与移动端共用同一套音源内核，支持导入订阅链接一键补全第三方音源。",
+      "category": "媒体工具",
+      "platforms": [
+        "windows"
+      ],
+      "mirror": {
+        "platform": "Windows x64 · 安装版",
+        "file": "Lyco.Music-0.2.54-windows-setup.exe",
+        "size": 88599060,
+        "sha256": "780cabbd71b1a99536b8826cc6428d386700909a157c3b7525a7638eda8a1292",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-windows-setup.exe"
+      },
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-windows-setup.exe"
+    },
+    {
+      "id": "lyco-music-windows-msi",
+      "name": "Lyco Music（Windows MSI）",
+      "summary": "网易云音乐风格的开源音乐播放器，Windows MSI 安装包，适合企业批量部署与静默安装。",
+      "category": "媒体工具",
+      "platforms": [
+        "windows"
+      ],
+      "mirror": {
+        "platform": "Windows x64 · MSI 安装包",
+        "file": "Lyco.Music-0.2.54-windows-x64.msi",
+        "size": 99057664,
+        "sha256": "76749e06405fddc69098baa7a05ce4092c1117d27f68979856ecb68011ae8713",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-windows-x64.msi"
+      },
+      "install": "msiexec /i Lyco.Music-*.msi /qn",
+      "note": "MSI 包支持静默安装（msiexec /qn），适合批量部署；个人用户建议下载上面的 setup.exe 向导版。",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-windows-x64.msi"
+    },
+    {
+      "id": "lyco-music-windows-portable",
+      "name": "Lyco Music（Windows 便携版）",
+      "summary": "网易云音乐风格的开源音乐播放器，Windows 免安装便携版，解压即用，不写注册表。",
+      "category": "媒体工具",
+      "platforms": [
+        "windows"
+      ],
+      "mirror": {
+        "platform": "Windows x64 · 免安装便携版",
+        "file": "Lyco.Music-0.2.54-windows-x64-portable.exe",
+        "size": 88321122,
+        "sha256": "966aaca34f219936e53c8473827e38a1dfc97a09377d9f2498ea8bc769670f54",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-windows-x64-portable.exe"
+      },
+      "note": "便携版不需要安装，双击即可运行；数据与配置保存在程序所在目录。适合放在 U 盘里随身携带。",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-windows-x64-portable.exe"
+    },
+    {
+      "id": "lyco-music-macos",
+      "name": "Lyco Music（macOS）",
+      "summary": "网易云音乐风格的开源音乐播放器，Apple Silicon 与 Intel 双架构。未签名，首次打开需右键 → 打开。",
+      "category": "媒体工具",
+      "platforms": [
+        "macos"
+      ],
+      "mirror": {
+        "platform": "macOS arm64 · Apple Silicon",
+        "file": "Lyco.Music-0.2.54-macos-arm64.dmg",
+        "size": 110674271,
+        "sha256": "d91ff8a35b8657f2d6a6afb61299c1dbec4f41a13d403b275f9c7e0a90803440",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-macos-arm64.dmg"
+      },
+      "note": "安装包未经 Apple 签名与公证。首次打开请右键点图标选「打开」，或到「系统设置 → 隐私与安全性」点「仍要打开」。Intel 机型请改用同目录的 macos-x64.dmg。",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-macos-arm64.dmg"
+    },
+    {
+      "id": "lyco-music-android",
+      "name": "Lyco Music（Android）",
+      "summary": "网易云音乐风格的开源音乐播放器安卓版，含 arm64-v8a 与 armeabi-v7a。",
+      "category": "媒体工具",
+      "platforms": [
+        "android"
+      ],
+      "mirror": {
+        "platform": "Android · 通用 APK",
+        "file": "Lyco.Music-0.2.54-android-universal.apk",
+        "size": 51546484,
+        "sha256": "72f641a279cc2d677eaf8e16af5e04e2462d3ea2fd37eeb5ecbed999296144af",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-android-universal.apk"
+      },
+      "note": "使用仓库内置调试证书签名，升级安装时请先卸载旧版。安装前需在系统设置里允许「安装未知来源应用」。",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-android-universal.apk"
+    },
+    {
+      "id": "lyco-music-linux",
+      "name": "Lyco Music（Linux）",
+      "summary": "网易云音乐风格的开源音乐播放器 Linux 版，单文件 AppImage，无需安装。",
+      "category": "媒体工具",
+      "platforms": [
+        "linux"
+      ],
+      "mirror": {
+        "platform": "Linux x86_64 · AppImage",
+        "file": "Lyco.Music-0.2.54-linux-x86_64.AppImage",
+        "size": 119129800,
+        "sha256": "c2fdf24b8c01c3673f142f8f3a5077041931c5c74d231f9ddeb7884e284fd6be",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-linux-x86_64.AppImage"
+      },
+      "install": "chmod +x Lyco.Music-*.AppImage && ./Lyco.Music-*.AppImage",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-linux-x86_64.AppImage"
+    },
+    {
+      "id": "lyco-music-ios",
+      "name": "Lyco Music（iOS）",
+      "summary": "网易云音乐风格的开源音乐播放器 iOS 版。安装包未签名，需要自行签名或使用 AltStore / SideStore 侧载。",
+      "category": "媒体工具",
+      "platforms": [
+        "ios"
+      ],
+      "mirror": {
+        "platform": "iOS · 未签名 IPA",
+        "file": "Lyco.Music-0.2.54-ios-unsigned.ipa",
+        "size": 6300694,
+        "sha256": "14374fb1925981093905f4c2e75d6bac5850f4514ac2aeb838b3fa80d83b6712",
+        "url": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-ios-unsigned.ipa"
+      },
+      "note": "这是未签名 IPA，不能直接双击安装。可用 AltStore / SideStore / TrollStore 侧载，或用你自己的开发者证书重签后再装。",
+      "license": "Apache-2.0",
+      "repository": "https://github.com/lilyco-42/lyco_music",
+      "version": "0.2.54",
+      "official": "https://lain42.top/downloads/lyco_music/v0.2.54-20261023/",
+      "channel": "本站文件",
+      "release": "v0.2.54-20261023",
+      "r2Mirror": "https://lyco-music-dl.m15178682641.workers.dev/lyco_music/v0.2.54-20261023/Lyco.Music-0.2.54-ios-unsigned.ipa"
+    }
+  ]
+}
